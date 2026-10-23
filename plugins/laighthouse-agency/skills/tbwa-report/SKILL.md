@@ -6,7 +6,7 @@ description: >
   예산·소진율·진행율과 목표(e.*)·달성률을 담은 Total/Monthly Summary, 월·미디어 필터로 보는 Product·Target·Placement·Weekly·Daily 표
   (디멘전·지표 설정, 접기), 예산·단가를 입력해 예상 성과를 보는 Mix 계획표를 담은 HTML 보고서. 사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
-  version: "1.2.1"
+  version: "1.2.3"
 ---
 
 > ⚡ **thinking 지침**: thinking은 최대한 짧게 유지한다. 바로 MCP 호출 → 스크립트 실행 → 완료 순서로 진행한다.
@@ -71,7 +71,7 @@ MCP 데이터를 받아 **TBWA 보고서**(HTML 한 파일)로 렌더링한다.
      크기 오류면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절).
    - Placement 데이터: **차원 목록에 노출 위치 차원(`placement`·`노출위치`·`노출 위치`·`노출_위치`·`position` 중 처음 것)이 있을 때만** —
      `time_grain:"day"`, `group_by` = `["media", (ad_type 또는 상품 중 있는 것), 노출 위치 차원]`, 달마다 1회(표 데이터와 같은 기간 나눔).
-     없으면 부르지 않는다(표가 조용히 빠진다).
+     없으면 부르지 않는다(Placement 자리에 '노출 위치 데이터 준비 중' 안내가 나온다 — 사용자에게 묻지 않는다).
    - 예산·목표: `get_target_progress_v2` — `month` = 걸친 달마다, `cost_metric` = `metric_keys.cost`,
      `as_of_date` = 지난 달은 그 달 말일, 마지막 달은 E. **달마다 `media` 생략 1회**(응답 둘째 표에 매체·캠페인 행이 모두 온다 —
      매체마다 따로 부르지 않는다). 한 줄 메시지·에러는 "목표 없음"(원문 그대로, 에러면 빈 문자열).

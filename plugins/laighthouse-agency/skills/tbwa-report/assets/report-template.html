@@ -118,6 +118,11 @@ td.tb-inp .tb-in + span { margin-left: 1px; }
 td.tb-inp .tb-in-text, td .tb-in-text { color: var(--accent); }
 .tb-in-text { width: 100%; min-width: 150px; border-color: var(--line); background: #fff; text-align: center; font-weight: 700; color: var(--accent); }
 
+/* 데이터가 아직 없는 표 자리(Placement) */
+.tb-pending { display: flex; flex-direction: column; gap: 4px; align-items: center; padding: 24px 16px; border: 1px dashed var(--line);
+  border-radius: 8px; color: var(--label); font-size: 13px; text-align: center; }
+.tb-pending strong { color: var(--ink); }
+
 /* '외 N개' 줄 — 접힌 나머지의 합계 + 더 보기 */
 .tb-table tr.tb-morerow td.tb-more, .tb-table tr.tb-morerow td.tb-num { background: #fff; color: var(--label); font-weight: 400; border-bottom: 1px dashed var(--line); }
 .tb-table td.tb-more { white-space: nowrap; }

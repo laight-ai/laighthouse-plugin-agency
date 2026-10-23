@@ -172,7 +172,7 @@
 
     const placeEl = root.querySelector('[data-sec="place"]');
     const PL = rep.place && rep.place.n ? rep.place : null;
-    if (!PL) placeEl.remove();   // 노출 위치 차원이 없는 브랜드 — 표가 조용히 빠진다
+    if (!PL) placePending(placeEl);   // 노출 위치 차원이 없는 브랜드 — 섹션은 두고 이유를 알린다(차원이 생기면 자동으로 채워진다)
     const tableEls = ['total', 'monthly', 'product', 'target', 'weekly', 'daily', 'mix'].map(id => root.querySelector('[data-sec="' + id + '"]'));
     const filterEl = root.querySelector('[data-sec="filter"]');
     if (!T || !T.n) { tableEls.forEach(placeholder); filterEl.remove(); buildToc(root); return; }
@@ -820,6 +820,20 @@
     };
     window.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(spy); }, { passive: true });
     spy();
+  }
+
+  /* Placement 자리 — 노출 위치 데이터가 없을 때 */
+  function placePending(el) {
+    el.innerHTML = '';
+    const hd = h('div', 'lh-section-head');
+    const h2 = h('h2', null, 'Placement ');
+    h2.appendChild(h('span', 'lh-muted', '미디어 · 상품 · 노출 위치별'));
+    hd.appendChild(h2);
+    el.appendChild(hd);
+    const box = h('div', 'tb-pending');
+    box.appendChild(h('strong', null, '노출 위치 데이터 준비 중'));
+    box.appendChild(h('span', null, '이 브랜드 데이터에 노출 위치(placement) 차원이 아직 없습니다. 차원이 추가되면 다음 보고서부터 이 표가 채워집니다.'));
+    el.appendChild(box);
   }
 
   /* Daily Comment: 요약 → 매체별 불릿(급감 광고그룹 하위 불릿) → 맺음 */
