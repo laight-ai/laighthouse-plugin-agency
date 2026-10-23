@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": ".*get_ad_performance$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/capture_ad_performance.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

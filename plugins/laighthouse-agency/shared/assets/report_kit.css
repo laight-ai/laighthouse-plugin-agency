@@ -1,0 +1,344 @@
+/* Copilot 보고서 공용 CSS — 화면 모양은 이 파일만 정한다(마크업에 인라인 style 없음).
+ * 톤: Claude/GPT판 라이트하우스 보고서와 동일(섹션 카드 · slate 계열 · 가운데 정렬 KPI · 알약 탭).
+ * 데이터 색은 --c 변수로 받는다. */
+:root {
+  --ink: #1e293b; --body: #374151; --label: #64748b; --muted: #94a3b8;
+  --line: #e2e8f0; --line-soft: #f1f5f9; --head-bg: #f1f5f9; --sub-bg: #f8fafc; --page-bg: #f8fafc;
+  --up: #dc2626; --down: #2563eb; --flat: #1e293b;
+  --green: #16a34a; --neutral: #78716c; --yellow: #eda100; --accent: #3b82f6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+  background: var(--page-bg); color: var(--ink); padding: 24px; }
+
+/* 페이지 */
+.lh-page { max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.lh-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
+.lh-header h1 { font-size: 20px; font-weight: 700; color: var(--ink); }
+.lh-meta { font-size: 13px; color: var(--label); margin-top: 4px; }
+.lh-meta + .lh-meta { margin-top: 0; }
+.lh-print { padding: 8px 14px; background: var(--accent); border: none; border-radius: 8px; font: inherit; font-size: 13px;
+  color: #fff; cursor: pointer; }
+.lh-print:hover { filter: brightness(.95); }
+.lh-footer { text-align: center; font-size: 12px; color: var(--muted); padding: 16px 0; }
+
+/* 섹션 = 카드 */
+.lh-section { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 20px;
+  display: flex; flex-direction: column; gap: 12px; }
+.lh-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.lh-section h2 { font-size: 15px; font-weight: 700; color: var(--ink); }
+.lh-section h2 .lh-muted, .lh-best-title .lh-muted { font-weight: 500; color: var(--label); }
+.lh-desc { font-size: 12px; color: var(--label); margin-top: 4px; }
+.lh-note { font-size: 11px; line-height: 1.6; color: var(--muted); white-space: pre-line; }
+.lh-muted { color: var(--muted); }
+.lh-strong { font-weight: 600; color: var(--ink); }
+.lh-placeholder { padding: 20px; color: var(--muted); font-size: 13px; }
+.lh-cmp { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--label); }
+
+/* 탭(지표 선택·비교 기준) */
+.lh-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.lh-tab { border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 5px 10px;
+  font: inherit; font-size: 12px; cursor: pointer; }
+.lh-tab:hover { background: var(--sub-bg); }
+.lh-tab.is-on { border-color: var(--ink); background: var(--ink); color: #fff; }
+
+/* KPI 카드 격자 */
+.lh-kpis { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.lh-kpi { padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -1px -1px 0; }
+.lh-kpi-label { font-size: 12px; color: var(--label); margin-bottom: 4px; }
+.lh-kpi-value { font-size: 28px; font-weight: 700; color: var(--ink); margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+.lh-kpi-delta { font-size: 12px; font-weight: 600; color: var(--flat); }
+.lh-kpi-sub { font-size: 12px; color: var(--muted); }
+.lh-kpi-sub:empty, .lh-kpi-delta:empty { display: none; }
+.lh-bar { position: relative; width: 100%; height: 6px; border-radius: 3px; background: var(--line-soft); margin: 4px 0; }
+.lh-bar-fill { height: 100%; width: var(--w, 0); background: var(--accent); border-radius: 3px; }
+.lh-bar-fill.up { background: var(--up); }
+.lh-bar-fill.warn { background: var(--yellow); }
+.lh-bar-marker { position: absolute; top: -3px; bottom: -3px; left: var(--m, 0); width: 2px; background: var(--ink); }
+
+/* 증감 색: 방향만 나타낸다 */
+.up { color: var(--up) !important; }
+.down { color: var(--down) !important; }
+.flat { color: var(--flat) !important; }
+.warn { color: #b45309 !important; }
+.good { color: var(--green) !important; }
+
+/* 요약 불릿 */
+.lh-bullets { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.lh-bullet { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: flex; gap: 10px; align-items: flex-start; }
+.lh-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; background: var(--neutral); }
+.tone-red .lh-dot { background: var(--up); }
+.tone-green .lh-dot { background: var(--green); }
+.tone-yellow .lh-dot { background: var(--yellow); }
+.lh-bullet-text { font-size: 13px; line-height: 1.6; color: var(--body); }
+.lh-bullet-text strong { color: var(--ink); font-weight: 700; }
+
+/* 차트 */
+.lh-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.lh-toolbar > .lh-muted { font-size: 12px; }
+.lh-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 20px; font-size: 12px; color: #334155; }
+.lh-legend-item { display: inline-flex; align-items: center; gap: 6px; border: none; background: none; font: inherit; color: inherit; padding: 0; }
+button.lh-legend-item { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 10px; cursor: pointer; color: var(--ink); }
+.lh-legend-item.is-off { opacity: .35; }
+.lh-swatch { width: 16px; height: 2px; background: var(--c, var(--muted)); display: inline-block; }
+.lh-swatch.box { width: 12px; height: 12px; border-radius: 2px; }
+.lh-legend-val { color: var(--label); font-variant-numeric: tabular-nums; }
+.lh-chart { position: relative; height: 320px; }
+
+/* 표 */
+.lh-table-wrap { overflow-x: auto; }
+.lh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lh-table th { background: var(--head-bg); color: #475569; font-weight: 600; padding: 8px 12px; text-align: center;
+  white-space: nowrap; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.lh-table th.lh-group { border-bottom: none; border-right: 1px solid var(--line); }
+.lh-table th.lh-sub { font-size: 11px; font-weight: 500; }
+.lh-table th.lh-name-col { text-align: left; border-right: 1px solid var(--line); }
+.lh-table td { padding: 8px 12px; color: var(--body); white-space: nowrap; border-bottom: 1px solid var(--line-soft); }
+.lh-table .lh-group-end { border-right: 1px solid var(--line); }
+.lh-table td.lh-name { text-align: left; border-right: 1px solid var(--line); }
+.lh-table td.lh-num { text-align: center; }
+.lh-creative td.lh-num, .lh-creative th.lh-num { text-align: right; }
+.lh-table tr.is-subtotal td { background: var(--sub-bg); font-weight: 600; }
+.lh-table tr.is-total td { background: var(--sub-bg); font-weight: 700; color: var(--ink); border-top: 1px solid var(--line); }
+.lh-delta { font-size: 10.5px; }
+.lh-mdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--muted));
+  margin-right: 6px; vertical-align: middle; }
+.lh-empty { text-align: center; color: var(--muted); padding: 20px !important; }
+.lh-creative th { cursor: pointer; user-select: none; }
+.lh-creative th:hover { background: var(--line); }
+.lh-creative th.is-sorted { color: var(--ink); }
+.lh-search { flex: 0 1 240px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px;
+  font: inherit; font-size: 12px; color: var(--body); }
+.lh-pager { display: flex; justify-content: center; gap: 6px; }
+.lh-pg { min-width: 28px; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 4px 8px;
+  font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; }
+.lh-pg.is-on { border-color: var(--ink); background: var(--ink); color: #fff; }
+.lh-pg:disabled { opacity: .4; cursor: default; }
+
+.lh-collapse-bar { margin-bottom: -4px; }
+.lh-toggle { cursor: pointer; }
+.lh-toggle:hover { background: var(--sub-bg); }
+.lh-caret { border: none; background: none; color: var(--label); font-size: 11px; width: 16px; cursor: pointer; padding: 0; margin-right: 2px;
+  transition: transform .15s; }
+.lh-caret.is-closed { transform: rotate(-90deg); }
+
+/* 일반 표 (MTD 목표 달성 현황 등) */
+.lh-plain td { text-align: right; }
+.lh-plain td.lh-name, .lh-plain td.lh-left { text-align: left; }
+.lh-plain td.lh-center { text-align: center; }
+.lh-cellbar { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.lh-cellbar .lh-bar { width: 64px; margin: 0; flex: none; }
+.lh-cell-sub { font-size: 11px; color: var(--label); }
+.lh-plain td.lh-hl, .lh-plain th.lh-hl { background: var(--sub-bg); border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+.lh-plain th.lh-group { border-bottom: 1px solid var(--line); }
+.lh-plain th.lh-hl { white-space: normal; min-width: 132px; line-height: 1.4; }
+.lh-plain td, .lh-plain th { padding-left: 10px; padding-right: 10px; }
+.lh-plain .lh-cellbar .lh-bar { width: 48px; }
+
+/* 최우수 소재 카드 */
+.lh-best { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.lh-best-group { display: flex; flex-direction: column; gap: 8px; }
+.lh-best-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.lh-best-desc { font-size: 12px; color: var(--label); }
+.lh-best-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.lh-ccard { border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.lh-ccard-top { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.lh-ccard-top .lh-mdot { margin-right: 0; }
+.lh-rank { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--ink); color: #fff; font-size: 11px; font-weight: 700; }
+.lh-thumb { aspect-ratio: 4 / 3; background: var(--line-soft); border-radius: 6px; display: flex; align-items: center;
+  justify-content: center; overflow: hidden; }
+.lh-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.lh-thumb-empty { font-size: 12px; color: var(--muted); }
+.lh-ccard-name { font-size: 13px; font-weight: 600; color: var(--ink); word-break: break-all; }
+.lh-ccard-val { display: flex; align-items: baseline; justify-content: space-between; font-size: 12px; }
+.lh-ccard-val strong { font-size: 20px; color: var(--ink); }
+.lh-ccard-sub { font-size: 11px; color: var(--muted); }
+
+/* 분석 카드 (MTD 매체-상품 분석) */
+.lh-analysis { display: flex; flex-direction: column; gap: 10px; }
+.lh-analysis-item { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.lh-analysis-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lh-analysis-head .lh-mdot { margin-right: 0; }
+.lh-analysis-head h3 { font-size: 14px; font-weight: 700; color: var(--ink); }
+.lh-analysis-text { font-size: 13px; line-height: 1.6; color: var(--body); }
+.lh-analysis-text strong { color: var(--ink); }
+.lh-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  background: var(--line-soft); color: var(--label); }
+.lh-tag.tone-red { background: #fef2f2; color: var(--up); }
+.lh-tag.tone-green { background: #f0fdf4; color: var(--green); }
+.lh-tag.tone-yellow { background: #fffbeb; color: #b45309; }
+
+/* 계층 표 (LHKit.treeTable) — Claude/GPT판 report_kit.css와 동일 */
+.lh-tree { font-size: 12.5px; }
+.lh-tree-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.lh-tree-search { flex: 1 1 220px; min-width: 0; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 6px 12px; font-size: 12px; color: #374151; }
+.lh-tree-bar button { border: 1px solid #e2e8f0; background: #fff; border-radius: 8px; padding: 6px 10px;
+  font-size: 12px; color: #374151; cursor: pointer; }
+.lh-tree-bar button:hover { background: #f8fafc; }
+.lh-tree-cols { position: relative; }
+.lh-tree-colmenu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; background: #fff;
+  border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  padding: 8px; max-height: 320px; overflow: auto; min-width: 200px; }
+.lh-tree-colmenu label { display: flex; gap: 6px; align-items: center; padding: 4px 6px; white-space: nowrap;
+  cursor: pointer; border-radius: 4px; }
+.lh-tree-colmenu label:hover { background: #f1f5f9; }
+.lh-tree-colacts { display: flex; gap: 6px; padding: 0 0 6px; margin-bottom: 6px; border-bottom: 1px solid #f1f5f9; }
+.lh-tree-colacts button { padding: 3px 8px !important; font-size: 11px !important; }
+.lh-tree-scroll { overflow: auto; max-height: 640px; border: 1px solid #e2e8f0; border-radius: 8px; }
+.lh-tree-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+.lh-tree-table th { position: sticky; top: 0; z-index: 2; background: #f1f5f9; color: #475569; font-weight: 600;
+  padding: 8px 10px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+.lh-tree-table th.lh-m { text-align: right; cursor: pointer; user-select: none; }
+.lh-tree-table th.lh-m:hover { background: #e2e8f0; }
+.lh-tree-table th.lh-sorted { color: #1e293b; }
+.lh-tree-table .lh-arrow { color: #94a3b8; font-size: 11px; }
+.lh-tree-table th.lh-sorted .lh-arrow { color: #2563eb; }
+.lh-tree-table th.lh-lv { text-align: left; }
+.lh-tree-table th.lh-lv:nth-child(4) { border-right: 1px solid #e2e8f0; }
+.lh-tree-table td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; color: #374151; vertical-align: middle; }
+/* 이름 열: 자르지 않고 줄바꿈한다(긴 캠페인·광고명도 전부 보이게). 공백 없는 긴 이름은 아무 곳에서나 끊는다. */
+.lh-tree-table td.lh-lv { min-width: 110px; max-width: 240px; white-space: normal; word-break: keep-all;
+  overflow-wrap: anywhere; line-height: 1.45; vertical-align: top; }
+.lh-tree-table th.lh-lv { min-width: 110px; }
+.lh-tree-table th.lh-lv:nth-child(n+2), .lh-tree-table td.lh-lv:nth-child(n+2) { min-width: 180px; }
+.lh-tree-table td.lh-m { vertical-align: top; }
+.lh-namebox { display: flex; align-items: flex-start; gap: 2px; }
+.lh-namebox > span { min-width: 0; }
+.lh-tree-table td.lh-name { font-weight: 500; }
+.lh-tree-table td.lh-all { color: #94a3b8; }
+.lh-tree-table td.lh-m { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lh-tree-table tr.lh-depth0 td { background: #f8fafc; }
+.lh-tree-table tr.lh-depth0 td.lh-name { font-weight: 700; color: #1e293b; }
+.lh-tree-table tr:hover td { background: #eff6ff; }
+.lh-tog { flex: none; line-height: 1.8; border: none; background: none; cursor: pointer; color: #64748b; font-size: 10px; width: 18px;
+  padding: 0; margin-right: 4px; }
+.lh-tog-sp { flex: none; display: inline-block; width: 22px; }
+.lh-v { color: #1e293b; }
+.lh-d { font-size: 10.5px; margin-top: 2px; }
+.lh-up { color: #dc2626; }
+.lh-down { color: #2563eb; }
+.lh-d0 { color: #94a3b8; }
+.lh-more td { background: #fff !important; }
+.lh-more button { border: 1px dashed #cbd5e1; background: #fff; border-radius: 6px; padding: 4px 10px;
+  font-size: 11.5px; color: #475569; cursor: pointer; }
+.lh-empty { text-align: center; color: #94a3b8; padding: 20px !important; }
+.lh-tree-note { font-size: 11px; color: #94a3b8; margin-top: 8px; line-height: 1.6; }
+
+
+/* 표시 기준(임계치) 바 — 입력란 제거됨(2026-10-11), 예전 HTML 호환용 */
+.lh-thr { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--label); margin-top: 8px; }
+.lh-thr-title { font-weight: 600; color: var(--ink); }
+.lh-thr-field { display: inline-flex; align-items: center; gap: 4px; }
+.lh-thr-input { width: 56px; border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; font: inherit; font-size: 12px;
+  color: var(--ink); text-align: right; }
+
+/* 차원 필터: 검색 + 드롭다운 */
+.lh-filter { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.lh-dd-wrap { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.lh-dd { position: relative; }
+.lh-dd > summary { list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px;
+  font-size: 12px; color: var(--ink); background: #fff; }
+.lh-dd > summary::-webkit-details-marker { display: none; }
+.lh-dd[open] > summary { background: var(--sub-bg); }
+.lh-dd-list { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; min-width: 200px; max-height: 280px; overflow: auto;
+  background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 23, 42, .12); padding: 6px; }
+.lh-dd-list label { display: flex; align-items: center; gap: 6px; padding: 4px 6px; font-size: 12px; white-space: nowrap;
+  border-radius: 4px; cursor: pointer; }
+.lh-dd-list label:hover { background: var(--line-soft); }
+.lh-tree-dd { display: inline-flex; }
+
+/* 피벗 표: 기준 차원 칩 */
+.lh-pivot-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.lh-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lh-chips-title { font-size: 12px; font-weight: 600; color: var(--ink); }
+.lh-chips-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.lh-chip { display: inline-flex; align-items: center; border: 1px dashed var(--line); border-radius: 999px; padding: 3px 10px;
+  font: inherit; font-size: 12px; color: var(--label); background: #fff; cursor: pointer; }
+.lh-chip.is-on { border-style: solid; border-color: var(--ink); background: var(--ink); color: #fff; padding: 0; overflow: hidden; }
+.lh-chip-name, .lh-chip-mv { border: none; background: none; color: inherit; font: inherit; font-size: 12px; cursor: pointer; padding: 3px 8px; }
+.lh-chip-mv { padding: 3px 5px; opacity: .7; }
+.lh-chip-mv:hover, .lh-chip-name:hover { background: rgba(255, 255, 255, .15); opacity: 1; }
+.lh-pivot .lh-more td { text-align: left; }
+.lh-pivot .lh-more button { border: 1px dashed var(--line); background: #fff; border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+
+/* KPI 카드 확장: 상태 태그·직접 정한 줄 */
+.lh-kpi .lh-tag { margin-bottom: 2px; }
+.lh-kpi-line { font-size: 12px; color: var(--body); }
+.lh-kpis.is-wide { grid-template-columns: repeat(2, 1fr); }
+
+/* Weekly Summary (소진·효율 그룹) */
+.lh-gsum { display: flex; flex-direction: column; gap: 16px; }
+.lh-gsum-group { display: flex; flex-direction: column; gap: 10px; }
+.lh-gsum-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+.lh-gsum-lead { font-size: 13px; line-height: 1.6; color: var(--body); }
+.lh-gsum-media { border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; display: flex; flex-direction: column; gap: 6px; }
+.lh-gsum-mhead { display: flex; align-items: center; font-size: 13px; color: var(--ink); }
+.lh-gsum-desc { font-size: 13px; line-height: 1.6; color: var(--body); }
+.lh-gsum-list { list-style: none; display: flex; flex-direction: column; gap: 4px; padding-left: 14px; }
+.lh-gsum-list li { font-size: 12.5px; line-height: 1.6; color: var(--body); }
+.lh-gsum-list li::before { content: '·'; margin: 0 6px 0 -12px; color: var(--muted); }
+.lh-gsum-label { color: var(--ink); }
+.lh-gsum-label.tone-red { color: var(--up); }
+.lh-gsum-label.tone-yellow { color: #b45309; }
+.lh-gsum-label.tone-green { color: var(--green); }
+.lh-gsum strong { color: var(--ink); }
+
+/* 선택형 카드(브랜드 선택) */
+.lh-select-bar { display: flex; justify-content: flex-end; }
+.lh-select-label { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--label); }
+.lh-select { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 12px; color: var(--ink);
+  background: #fff; min-width: 120px; }
+
+/* 선택 표 (Dimension·지표 메뉴) */
+.lh-pick-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.lh-pick-left { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.lh-pick-info { font-size: 12px; color: var(--label); }
+.lh-picker { position: relative; }
+.lh-picker-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: #fff; border-radius: 8px;
+  padding: 5px 10px; font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; }
+.lh-picker.is-open .lh-picker-btn { border-color: var(--accent); }
+.lh-picker-n { font-weight: 700; }
+.lh-picker-caret { color: var(--label); font-size: 10px; }
+.lh-picker.is-open .lh-picker-caret { transform: rotate(180deg); }
+.lh-picker-panel { display: none; position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; min-width: 220px; background: #fff;
+  border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 23, 42, .12); padding: 6px; }
+.lh-picker.is-open .lh-picker-panel { display: block; }
+.lh-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px 8px;
+  margin-bottom: 4px; border-bottom: 1px solid var(--line-soft); font-size: 11px; color: var(--label); }
+.lh-picker-reset { border: none; background: none; font: inherit; font-size: 11px; color: var(--accent); cursor: pointer; }
+.lh-picker-item { display: flex; align-items: center; gap: 2px; padding: 2px 4px; border-radius: 4px; }
+.lh-picker-item:hover { background: var(--line-soft); }
+.lh-picker-item label { flex: 1; display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; cursor: pointer; padding: 3px 2px; }
+.lh-picker-mv { border: none; background: none; font: inherit; font-size: 12px; color: var(--label); width: 22px; cursor: pointer; border-radius: 4px; }
+.lh-picker-mv:hover:not(:disabled) { background: var(--line); color: var(--ink); }
+.lh-picker-mv:disabled { color: var(--line); cursor: default; }
+.lh-pick td.lh-name { white-space: nowrap; }
+.lh-pick td.lh-num { text-align: right; font-variant-numeric: tabular-nums; }
+.lh-pick td.lh-base { color: var(--label); }
+.lh-pick td.lh-rate { min-width: 120px; }
+.lh-pick .lh-cellbar { justify-content: flex-start; }
+.lh-pick .lh-cellbar .lh-bar { flex: 1; width: auto; min-width: 48px; }
+.lh-pick .lh-cellbar span { min-width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
+.lh-pick-goal tr.is-row td.lh-name:empty { border-bottom-color: transparent; }
+.lh-showall { padding: 6px 10px; }
+.lh-labeled { display: flex; align-items: flex-start; gap: 8px; }
+.lh-mini-label { font-size: 12px; font-weight: 600; color: var(--label); white-space: nowrap; padding-top: 6px; }
+.lh-labeled .lh-legend { justify-content: flex-start; }
+
+@media (max-width: 720px) {
+  body { padding: 12px; }
+  .lh-kpis { grid-template-columns: repeat(2, 1fr); }
+  .lh-best-cards { grid-template-columns: 1fr; }
+}
+@media print {
+  body { background: #fff; padding: 0; }
+  .lh-print, .lh-search, .lh-pager, .lh-cmp, .lh-thr, .lh-dd-wrap, .lh-chips, .lh-pick-left, .lh-showall { display: none !important; }
+  .lh-section { break-inside: avoid; }
+  .lh-tree-bar, .lh-more { display: none !important; }
+  .lh-tree-scroll { max-height: none; overflow: visible; }
+  canvas { max-width: 100%; }
+  @page { margin: 15mm; size: A4; }
+}

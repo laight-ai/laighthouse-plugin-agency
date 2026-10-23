@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "laighthouse": {
+      "type": "http",
+      "url": "https://app.laight.ai/api/mcp"
+    }
+  }
+}

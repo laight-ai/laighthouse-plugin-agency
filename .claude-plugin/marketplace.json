@@ -1,0 +1,29 @@
+{
+  "name": "laighthouse-agency",
+  "description": "라이트하우스 에이전시 플러그인 마켓플레이스 — 대행사 양식 보고서(TBWA 등)를 MCP 연동 데이터로 렌더링합니다.",
+  "owner": {
+    "name": "LaightAI",
+    "email": "minhyeok.son@laight.ai"
+  },
+  "plugins": [
+    {
+      "name": "laighthouse-agency",
+      "displayName": "Laighthouse Agency",
+      "source": "./plugins/laighthouse-agency",
+      "description": "대행사 양식 보고서 플러그인 — MCP 연동 데이터(ELT 기반 get_ad_performance·get_target_progress_v2)를 TBWA 보고서(Comment·Summary·Product/Target/Placement/Weekly/Daily 표·Mix 계획표, HTML)로 렌더링합니다.",
+      "version": "1.2.0",
+      "author": {
+        "name": "LaightAI",
+        "email": "minhyeok.son@laight.ai"
+      },
+      "keywords": [
+        "analytics",
+        "report",
+        "agency",
+        "tbwa",
+        "laighthouse"
+      ],
+      "category": "analytics"
+    }
+  ]
+}

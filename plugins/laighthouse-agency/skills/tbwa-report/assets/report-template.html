@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__ · TBWA skill report</title>
+<style>
+__REPORT_KIT_CSS__
+</style>
+<style>
+/* TBWA 보고서 전용 — 톤은 report_kit.css 변수 그대로. 넓은 표를 위해 본문은 화면 폭을 다 쓰고 좌우 여백을 줄인다
+ * (오른쪽은 목차 자리만 비운다). */
+body { padding: 16px 60px 16px 16px; }
+.lh-page { max-width: none; }
+.lh-section { padding: 16px; scroll-margin-top: 12px; }
+.tb-filter ~ .lh-section { scroll-margin-top: 76px; }   /* 위에 붙는 필터 바 아래로 */
+.tb-eyebrow { font-size: 12px; font-weight: 600; color: var(--accent); letter-spacing: .02em; }
+.tb-hmeta { display: flex; gap: 24px; font-size: 12px; }
+.tb-hmeta > div { display: flex; flex-direction: column; gap: 2px; }
+.tb-hmeta .k { color: var(--muted); }
+.tb-hmeta .v { font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+/* Comment */
+.tb-comment { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; font-size: 13px; line-height: 1.7; color: var(--body);
+  display: flex; flex-direction: column; gap: 8px; }
+.tb-comment strong { color: var(--ink); font-weight: 700; }
+.tb-ul { padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
+.tb-ul2 { list-style: circle; padding-left: 22px; margin-top: 4px; display: flex; flex-direction: column; gap: 4px; }
+.tb-weekly { gap: 16px; }
+.tb-wsec { display: flex; flex-direction: column; gap: 4px; }
+.tb-wh { font-size: 14px; font-weight: 700; color: var(--ink); }
+.tb-wgroup { padding: 6px 0 0 16px; display: flex; flex-direction: column; gap: 2px; }
+.tb-wmedia { font-weight: 700; color: var(--ink); }
+
+/* 설정 메뉴: 오른쪽 정렬, 지표 그룹(기본/선택) 구분선 */
+.tb-menus { display: flex; gap: 8px; }
+.tb-menus .lh-picker-panel { left: auto; right: 0; width: 280px; max-height: 420px; overflow: auto; }
+.lh-picker-item.tb-sep { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 4px; border-radius: 0; }
+
+/* 월·미디어 필터 바 (스크롤해도 위에 붙는다) */
+.tb-filter { position: sticky; top: 0; z-index: 10; background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; }
+.tb-fgroup { display: flex; align-items: center; gap: 6px; }
+.tb-flabel { font-size: 12px; font-weight: 700; color: var(--ink); margin-right: 4px; }
+.tb-fdiv { width: 1px; height: 20px; background: var(--line); }
+.tb-reset { border: none; background: none; font: inherit; font-size: 12px; color: var(--accent); cursor: pointer; }
+.tb-fnote { margin-left: auto; font-size: 11px; color: var(--muted); }
+
+/* 표 */
+.tb-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+.tb-wrap.is-tall { max-height: 720px; }
+.tb-table { border-collapse: separate; border-spacing: 0; font-size: 12px; width: 100%; font-variant-numeric: tabular-nums; }
+.tb-table th { position: sticky; top: 0; z-index: 2; background: var(--head-bg); color: #475569; font-weight: 600; height: 34px;
+  padding: 0 8px; white-space: nowrap; border-bottom: 1px solid var(--line); }
+.tb-table .tb-hrow2 th { top: 34px; }
+.tb-table th.tb-gh { background: var(--line); color: var(--ink); font-weight: 700; text-align: center; }
+.tb-table td { height: 30px; padding: 0 8px; color: var(--body); white-space: nowrap; border-bottom: 1px solid var(--line-soft); background: #fff; }
+/* 이름 칸: 자르지 않고 다 보여 주되, 긴 이름(캠페인·광고그룹)은 칸 안에서 줄을 바꿔 표 폭을 지킨다 */
+.tb-table td.tb-lab > span { display: inline-block; width: max-content; max-width: 200px; padding: 4px 0; white-space: normal; word-break: keep-all;
+  overflow-wrap: anywhere; line-height: 1.35; vertical-align: middle; }
+.tb-table .tb-c { text-align: center; }
+.tb-table .tb-r { text-align: right; }
+.tb-table .tb-b { font-weight: 700; }
+.tb-table td.tb-num { text-align: right; }
+.tb-table .tb-edge { border-left: 1px solid var(--line); }
+.tb-table .tb-edge2 { border-left: 2px solid var(--line); }
+/* 접기 ▼/▶ (Claude판 계층 표와 같은 모양) */
+.tb-tog { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-right: 4px; padding: 0;
+  border: none; border-radius: 4px; background: none; color: var(--label); font-size: 10px; line-height: 1; cursor: pointer;
+  vertical-align: middle; }
+.tb-tog:hover { background: var(--line); color: var(--ink); }
+.tb-grand .tb-tog { color: #fff; }
+/* 단계 접기: 펼침 [미디어][상품][전체] */
+.tb-depth { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.tb-depth-k { font-size: 11px; color: var(--muted); padding: 0 6px 0 6px; }
+.tb-depth-b { border: none; background: none; border-radius: 6px; padding: 4px 8px; font: inherit; font-size: 12px; color: var(--label); cursor: pointer; white-space: nowrap; }
+.tb-depth-b:hover { background: var(--sub-bg); color: var(--ink); }
+.tb-depth-b.is-on { background: var(--ink); color: #fff; }
+/* 피벗: 미디어 = 연한 파랑, 둘째 단계 = 회색, 묶음 행은 같은 배경으로 이어 보이게 */
+.tb-pivot td.tb-g0 { background: #eff6ff; font-weight: 700; color: var(--ink); border-bottom-color: #eff6ff; }
+.tb-pivot td.tb-g1 { background: var(--sub-bg); font-weight: 700; border-bottom-color: var(--sub-bg); }
+.tb-pivot td.tb-g2 { font-weight: 600; border-bottom-color: #fff; }
+.tb-pivot tr.tb-subrow0 td { background: #eff6ff; font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--line); }
+.tb-pivot tr.tb-subrow1 td:not(.tb-g0) { background: var(--sub-bg); font-weight: 700; border-bottom: 1px solid var(--line); }
+.tb-pivot tr.tb-subrow2 td:not(.tb-g0):not(.tb-g1) { font-weight: 600; border-bottom: 1px solid var(--line); }
+.tb-pivot td.tb-g0leaf { border-bottom: 1px solid var(--line); }
+.tb-pivot tr.tb-total td { font-weight: 700; color: var(--ink); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+/* Summary: 미디어 요약 = 연한 파랑, 월 요약 = 회색, Total 요약 = 진한 행 */
+.tb-sum td.tb-lead { background: var(--sub-bg); font-weight: 700; border-bottom-color: var(--sub-bg); }
+.tb-sum td.tb-sg0 { font-weight: 700; border-bottom-color: #fff; }
+.tb-sum td.tb-sg1 { font-weight: 600; border-bottom-color: #fff; }
+.tb-sum tr.tb-subrow td:not(.tb-lead):not(.tb-sg0), .tb-sum tr.tb-subrow td.tb-sublabel { background: #eff6ff; font-weight: 700; border-bottom: 1px solid var(--line); }
+.tb-sum tr.tb-msum td { background: var(--head-bg); font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--line); }
+.tb-sum tr.tb-grand td { background: var(--ink); color: #fff; font-weight: 700; border-bottom: none; }
+.tb-camp { width: 120px; height: 24px; padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; background: #fff;
+  font: inherit; font-size: 12px; font-weight: 700; color: var(--ink); text-align: center; outline: none; }
+.tb-camp:focus { border-color: var(--accent); }
+
+/* Mix: 입력 칸(파란 글씨) · 입력 불가(회색) · 디멘전 단계별 배경 · 월 예산 머리글 */
+.tb-legend { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--label); white-space: nowrap; }
+.tb-legend b { color: var(--accent); font-weight: 600; }
+.tb-mix th { background: var(--ink); color: #fff; }
+.tb-mix th.tb-hm { background: #475569; }
+.tb-mix td.tb-mx-c { background: #eff6ff; font-weight: 700; border-bottom-color: #eff6ff; }
+.tb-mix td.tb-mx-m { background: var(--head-bg); font-weight: 700; border-bottom-color: var(--head-bg); }
+.tb-mix td.tb-mx-p { background: var(--sub-bg); font-weight: 700; border-bottom-color: var(--sub-bg); }
+.tb-mix td.tb-mx-leaf { border-bottom-color: var(--line-soft); }
+.tb-mix tr.tb-mxsub-0 td { background: #eff6ff; font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--line); }
+.tb-mix tr.tb-mxsub-1 td:not(.tb-mx-c) { background: var(--head-bg); font-weight: 700; border-bottom: 1px solid var(--line); }
+.tb-mix tr.tb-grand td { background: var(--ink); color: #fff; font-weight: 700; border-bottom: none; }
+.tb-mix td.tb-na { background: var(--sub-bg); }
+.tb-mix td.tb-inp { padding: 0 4px; color: var(--accent); font-weight: 600; white-space: nowrap; }
+.tb-in { width: 84px; height: 24px; padding: 0 4px; border: 1px solid transparent; border-radius: 4px; background: transparent;
+  font: inherit; font-size: 12px; font-weight: inherit; color: inherit; text-align: right; font-variant-numeric: tabular-nums; outline: none; }
+.tb-in:hover { border-color: var(--line); }
+.tb-in:focus { border-color: var(--accent); background: #fff; }
+td.tb-inp .tb-in + span { margin-left: 1px; }
+td.tb-inp .tb-in-text, td .tb-in-text { color: var(--accent); }
+.tb-in-text { width: 100%; min-width: 150px; border-color: var(--line); background: #fff; text-align: center; font-weight: 700; color: var(--accent); }
+
+/* '외 N개' 줄 — 접힌 나머지의 합계 + 더 보기 */
+.tb-table tr.tb-morerow td.tb-more, .tb-table tr.tb-morerow td.tb-num { background: #fff; color: var(--label); font-weight: 400; border-bottom: 1px dashed var(--line); }
+.tb-table td.tb-more { white-space: nowrap; }
+.tb-morebtn { margin-left: 8px; border: 1px dashed #cbd5e1; background: #fff; border-radius: 6px; padding: 1px 8px;
+  font: inherit; font-size: 11px; color: #475569; cursor: pointer; }
+.tb-morebtn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* 엑셀로 가져가기: 설정 메뉴 옆 아이콘 버튼 + 하단 토스트 */
+.tb-menus { align-items: center; }
+.tb-xl { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 28px; padding: 0; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff; color: var(--label); cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
+.tb-xl:hover { color: var(--green); border-color: var(--green); background: #f0fdf4; }
+.tb-xl.is-done { color: #fff; border-color: var(--green); background: var(--green); }
+.tb-toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); z-index: 50; padding: 9px 16px; border-radius: 999px;
+  background: var(--ink); color: #fff; font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+.tb-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+.tb-hidden { position: fixed; left: -9999px; top: 0; }
+
+/* 오른쪽 목차 — 좁은 화면은 점만, 마우스를 올리면 제목이 펼쳐진다. 넓은 화면(1800px~)은 늘 펼쳐 둔다 */
+.tb-toc { position: fixed; right: 10px; top: 50%; transform: translateY(-50%); z-index: 30; display: flex; flex-direction: column; gap: 1px;
+  padding: 8px 6px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 4px 16px rgba(15, 23, 42, .08);
+  max-height: calc(100vh - 32px); overflow: auto; }
+.tb-toc-h { font-size: 11px; font-weight: 700; color: var(--muted); padding: 2px 6px 4px; }
+.tb-toc-div { font-size: 10px; color: var(--muted); padding: 6px 6px 2px; margin-top: 4px; border-top: 1px solid var(--line-soft); white-space: nowrap; }
+.tb-toc-a, .tb-toc-top { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; font: inherit; font-size: 12px;
+  color: var(--label); text-decoration: none; white-space: nowrap; border: none; background: none; cursor: pointer; text-align: left; }
+.tb-toc-a:hover, .tb-toc-top:hover { background: var(--sub-bg); color: var(--ink); }
+.tb-toc-a.is-on { color: var(--accent); font-weight: 700; background: #eff6ff; }
+.tb-toc-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.tb-toc-a.is-on .tb-toc-dot { background: var(--accent); }
+.tb-toc-top { margin-top: 4px; border-top: 1px solid var(--line-soft); border-radius: 0 0 6px 6px; }
+.tb-toc-top .tb-toc-dot { background: none; width: 8px; height: auto; font-size: 11px; line-height: 1; display: flex; justify-content: center; }
+.tb-toc:not(:hover):not(:focus-within) .tb-toc-t, .tb-toc:not(:hover):not(:focus-within) .tb-toc-h,
+.tb-toc:not(:hover):not(:focus-within) .tb-toc-div { display: none; }
+.tb-toc:not(:hover):not(:focus-within) .tb-toc-div + .tb-toc-a { margin-top: 6px; border-top: 1px solid var(--line-soft); border-radius: 0; }
+@media (min-width: 1800px) {
+  body { padding-right: 196px; }
+  .tb-toc { width: 172px; }
+  .tb-toc .tb-toc-t, .tb-toc .tb-toc-h, .tb-toc .tb-toc-div { display: block !important; }
+  .tb-toc .tb-toc-div + .tb-toc-a { margin-top: 0 !important; border-top: none !important; border-radius: 6px !important; }
+}
+@media (max-width: 720px) { body { padding: 12px; } .tb-toc { display: none; } }
+
+@media print {
+  .tb-filter { position: static; }
+  body { padding: 0; }
+  .tb-menus, .tb-tog, .tb-toast, .tb-toc { display: none !important; }
+  .tb-wrap.is-tall { max-height: none; }
+}
+</style>
+</head>
+<body>
+<main class="lh-page" id="tbwa">
+  <header class="lh-header">
+    <div>
+      <div class="tb-eyebrow">TBWA skill report</div>
+      <h1>__TITLE__</h1>
+    </div>
+    <div class="tb-hmeta">
+      <div><span class="k">집계 기간</span><span class="v" data-h="period"></span></div>
+      <div><span class="k">매체</span><span class="v" data-h="media"></span></div>
+    </div>
+  </header>
+
+  <section class="lh-section">
+    <h2>Daily Comment <span class="lh-muted" data-meta></span></h2>
+    <div data-sec="c-daily"></div>
+  </section>
+
+  <section class="lh-section">
+    <h2>Weekly Comment <span class="lh-muted" data-meta></span></h2>
+    <div data-sec="c-weekly"></div>
+  </section>
+
+  <section class="lh-section" data-sec="total"></section>
+  <section class="lh-section" data-sec="monthly"></section>
+
+  <div class="tb-filter" data-sec="filter"></div>
+
+  <section class="lh-section" data-sec="product"></section>
+  <section class="lh-section" data-sec="target"></section>
+  <section class="lh-section" data-sec="place"></section>
+  <section class="lh-section" data-sec="weekly"></section>
+  <section class="lh-section" data-sec="daily"></section>
+  <section class="lh-section" data-sec="mix"></section>
+
+  <footer class="lh-footer">Engineered by Laighthouse AI</footer>
+</main>
+<script>
+__TBWA_JS__
+</script>
+<script>
+const REPORT = __REPORT_JSON__;
+window.TBWA.mount(REPORT);
+</script>
+</body>
+</html>
