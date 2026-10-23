@@ -193,11 +193,17 @@ def main():
     # Cowork는 초대형 응답을 스스로 파일로 빼고 "Output has been saved to <경로>" 안내만 넘긴다
     # (실측: 마크다운 시절 naver ad 단위 101,905자 → 1,325자 안내문). 그 파일을 직접 읽어 정상
     # 캡처로 전환한다 — 모델이 offset/limit으로 원본을 더듬는 경로를 원천 차단.
+    # Claude Code CLI도 같은 방식이다("Error: result (53,584 characters) exceeds maximum allowed tokens. Output has
+    # been saved to …\tool-results\….txt" — 안내문이 2,000자를 넘기도 한다, 2026-10-23 실측). 그래서 길이와 관계없이
+    # JSON 봉투가 아닌 안내문이면 그 파일을 읽는다. Windows는 그 경로가 260자를 넘기 쉬워 긴 경로 접두사로 연다.
     saved_match = re.search(r"saved to (\S+?\.txt)", text)
-    if len(text) <= MIN_CHARS and saved_match:
+    if saved_match and not text.lstrip().startswith("{"):
         saved_path = saved_match.group(1)
+        open_path = saved_path
+        if os.name == "nt" and not open_path.startswith("\\\\?\\"):
+            open_path = "\\\\?\\" + os.path.abspath(open_path)
         try:
-            with open(saved_path, encoding="utf-8") as f:
+            with open(open_path, encoding="utf-8-sig") as f:
                 redirected = unwrap_json_result(f.read())
         except OSError:
             _breadcrumb(f"skip: oversized notice but cannot read {saved_path} — pass-through")
