@@ -56,8 +56,20 @@ def read_payload(argv=None, stdin=None):
     argv = _sys.argv if argv is None else argv
     if len(argv) > 1 and argv[1] not in ("-", ""):
         with open(os.path.expanduser(argv[1]), encoding="utf-8-sig") as f:
-            return json.load(f)
-    return json.load(stdin or _sys.stdin)
+            payload = json.load(f)
+    else:
+        payload = json.load(stdin or _sys.stdin)
+    return merge_base(payload)
+
+
+def merge_base(payload):
+    """{"base": <prepare.py가 만든 build.json 경로>, ...} → base 내용에 입력 키를 덮어쓴 dict(입력 키가 우선)."""
+    if not isinstance(payload, dict) or not payload.get("base"):
+        return payload
+    with open(os.path.expanduser(payload["base"]), encoding="utf-8-sig") as f:
+        merged = json.load(f)
+    merged.update({k: v for k, v in payload.items() if k != "base"})
+    return merged
 
 
 def _unwrap_tool_result(obj):
