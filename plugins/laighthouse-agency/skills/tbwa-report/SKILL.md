@@ -6,7 +6,7 @@ description: >
   예산·소진율·진행율과 목표(e.*)·달성률을 담은 Total/Monthly Summary, 월·미디어 필터로 보는 Product·Target·Placement·Weekly·Daily 표
   (디멘전·지표 설정, 접기), 예산·단가를 입력해 예상 성과를 보는 Mix 계획표를 담은 HTML 보고서. 사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
-  version: "1.2.3"
+  version: "1.3.0"
 ---
 
 > ⚡ **thinking 지침**: thinking은 최대한 짧게 유지한다. 바로 MCP 호출 → 스크립트 실행 → 완료 순서로 진행한다.
@@ -37,15 +37,16 @@ MCP 데이터를 받아 **TBWA 보고서**(HTML 한 파일)로 렌더링한다.
 ## 실행 방식 절대 지침
 
 > 🧩 **응답을 빌더에 넘기는 규칙**
-> 1. 이 플러그인의 PostToolUse 훅이 `group_by`가 있는 `get_ad_performance`의 큰 응답을 파일로 저장하고,
->    모델에게는 `[laighthouse-capture-hook] ... 저장됨: <경로>` 스텁만 보여 준다 → 그 **경로**를 `json_files`에 넣는다.
->    스텁이 가리키는 파일을 Read로 열어 컨텍스트로 가져오지 않는다.
-> 2. 스텁 없이 원본 JSON 봉투가 그대로 온 작은 응답은 **한 글자도 바꾸지 않고** 문자열로 `json`에 넣는다(혼용 가능).
+> 1. 플러그인 저장 훅이 응답 원본을 파일로 남긴다 — `assets/prepare.py`가 그 파일로 빌더 입력(build.json)을 만든다.
+>    응답 원문(봉투·목표 표)을 직접 옮겨 적지 않는다. 캡처 훅 스텁(`[laighthouse-capture-hook] ... 저장됨`)도 무시해도 된다.
+> 2. 모델이 빌더에 직접 넣는 것은 차원 확인 에러 메시지 원문(`dims`)뿐이다.
+> 3. 저장 훅이 없는 호스트(prepare.py가 `note`)에서만 예전 방식대로 build.json을 직접 만든다: 스텁 경로는 `json_files`에,
+>    원본이 그대로 온 작은 응답은 **한 글자도 바꾸지 않고** `json`에 넣는다. build.json은 Write로 만들고 경로를 인자로 넘긴다.
 >    🚫 값만 골라 옮겨 적기, 봉투를 새로 조립하기, 다른 호출의 값을 재사용하기는 전부 금지다.
-> 3. 빌더 입력 JSON은 파일로 만들고(Write) 경로를 인자로 넘긴다: `python3 assets/build_report.py <build.json 경로>`.
 
 - 렌더링은 **미리 검증된 asset 스크립트**만 한다(`.py`/`.js` 신규 작성, HTML 직접 작성 금지).
   - `assets/discover.py` — 매체별 일별 응답(파일 경로 또는 stdin) → `metric_keys`/`currency`/`missing`.
+  - `assets/prepare.py` — 저장된 응답 → build.json(매체별 일별·월별 표 데이터·Placement·월별 목표 원문).
   - `assets/build_report.py` — 봉투·목표 원문 → 최종 HTML 1개(Comment 생성 포함). 입력 스키마는 docstring.
 
 > ℹ️ 이 호스트의 Bash 기본 셸은 `sh`(dash)일 수 있다 — bash 전용 문법은 쓰지 않는다. `python3`이 없으면 `python`으로 부른다.
@@ -68,20 +69,34 @@ MCP 데이터를 받아 **TBWA 보고서**(HTML 한 파일)로 렌더링한다.
      (스텁 없이 원본이 왔으면 stdin으로). `missing`이 있으면 사용자에게 한 번에 묻는다. 매체 목록도 여기서 얻는다.
 3. **데이터 호출을 한 메시지에 동시 발사** (`metrics`·`filters` 생략):
    - 표 데이터: `time_grain:"day"`, `group_by` = FINE_DIMS — **달마다 1회**(첫 달은 S부터, 마지막 달은 E까지 — 겹치지 않게 나눠 받는다).
-     크기 오류면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절).
+     크기 오류면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절). 서버의 5만 행 오류뿐 아니라
+     호스트가 응답을 못 읽었다는 오류(예: "larger than 16MB")도 크기 오류다 — 그 응답은 저장되지 않으므로 바로 다시 받는다.
    - Placement 데이터: **차원 목록에 노출 위치 차원(`placement`·`노출위치`·`노출 위치`·`노출_위치`·`position` 중 처음 것)이 있을 때만** —
      `time_grain:"day"`, `group_by` = `["media", (ad_type 또는 상품 중 있는 것), 노출 위치 차원]`, 달마다 1회(표 데이터와 같은 기간 나눔).
      없으면 부르지 않는다(Placement 자리에 '노출 위치 데이터 준비 중' 안내가 나온다 — 사용자에게 묻지 않는다).
    - 예산·목표: `get_target_progress_v2` — `month` = 걸친 달마다, `cost_metric` = `metric_keys.cost`,
      `as_of_date` = 지난 달은 그 달 말일, 마지막 달은 E. **달마다 `media` 생략 1회**(응답 둘째 표에 매체·캠페인 행이 모두 온다 —
      매체마다 따로 부르지 않는다). 한 줄 메시지·에러는 "목표 없음"(원문 그대로, 에러면 빈 문자열).
-4. **빌드**: `build.json`을 Write로 만들고 빌더 1회. `out` = `~/Downloads/laighthouse-reports/{브랜드명}_tbwa_{기준_일자}.html`
-   (디렉터리는 빌더가 만든다). 빌더가 "대조 검증 실패"로 멈추면 매체별 일별 응답을 원문 그대로 다시 넣거나 다시 조회한다
-   (값을 고쳐 맞추지 않는다).
+4. **빌드 입력 준비 + 빌드**: 응답 원문을 `build.json`에 옮겨 적지 않는다 — 플러그인 저장 훅(`hooks/save_responses.py`)이
+   2·3단계 응답 원본을 파일로 남겨 두었다.
+   ```
+   python3 assets/prepare.py --brand <브랜드> --target-date <D> [--start-date <S>]
+   ```
+   → 출력의 `base`(build.json 경로). `missing`(다시 보낼 호출)이 있으면 그 호출만 다시 보내고 재실행한다(`errors`는 그 응답이
+   에러였다는 뜻). `discover.metrics_absent`는 브랜드가 주지 않는 지표라 묻지 않는다.
+   그다음 빌더 1회 — 차원 확인 에러 메시지 원문만 직접 넣는다:
+   ```
+   python3 assets/build_report.py <<'PYEOF'
+   {"base": "<prepare가 준 경로>", "dims": "<차원 확인 에러 메시지 원문>"}
+   PYEOF
+   ```
+   `out`은 `~/Downloads/laighthouse-reports/{브랜드명}_tbwa_{기준_일자}.html`(base에 들어 있다 — 바꿀 때만 `"out"`을 함께 넣는다).
+   빌더가 "대조 검증 실패"로 멈추면 매체별 일별 응답을 다시 조회하고 prepare.py부터 다시 한다(값을 고쳐 맞추지 않는다).
+   prepare.py가 `note`(저장된 응답 없음)를 내면 저장 훅이 없는 호스트다 → 아래 「빌더 입력 (build.json)」대로 직접 만든다.
 5. 완성된 HTML을 낸다 — 빌더가 위 경로에 저장했다. 채팅에서 보여 줄 수 있는 호스트(Artifact 등)면 그 파일로 게시한다.
 6. 완료 메시지는 아래 형식 그대로.
 
-## 빌더 입력 (build.json)
+## 빌더 입력 (build.json) — 저장 훅이 없는 호스트에서만 직접 만든다
 
 ```json
 {"out": "~/Downloads/laighthouse-reports/acme_tbwa_2026-10-08.html", "brand": "acme", "target_date": "2026-10-08",
