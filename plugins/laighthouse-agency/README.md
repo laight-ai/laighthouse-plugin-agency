@@ -15,12 +15,12 @@
 | MCP | laighthouse | `https://app.laight.ai/api/mcp` 연동 |
 | 훅 | save_responses | laighthouse 응답 원본을 파일로 남긴다 — 각 스킬의 `assets/prepare.py`가 빌더 입력을 만든다 |
 | 훅 | capture_ad_performance | `get_ad_performance`의 큰 응답을 파일로 저장하고 경로만 모델에 보여 준다(재타이핑 방지) |
-| 스킬 | integrated-report | 종합 리포트(HTML) + 같은 이름의 엑셀(.xlsx) 렌더링 |
+| 스킬 | overall-summary | 종합 리포트(HTML) + 같은 이름의 엑셀(.xlsx) 렌더링 |
 | 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
 
 ## 사용법
 
-> "breezm 종합 리포트 만들어줘" → `integrated-report`
+> "breezm 종합 리포트 만들어줘" → `overall-summary`
 > "breezm 종합 리포트 7월 15일부터" → 시작일 지정(기본: 전월 1일, 366일까지)
 
 > "breezm 데일리 보고서" → `daily-report` (기준일 기본: 어제)
@@ -51,7 +51,7 @@
 
 ### 엑셀 파일 (.xlsx)
 
-HTML과 같은 폴더에 같은 이름의 `.xlsx`가 함께 생긴다(`~/Downloads/laighthouse-reports/{브랜드}_integrated_{기준일}.xlsx`).
+HTML과 같은 폴더에 같은 이름의 `.xlsx`가 함께 생긴다(`~/Downloads/laighthouse-reports/{브랜드}_overall_summary_{기준일}.xlsx`).
 빌더 1회 호출이 HTML과 같은 데이터·같은 계산 규칙으로 만든다 — 추가 MCP 호출·수치 옮겨 적기 없음, openpyxl 등 설치 불필요.
 
 | 시트 | 내용 |
@@ -69,7 +69,7 @@ HTML과 같은 폴더에 같은 이름의 `.xlsx`가 함께 생긴다(`~/Downloa
 - 실행 시작에 차원 목록을 확인하고, 지표 키는 첫 응답의 지표 목록에서 정한다(prepare.py가 같은 규칙으로 다시 확인). 브랜드가 제공하지 않는 차원(상품·노출 위치 등)은
   묻지 않고 보고서에서 조용히 빠진다.
 - 예산·목표는 `get_target_progress_v2`(전체·매체·캠페인 단위)에서 읽는다. 목표가 없으면 빈칸이다.
-- 렌더링 부품은 공용 킷 `shared/assets/report_kit.*`와 스킬의 `assets/integrated_report.js`에 있다.
+- 렌더링 부품은 공용 킷 `shared/assets/report_kit.*`와 스킬의 `assets/overall_summary.js`에 있다.
 
 ## MCP 서버
 

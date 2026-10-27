@@ -27,7 +27,7 @@
 
 | 스킬 | 호출 (`group_by` = FINE_DIMS, `metrics`·`filters` 생략) | 대조 검증 상대 |
 |---|---|---|
-| integrated-report | `time_grain:"day"`, 걸친 달마다 1회 | 매체별 일별 |
+| overall-summary | `time_grain:"day"`, 걸친 달마다 1회 | 매체별 일별 |
 | daily-report | 1회: `time_grain:"day"`, D7~D0 (빌더가 기준일·전일·전주 동요일 행만 쓴다) | s3 매체 일별 · s1 전체 |
 | weekly-report | 이번주(E-6~E)·전주(E-13~E-7) **각 1회**: `time_grain:"total"` | s3 매체 일별의 그 주 합 |
 | monthly-report | 1회: `time_grain:"month"`, M-1 1일 ~ M0 말일 | s4 매체 월별 |
