@@ -15,7 +15,7 @@
 | MCP | laighthouse | `https://app.laight.ai/api/mcp` 연동 |
 | 훅 | save_responses | laighthouse 응답 원본을 파일로 남긴다 — 각 스킬의 `assets/prepare.py`가 빌더 입력을 만든다 |
 | 훅 | capture_ad_performance | `get_ad_performance`의 큰 응답을 파일로 저장하고 경로만 모델에 보여 준다(재타이핑 방지) |
-| 스킬 | tbwa-report | TBWA 보고서(HTML) 렌더링 |
+| 스킬 | tbwa-report | TBWA 보고서(HTML) + 같은 이름의 엑셀(.xlsx) 렌더링 |
 | 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
 
 ## 사용법
@@ -48,6 +48,21 @@
 4. **Mix** — 월 예산·CPM·CPC·VTR을 입력해 예상 노출·클릭·조회를 보는 계획표(입력값은 브라우저에 저장)
 
 모든 표: 디멘전·지표 설정(선택·순서), ▼/▶ 접기와 `펼침` 단계 버튼, 엑셀로 복사(시트 아이콘·Ctrl+C), 오른쪽 목차.
+
+### 엑셀 파일 (.xlsx)
+
+HTML과 같은 폴더에 같은 이름의 `.xlsx`가 함께 생긴다(`~/Downloads/laighthouse-reports/{브랜드}_tbwa_{기준일}.xlsx`).
+빌더 1회 호출이 HTML과 같은 데이터·같은 계산 규칙으로 만든다 — 추가 MCP 호출·수치 옮겨 적기 없음, openpyxl 등 설치 불필요.
+
+| 시트 | 내용 |
+|---|---|
+| Summary | Total Summary · Monthly Summary(예산·소진율·목표 영역) · Daily/Weekly Comment |
+| By Media | Product · Target · Creative(소재 차원이 있을 때) · Placement |
+| By Date | Weekly · Daily |
+| Mix | 계획표 — 월 예산·CPM·CPC·VTR(파란 글씨)을 고치면 예상치가 수식으로 다시 계산된다 |
+| Raw | 표 데이터 원자 행(일 × 차원) — 필터·피벗용 |
+
+엑셀 생성이 실패해도(예: 같은 파일이 엑셀에 열려 있음) HTML 보고서는 그대로 만들어진다.
 
 ### 브랜드 비종속 동작
 

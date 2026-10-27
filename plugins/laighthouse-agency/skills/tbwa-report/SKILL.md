@@ -4,7 +4,8 @@ description: >
   TBWA 보고서(TBWA skill report) 생성 스킬. "TBWA 보고서", "TBWA 스킬 보고서", "tbwa report" 요청 시 사용.
   시작일(기본: 전월 1일)부터 어제까지를 한 화면에 담는다 — 전일 대비 급감 광고그룹을 짚는 Daily Comment, 소진·효율 관점의 Weekly Comment,
   예산·소진율·진행율과 목표(e.*)·달성률을 담은 Total/Monthly Summary, 월·미디어 필터로 보는 Product·Target·Placement·Weekly·Daily 표
-  (디멘전·지표 설정, 접기), 예산·단가를 입력해 예상 성과를 보는 Mix 계획표를 담은 HTML 보고서. 사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
+  (디멘전·지표 설정, 접기), 예산·단가를 입력해 예상 성과를 보는 Mix 계획표를 담은 HTML 보고서와, 같은 내용을 시트로 나눈
+  엑셀(.xlsx — Summary·By Media·By Date·Mix·Raw)을 함께 만든다. 사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
   version: "1.3.0"
 ---
@@ -13,7 +14,8 @@ metadata:
 
 ## 역할
 
-MCP 데이터를 받아 **TBWA 보고서**(HTML 한 파일)로 렌더링한다.
+MCP 데이터를 받아 **TBWA 보고서**(HTML 한 파일 + 같은 폴더·같은 이름의 엑셀 `.xlsx`)로 렌더링한다.
+빌더 1회 호출이 둘 다 만든다 — 엑셀을 따로 부르거나 수치를 옮겨 적지 않는다.
 
 - **브랜드 비종속**: 사용자가 말한 브랜드명을 모든 MCP 호출의 `brand_name`과 제목·파일명에 그대로 쓴다.
 - **기간**: 기준일 D(없으면 오늘, KST), 데이터 마지막 날 **E = D-1**. 집계 기간 = **시작일 S ~ E**.
@@ -47,7 +49,8 @@ MCP 데이터를 받아 **TBWA 보고서**(HTML 한 파일)로 렌더링한다.
 - 렌더링은 **미리 검증된 asset 스크립트**만 한다(`.py`/`.js` 신규 작성, HTML 직접 작성 금지).
   - `assets/discover.py` — 매체별 일별 응답(파일 경로 또는 stdin) → `metric_keys`/`currency`/`missing`.
   - `assets/prepare.py` — 저장된 응답 → build.json(매체별 일별·월별 표 데이터·Placement·월별 목표 원문).
-  - `assets/build_report.py` — 봉투·목표 원문 → 최종 HTML 1개(Comment 생성 포함). 입력 스키마는 docstring.
+  - `assets/build_report.py` — 봉투·목표 원문 → 최종 HTML 1개(Comment 생성 포함) + 같은 이름의 `.xlsx` 1개. 입력 스키마는 docstring.
+  - `assets/tbwa_xlsx.py` — 빌더가 import 한다(직접 부르지 않는다). 표준 라이브러리만으로 엑셀을 쓴다(openpyxl 불필요).
 
 > ℹ️ 이 호스트의 Bash 기본 셸은 `sh`(dash)일 수 있다 — bash 전용 문법은 쓰지 않는다. `python3`이 없으면 `python`으로 부른다.
 
@@ -91,9 +94,12 @@ MCP 데이터를 받아 **TBWA 보고서**(HTML 한 파일)로 렌더링한다.
    PYEOF
    ```
    `out`은 `~/Downloads/laighthouse-reports/{브랜드명}_tbwa_{기준_일자}.html`(base에 들어 있다 — 바꿀 때만 `"out"`을 함께 넣는다).
+   엑셀은 같은 폴더의 `{브랜드명}_tbwa_{기준_일자}.xlsx` — 출력의 `xlsx`가 그 경로다. `xlsx_error`(예: 같은 파일이 엑셀에 열려 있음)면
+   HTML은 정상이다 — 다시 부르지 말고 완료 메시지에 이유를 한 줄로 적는다(파일을 닫고 다시 만들 수 있다고 안내).
    빌더가 "대조 검증 실패"로 멈추면 매체별 일별 응답을 다시 조회하고 prepare.py부터 다시 한다(값을 고쳐 맞추지 않는다).
    prepare.py가 `note`(저장된 응답 없음)를 내면 저장 훅이 없는 호스트다 → 아래 「빌더 입력 (build.json)」대로 직접 만든다.
 5. 완성된 HTML을 낸다 — 빌더가 위 경로에 저장했다. 채팅에서 보여 줄 수 있는 호스트(Artifact 등)면 그 파일로 게시한다.
+   엑셀은 경로만 알린다(게시하지 않는다).
 6. 완료 메시지는 아래 형식 그대로.
 
 ## 빌더 입력 (build.json) — 저장 훅이 없는 호스트에서만 직접 만든다
@@ -117,9 +123,25 @@ MCP 데이터를 받아 **TBWA 보고서**(HTML 한 파일)로 렌더링한다.
 
 ```
 {브랜드명} TBWA 보고서({기준_일자}) 생성 완료.
+엑셀: {xlsx 경로} (Summary · By Media · By Date · Mix · Raw)
 가장 인상적인 부분: {Daily/Weekly Comment에서 고른 한 문장}.
 — by LaightAI
 ```
+
+엑셀이 없으면 `엑셀:` 줄에 경로 대신 `만들지 못함 — {xlsx_error 또는 xlsx_note}`를 적는다.
+
+## 엑셀 시트 구성 (빌더가 HTML과 같은 데이터·같은 규칙으로 만든다)
+
+| 시트 | 내용 |
+|---|---|
+| Summary | Total Summary · Monthly Summary(기본 영역 + 목표 영역) · Daily/Weekly Comment |
+| By Media | Product · Target · Creative(소재 차원이 있을 때) · Placement(없으면 '준비 중' 안내) |
+| By Date | Weekly · Daily (나란히) |
+| Mix | 목표 초기값 기준 계획표 — 월 예산·CPM·CPC·VTR(파란 글씨)은 값, 예산·예상치·묶음 행은 수식(고치면 다시 계산) |
+| Raw | 표 데이터 원자 행(일 × 차원 × 비용·노출·클릭·조회) — 필터·피벗용 |
+
+- 묶음 행의 CTR·CPM·CPC·CPV·VTR은 원자 지표 합으로 다시 계산한다(HTML과 같다). 화면의 `외 N개` 접기 없이 모든 행이 들어간다.
+- 필터는 초기 상태(전체 월·전 매체), 디멘전은 기본 설정(Summary: 미디어 → 상품 → 광고 그룹)이다.
 
 ## 섹션 구성 (고정)
 

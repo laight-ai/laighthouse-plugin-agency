@@ -34,7 +34,10 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
         # 달마다 나눠 받는다. 표 데이터와 따로 받아(행 수가 적다) Placement 표만 그린다. 없거나 노출 위치 차원이 없으면 표가 빠진다.
 }
 - 응답에 없는 차원(예: 상품)은 표·디멘전 설정에 나오지 않는다 — 조용히 빠진다.
-- 출력(stdout): {"out", "bytes", "rows", "sections": {"comment", "tables"}: "ok"|"placeholder"}
+- 같은 실행에서 엑셀(.xlsx)도 만든다 — HTML과 같은 폴더·같은 이름(assets/tbwa_xlsx.py, 표준 라이브러리만).
+  시트 = Summary · By Media · By Date · Mix · Raw. 엑셀이 실패해도 HTML은 그대로 남고 xlsx_error만 알린다.
+- 출력(stdout): {"out", "bytes", "rows", "sections": {"comment", "tables"}: "ok"|"placeholder",
+                "xlsx": 경로|null, "xlsx_error"?: 실패 이유, "xlsx_note"?: 만들지 않은 이유(표 데이터 없음)}
 """
 import html as _html
 import io
@@ -50,6 +53,7 @@ if __name__ == "__main__":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 ASSETS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, ASSETS_DIR)   # tbwa_xlsx (python -I 등 스크립트 폴더를 경로에 넣지 않는 실행에서도)
 for cand in (os.path.join(ASSETS_DIR, "..", "shared", "assets"),
              os.path.join(ASSETS_DIR, "..", "..", "..", "shared", "assets")):
     if os.path.exists(os.path.join(cand, "report_kit.py")):
@@ -585,14 +589,26 @@ def build_html(report, out):
     return path, os.path.getsize(path)
 
 
+def build_xlsx(report, rows, html_path):
+    """같은 데이터로 엑셀도 만든다 — HTML 옆 같은 이름(.xlsx). 실패해도 HTML은 그대로 두고 이유만 돌려준다."""
+    out = os.path.splitext(html_path)[0] + ".xlsx"
+    try:
+        import tbwa_xlsx
+        made = tbwa_xlsx.write(report, rows, out)
+    except Exception as e:  # noqa: BLE001 — 엑셀 실패가 HTML 보고서를 막지 않는다(예: 같은 파일이 엑셀에 열려 있음)
+        return {"xlsx": None, "xlsx_error": f"{type(e).__name__}: {e}"}
+    return {"xlsx": made} if made else {"xlsx": None, "xlsx_note": "표 데이터가 없어 엑셀을 만들지 않았다"}
+
+
 def main():
     payload = kit.read_payload()
     report, rows = compute(payload)
     path, size = build_html(report, payload["out"])
-    json.dump({"out": path, "bytes": size, "rows": len(rows),
-               "sections": {"comment": "ok" if report["comment"] else "placeholder",
-                            "tables": "ok" if report["table"] else "placeholder"}},
-              sys.stdout, ensure_ascii=False)
+    result = {"out": path, "bytes": size, "rows": len(rows),
+              "sections": {"comment": "ok" if report["comment"] else "placeholder",
+                           "tables": "ok" if report["table"] else "placeholder"}}
+    result.update(build_xlsx(report, rows, path))
+    json.dump(result, sys.stdout, ensure_ascii=False)
 
 
 if __name__ == "__main__":
