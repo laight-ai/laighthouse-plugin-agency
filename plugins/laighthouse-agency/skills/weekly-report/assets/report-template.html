@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+__REPORT_KIT_CSS__
+</style>
+</head>
+<body>
+<main class="lh-page">
+  <header class="lh-header">
+    <div>
+      <h1>__TITLE__</h1>
+      <p class="lh-meta">기준일: __DATE_LABEL__</p>
+      <p class="lh-meta">__PERIODS__</p>
+    </div>
+    <button class="lh-print" type="button" onclick="window.print()">PDF 저장</button>
+  </header>
+
+  <section class="lh-section">
+    <div>
+      <h2>월간 성과 요약</h2>
+      <p class="lh-desc">__MEDIA_SUM____MTD_RANGE__ · __S1_DESC__</p>
+    </div>
+    <div data-sec="s1"></div>
+  </section>
+
+  <section class="lh-section">
+    <div>
+      <h2>Weekly Summary</h2>
+      <p class="lh-desc">이번주(__CUR_SHORT__) 성과를 전주(__BASE_SHORT__)와 비교해 소진·효율 관점에서 매체-상품 단위로 정리했습니다.</p>
+    </div>
+    <div data-sec="s2"></div>
+  </section>
+
+  <section class="lh-section">
+    <div>
+      <h2>매체별 주단위 성과 추이 <span class="lh-muted">(최근 5주)</span></h2>
+      <p class="lh-desc">__WEEKS_RANGE__, 기준일 전날부터 7일 단위로 합산했습니다. 지표를 바꿔 볼 수 있습니다.</p>
+    </div>
+    <div data-sec="s3"></div>
+    <p class="lh-note">* 주 단위 CTR·CPM·CPV는 그 주의 광고비·노출·클릭·조회수 합으로 계산합니다.</p>
+  </section>
+
+  <section class="lh-section">
+    <h2>주간 성과 비교 <span class="lh-muted">(__CMP_TITLE__) 및 전주 대비 증감율</span></h2>
+    <div data-sec="s4"></div>
+    <p class="lh-note">* 이번주 아래 %는 전주 대비 변화율이며(단위가 %인 지표는 %p), 증감 색상은 상승(▲) 빨강, 하락(▼) 파랑으로 방향만 나타냅니다.
+* Dimension·지표 메뉴에서 표시할 열과 순서를 바꿀 수 있으며, 선택한 조합 단위로 합산해 이번주 광고비 순으로 정렬합니다(페이지당 10개).
+* 여러 행을 묶은 값의 CTR·CPM·CPV는 합친 광고비·노출·클릭·조회수로 다시 계산하고, 다시 계산할 수 없는 비율 지표는 "-"로 표시합니다.</p>
+  </section>
+
+  <footer class="lh-footer">Engineered by Laighthouse AI</footer>
+</main>
+<script>
+__CHART_JS_INLINE__
+</script>
+<script>
+__REPORT_KIT_JS__
+</script>
+<script>
+const REPORT = __REPORT_JSON__;
+(function () {
+  const K = window.LHKit;
+  K.render(REPORT, {
+    s1: (el, d) => {
+      K.kpiGrid(el, d.cards);
+      if (d.note) { const p = document.createElement('p'); p.className = 'lh-note'; p.textContent = d.note; el.appendChild(p); }
+    },
+    s2: (el, d) => (d.groups ? K.groupSummary(el, d.groups) : K.bullets(el, d.bullets)),
+    s3: (el, d) => K.trend(el, d),
+    s4: (el, d) => K.pickTable(el, d),
+  });
+})();
+</script>
+</body>
+</html>

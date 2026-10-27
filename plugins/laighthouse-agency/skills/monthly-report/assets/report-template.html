@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+__REPORT_KIT_CSS__
+</style>
+</head>
+<body>
+<main class="lh-page">
+  <header class="lh-header">
+    <div>
+      <h1>__TITLE__</h1>
+      <p class="lh-meta">보고서 기간: __PERIOD__</p>
+      <p class="lh-meta">비교 기간: __PREV_PERIOD__</p>
+    </div>
+    <button class="lh-print" type="button" onclick="window.print()">PDF 저장</button>
+  </header>
+
+  <section class="lh-section">
+    <div>
+      <h2>월간 성과 요약</h2>
+      <p class="lh-desc">__MEDIA_SUM__전월 대비 증감</p>
+    </div>
+    <div data-sec="s1"></div>
+    <p class="lh-note">* 증감 색상은 상승(▲) 빨강, 하락(▼) 파랑으로 표기하며, 좋고 나쁨이 아닌 방향을 나타냅니다.
+* 예산 소진율 = 당월 광고비 ÷ 월 예산(등록된 목표 합계).</p>
+  </section>
+
+  <section class="lh-section">
+    <h2>Executive Summary</h2>
+    <div data-sec="s2"></div>
+  </section>
+
+  <section class="lh-section">
+    <div>
+      <h2>월별 광고 성과</h2>
+      <p class="lh-desc">최근 6개월, 전체 광고비와 CPV 추이</p>
+    </div>
+    <div data-sec="s3"></div>
+  </section>
+
+  <section class="lh-section">
+    <div>
+      <h2>매체별 성과 추이 <span class="lh-muted">(최근 6개월)</span></h2>
+      <p class="lh-desc">지표를 바꿔 볼 수 있고, 범례를 눌러 매체를 끄고 켤 수 있습니다.</p>
+    </div>
+    <div data-sec="s4"></div>
+  </section>
+
+  <section class="lh-section">
+    <h2>매체 성과 비교 <span class="lh-muted">(__CMP_TITLE__) 및 전월 대비 증감율</span></h2>
+    <div data-sec="s5"></div>
+    <p class="lh-note">* __CUR_MONTH__에 표시된 %는 전월 대비 변화율입니다. 단위가 %인 지표(CTR 등)는 %p 차이입니다.</p>
+  </section>
+
+  <section class="lh-section">
+    <div>
+      <h2>예산 및 목표 달성 결과 <span class="lh-muted">(__CUR_RANGE__)</span></h2>
+      <p class="lh-desc">월간 목표 대비 __CUR_MONTH__ 최종 성과입니다. 목표가 등록되지 않은 지표·단위는 "-"로 표시합니다.</p>
+    </div>
+    <div data-sec="s6"></div>
+    <p class="lh-note">* 달성률 = 실적 ÷ 월 목표. 광고비는 소진율이 100%와 ±10%p 이상 차이 나면 빨강(초과)·주황(미소진), 그 외 합산 지표는 목표 달성 시 초록, 90% 이상 주황, 미만 빨강입니다.
+* 비율 지표는 목표 대비 차이(%)를 표시하며, CTR 등은 높을수록, CPM·CPV는 낮을수록 좋은 지표로 판단합니다(달성 초록, 미달 빨강).
+* 목표는 브랜드 전체와 매체 단위로 등록된 값만 씁니다. 첫 Dimension이 매체이면 매체마다 소계 행을 두며, 전체는 서버 총계(검색 시 검색된 행의 합계)입니다.
+* Dimension·지표 메뉴에서 표시할 열과 순서를 바꿀 수 있으며, 매체부터 광고비 순으로 정렬합니다(페이지당 10개).
+* CTR = 클릭 ÷ 노출, CPM = 광고비 ÷ 노출 × 1,000, CPV = 광고비 ÷ 조회수.</p>
+  </section>
+
+
+
+  <footer class="lh-footer">Engineered by Laighthouse AI</footer>
+</main>
+<script>
+__CHART_JS_INLINE__
+</script>
+<script>
+__REPORT_KIT_JS__
+</script>
+<script>
+const REPORT = __REPORT_JSON__;
+(function () {
+  const K = window.LHKit;
+  K.render(REPORT, {
+    s1: (el, d) => K.kpiGrid(el, d.cards),
+    s2: (el, d) => K.bullets(el, d),
+    s3: (el, d) => K.barLine(el, d),
+    s4: (el, d) => K.trend(el, d),
+    s5: (el, d) => K.compareTable(el, d),
+    s6: (el, d) => K.pickTable(el, d),
+  });
+})();
+</script>
+</body>
+</html>

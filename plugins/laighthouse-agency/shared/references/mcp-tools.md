@@ -11,7 +11,8 @@
   "time_grain": "day" | "month" | "total",
   "group_by": ["media", "ad_type", "campaign_name", "ad_group_name", "ad_name"],   // 차원명 리스트, 생략 시 총계
   "metrics": null,                         // 항상 생략 = 서빙 지표 전부
-  "filters": null                          // 생략 = 전체
+  "filters": null,                         // 생략 = 전체
+  "day_offset": 20                         // month grain 전용 — 각 월을 1일~N일로 자른다(weekly-report의 전월 동기간 비교)
 }
 ```
 
@@ -34,7 +35,9 @@
 { "brand_name": "<brand>", "month": "YYYY-MM", "as_of_date": "YYYY-MM-DD", "cost_metric": "<metric_keys.cost>" }
 ```
 
-- `media` 생략 = 전체. 응답 첫째 표(`| metric | target | actual | progress_ratio |`)는 전체 합계(cost = Gross),
+- `media` 생략 = 전체. `media`에 매체 값을 그대로 넣으면 그 매체 목표다(monthly-report의 매체 목표 — 매체마다 1회).
+  tbwa-report·weekly-report는 `media` 생략 1회뿐이다.
+- 응답 첫째 표(`| metric | target | actual | progress_ratio |`)는 전체 합계(cost = Gross),
   둘째 표(`| media | campaign_name | included | metric | target | actual | achievement |`)는 매체·캠페인 행이다.
 - 표 대신 한 줄 평문(`No all budget/target available for {month}.` 등)은 오류가 아니라 **목표 없음**이다.
 - 응답 원문을 그대로 빌더에 넘긴다 — `actual` 열은 쓰지 않는다(실적은 `get_ad_performance` 값).

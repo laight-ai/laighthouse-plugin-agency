@@ -13,13 +13,31 @@
 | 유형 | 이름 | 설명 |
 |------|------|------|
 | MCP | laighthouse | `https://app.laight.ai/api/mcp` 연동 |
+| 훅 | save_responses | laighthouse 응답 원본을 파일로 남긴다 — 각 스킬의 `assets/prepare.py`가 빌더 입력을 만든다 |
 | 훅 | capture_ad_performance | `get_ad_performance`의 큰 응답을 파일로 저장하고 경로만 모델에 보여 준다(재타이핑 방지) |
 | 스킬 | tbwa-report | TBWA 보고서(HTML) 렌더링 |
+| 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
 
 ## 사용법
 
 > "breezm TBWA 보고서 만들어줘" → `tbwa-report`
 > "breezm TBWA 보고서 7월 15일부터" → 시작일 지정(기본: 전월 1일, 366일까지)
+
+> "breezm 데일리 보고서" → `daily-report` (기준일 기본: 어제)
+> "breezm 주간 보고서" → `weekly-report` (기준일 기본: 오늘, 데이터는 어제까지)
+> "breezm 9월 월간 보고서" → `monthly-report` (대상 월 기본: 지난달)
+
+### Daily · Weekly · Monthly 보고서 구성
+
+| 스킬 | 섹션 |
+|---|---|
+| daily-report | 일간 성과 요약(7 KPI, 전일/전주 동요일) · Daily Summary · 매체별 최근 7일 추이 · 성과 비교 표 |
+| weekly-report | 월 누적 예산 소진율·목표 진척도 · Weekly Summary(소진·효율) · 매체별 최근 5주 추이 · 주간 성과 비교 표 |
+| monthly-report | 예산 소진율 + 7 KPI · Executive Summary · 6개월 추이 · 매체별 추이 · 매체 비교 · 예산·목표 달성 표 |
+
+- 호출은 두 번에 나눠 동시에 보낸다(차원 확인이 끝나야 표 데이터 차원이 정해진다). 응답 원문은 저장 훅 → `prepare.py`가
+  빌더 입력과 요약 근거(`digest`)로 바꾼다 — 모델은 요약 문장만 쓴다.
+- Chart.js는 `shared/assets/chart.umd.min.js` 한 벌을 HTML에 인라인한다(오프라인에서도 열린다).
 
 ### TBWA 보고서 구성
 

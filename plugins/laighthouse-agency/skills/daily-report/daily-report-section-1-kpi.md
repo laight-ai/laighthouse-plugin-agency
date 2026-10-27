@@ -1,0 +1,19 @@
+# section-1: 일간 성과 요약
+
+## MCP 호출
+
+`get_ad_performance` ×1 — `time_grain:"day"`, `group_by` 생략, `start_date` = D0-7일, `end_date` = D0,
+`metrics`·`filters` 생략. 응답에 D7·D1·D0 날짜 행이 들어 있다.
+
+## 빌더 입력 (`assets/prepare.py`가 채운다 — 저장 훅이 없을 때만 직접 만든다)
+
+```json
+"s1": {"json": "<응답 원문 문자열 그대로>"}
+```
+
+## 빌더가 하는 일 (모델은 계산하지 않는다)
+
+- 카드 = 고정 7 역할(`metric_keys`의 cost·impression·click·ctr·views·cpm·cpv) 순서. 값은 D0 행 그대로.
+- 증감 = 전일(D1) 대비, 전주 동요일(D7) 대비 두 개. 상단 "비교 기준" 토글로 주 줄을 바꾼다.
+- 단위가 `%`인 지표는 %p 차이, 그 외는 변화율. ▲ 빨강 / ▼ 파랑은 방향만 뜻한다(좋고 나쁨 아님).
+- D0 행이 없으면 섹션이 "데이터 준비 중"이 된다.

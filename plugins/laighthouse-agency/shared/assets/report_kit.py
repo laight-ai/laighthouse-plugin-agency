@@ -387,8 +387,11 @@ def inline_assets(html):
 
 
 def chart_js(assets_dir):
-    """Chart.js UMD 본문. zip 번들은 chart.umd.min.txt로 싣는다."""
-    return _read_first(assets_dir, ["chart.umd.min.txt", "chart.umd.min.js"])
+    """Chart.js UMD 본문. zip 번들은 chart.umd.min.txt로 싣는다. 스킬 폴더에 없으면 킷 폴더(플러그인 공용 한 벌)에서 읽는다."""
+    names = ["chart.umd.min.txt", "chart.umd.min.js"]
+    if not any(os.path.exists(os.path.join(assets_dir, n)) for n in names):
+        assets_dir = KIT_DIR
+    return _read_first(assets_dir, names)
 
 
 def load_kit_from(assets_dir):
