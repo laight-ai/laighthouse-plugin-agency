@@ -134,7 +134,7 @@ def main():
         os.write(1, json.dumps(result, ensure_ascii=False).encode("utf-8"))
         return
 
-    folder = os.path.join(WORK_ROOT, re.sub(r"[^\w.-]", "_", f"{a.brand}_tbwa_{D}"))
+    folder = os.path.join(WORK_ROOT, re.sub(r"[^\w.-]", "_", f"{a.brand}_integrated_{D}"))
     os.makedirs(folder, exist_ok=True)
 
     def save_env(name, rec, call):
@@ -153,7 +153,7 @@ def main():
 
     perf = [r for r in recs if r["_tool"] == "get_ad_performance"]
     media = [r for r in perf if is_day_perf(r["tool_input"], S, E) and (r["tool_input"].get("group_by") or []) == ["media"]]
-    base = {"out": f"~/Downloads/laighthouse-reports/{a.brand}_tbwa_{D}.html", "brand": a.brand, "target_date": str(D)}
+    base = {"out": f"~/Downloads/laighthouse-reports/{a.brand}_integrated_{D}.html", "brand": a.brand, "target_date": str(D)}
     if a.start_date:
         base["start_date"] = str(S)
     media_path = None

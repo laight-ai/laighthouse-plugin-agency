@@ -10,7 +10,7 @@ heredoc으로 **다시 타이핑**해야 했다 — 보고서 생성 시간의 �
 무엇을 하나 (Claude Code가 이 훅을 도구 응답 직후, 모델이 보기 전에 실행한다):
 1. stdin으로 받은 훅 입력(JSON)에 `tool_input.group_by`(문자열 리스트)가 있고 응답 텍스트가 충분히
    크면(MIN_CHARS 초과), 응답 원본(JSON 봉투 문자열)을 임시 디렉터리에 .json 파일로 저장한다.
-   (agency판: TBWA 보고서는 몇 달치 매체별 일별(`["media"]`)·Placement(`["media","ad_type","placement"]`)
+   (agency판: 종합 리포트는 몇 달치 매체별 일별(`["media"]`)·Placement(`["media","ad_type","placement"]`)
    응답도 커서 group_by가 있으면 차원과 관계없이 캡처한다.)
 2. `hookSpecificOutput.updatedToolOutput`으로 모델에게 보이는 응답을 "저장 경로 + 행 통계 +
    사용법 + 미리보기" 스텁으로 교체한다 — 원본은 컨텍스트에 들어가지 않는다.

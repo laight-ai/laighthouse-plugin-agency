@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>__TITLE__ · TBWA skill report</title>
+<title>__TITLE__ · 종합 리포트</title>
 <style>
 __REPORT_KIT_CSS__
 </style>
 <style>
-/* TBWA 보고서 전용 — 톤은 report_kit.css 변수 그대로. 넓은 표를 위해 본문은 화면 폭을 다 쓰고 좌우 여백을 줄인다
+/* 종합 리포트 전용 — 톤은 report_kit.css 변수 그대로. 넓은 표를 위해 본문은 화면 폭을 다 쓰고 좌우 여백을 줄인다
  * (오른쪽은 목차 자리만 비운다). */
 body { padding: 16px 60px 16px 16px; }
 .lh-page { max-width: none; }
@@ -175,10 +175,10 @@ td.tb-inp .tb-in-text, td .tb-in-text { color: var(--accent); }
 </style>
 </head>
 <body>
-<main class="lh-page" id="tbwa">
+<main class="lh-page" id="integrated">
   <header class="lh-header">
     <div>
-      <div class="tb-eyebrow">TBWA skill report</div>
+      <div class="tb-eyebrow">종합 리포트</div>
       <h1>__TITLE__</h1>
     </div>
     <div class="tb-hmeta">
@@ -212,11 +212,11 @@ td.tb-inp .tb-in-text, td .tb-in-text { color: var(--accent); }
   <footer class="lh-footer">Engineered by Laighthouse AI</footer>
 </main>
 <script>
-__TBWA_JS__
+__INTEGRATED_JS__
 </script>
 <script>
 const REPORT = __REPORT_JSON__;
-window.TBWA.mount(REPORT);
+window.IntegratedReport.mount(REPORT);
 </script>
 </body>
 </html>

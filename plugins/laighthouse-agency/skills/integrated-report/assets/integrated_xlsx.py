@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TBWA 보고서 엑셀(.xlsx) — build_report.py가 HTML과 같은 데이터로 함께 만든다(직접 부르지 않는다).
+"""종합 리포트 엑셀(.xlsx) — build_report.py가 HTML과 같은 데이터로 함께 만든다(직접 부르지 않는다).
 
 시트 구성(대행사 기본 레포트 양식 — Summary · By Media · By Date · Mix + 원자료):
   Summary   Total Summary · Monthly Summary(기본 영역 + 목표 영역) · Daily/Weekly Comment
@@ -8,7 +8,7 @@
   Mix       목표 입력값 기준 월별 계획 — 월 예산·CPM·CPC·VTR(파란 글씨)은 값, 예산·예상치는 수식(바꾸면 다시 계산된다)
   Raw       표 데이터 원자 행(일 × 차원) — 필터·피벗용
 
-수치 규칙은 브라우저(assets/tbwa_report.js)와 같다:
+수치 규칙은 브라우저(assets/integrated_report.js)와 같다:
   - 행 계층·순서: 미디어 → 디멘전(기본 설정), 광고비 큰 순(주·일은 날짜 순). 묶음마다 '{이름} 요약', 맨 아래 총합계.
   - 묶음 행의 CTR·CPM·CPC·CPV·VTR은 원자 지표(광고비·노출·클릭·조회) 합으로 다시 계산한다.
   - 예산·목표(e.*)·소진율·진행율·달성률은 같은 범위 찾기(lookup/targetsOf), Mix 줄·초기값은 같은 MIX_LINES 규칙.
@@ -335,7 +335,7 @@ def _abs(rng):
     return ":".join(re.sub(r"([A-Z]+)(\d+)", r"$\1$\2", p) for p in rng.split(":"))
 
 
-# ── 화면과 같은 계산 (tbwa_report.js 포팅) ────────────────────────────────────
+# ── 화면과 같은 계산 (integrated_report.js 포팅) ────────────────────────────────────
 
 
 def uniq(seq):
@@ -352,7 +352,7 @@ def agg(rs):
 
 class Targets:
     """예산·목표(budgets): 정확한 범위가 있으면 그 값, 없으면 더 잘게 받은 범위가 이 행의 단위를 모두 덮을 때만 합
-    (비율 목표는 합하지 않는다) — tbwa_report.js lookup·targetsOf·progOf와 같다."""
+    (비율 목표는 합하지 않는다) — integrated_report.js lookup·targetsOf·progOf와 같다."""
 
     def __init__(self, budgets, months):
         self.B = budgets or []
@@ -604,7 +604,7 @@ class Ctx:
 
 def title_block(sh, ctx, c=2):
     h = ctx.report["header"]
-    sh.set(2, c, f"{ctx.brand} | TBWA 보고서", {"b": True, "sz": 14}, fit=False)
+    sh.set(2, c, f"{ctx.brand} | 종합 리포트", {"b": True, "sz": 14}, fit=False)
     sh.set(3, c, "Digital Campaign Report", {"b": True, "sz": 18}, fit=False)
     sh.set(4, c, f"집계 기간 {h['period']} · 미디어 {h['media'] or '-'}", {"fc": "595959"}, fit=False)
     sh.heights.update({2: 23, 3: 30})

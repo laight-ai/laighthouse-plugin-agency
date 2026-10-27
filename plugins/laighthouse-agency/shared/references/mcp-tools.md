@@ -36,7 +36,7 @@
 ```
 
 - `media` 생략 = 전체. `media`에 매체 값을 그대로 넣으면 그 매체 목표다(monthly-report의 매체 목표 — 매체마다 1회).
-  tbwa-report·weekly-report는 `media` 생략 1회뿐이다.
+  integrated-report·weekly-report는 `media` 생략 1회뿐이다.
 - 응답 첫째 표(`| metric | target | actual | progress_ratio |`)는 전체 합계(cost = Gross),
   둘째 표(`| media | campaign_name | included | metric | target | actual | achievement |`)는 매체·캠페인 행이다.
 - 표 대신 한 줄 평문(`No all budget/target available for {month}.` 등)은 오류가 아니라 **목표 없음**이다.

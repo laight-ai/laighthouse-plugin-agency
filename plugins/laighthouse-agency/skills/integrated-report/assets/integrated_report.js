@@ -1,17 +1,17 @@
-/* TBWA 보고서 화면 — build_report.py 가 넣은 REPORT로 목업(TBWA skill report)의 기능을 그린다.
+/* 종합 리포트 화면 — build_report.py 가 넣은 REPORT로 목업(종합 리포트)의 기능을 그린다.
  * - Daily/Weekly Comment: 빌더가 만든 문장을 그대로 그린다.
  * - Total/Monthly Summary(필터 미적용): 미디어 → 디멘전 계층, 예산·소진율·진행율 + 목표 영역(e.* 목표·달성률).
  * - 월·미디어 필터 → Product·Target·Placement·Weekly·Daily 표(Placement는 노출 위치 데이터 REPORT.place가 있을 때만).
  * - 모든 표: 묶음 이름 옆 ▼/▶ 접기 + 제목 줄 '펼침 [미디어][…][전체]' 단계 접기, 오른쪽 목차(바로가기·맨 위로).
  * - 디멘전 설정·지표 설정(선택·순서)과 캠페인명은 localStorage에 남긴다.
  * 모양은 report_kit.css + 템플릿 <style>만 정한다(인라인 style 없음).
- * 전역: window.TBWA = { mount(report) }
+ * 전역: window.IntegratedReport = { mount(report) }
  */
 (function () {
-  const LS_METRICS = 'tbwa-skill-report-metrics';
-  const LS_DIMS = 'tbwa-skill-report-dims';
-  const LS_CAMP = 'tbwa-skill-report-camp';
-  const LS_MIX = 'tbwa-skill-report-mix';
+  const LS_METRICS = 'integrated-report-metrics';
+  const LS_DIMS = 'integrated-report-dims';
+  const LS_CAMP = 'integrated-report-camp';
+  const LS_MIX = 'integrated-report-mix';
   const MORE = 20;   // '더 보기' 한 번에 더 그리는 항목 수
   const FIRST = level => (level <= 1 ? 10 : 5);   // 묶음마다 처음 그리는 항목 수(광고비 상위) — 단계가 깊을수록 적게
 
@@ -154,7 +154,7 @@
   });
 
   function mount(rep) {
-    const root = document.getElementById('tbwa');
+    const root = document.getElementById('integrated');
     const months = rep.months;
     const T = rep.table;
 
@@ -884,5 +884,5 @@
     el.appendChild(box);
   }
 
-  window.TBWA = { mount };
+  window.IntegratedReport = { mount };
 })();
