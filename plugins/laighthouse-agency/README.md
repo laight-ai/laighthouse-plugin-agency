@@ -32,8 +32,8 @@
 | 스킬 | 섹션 |
 |---|---|
 | daily-report | 일간 성과 요약(기본 7 KPI + 지표 메뉴로 ELT 지표 추가·해제, 전일/전주 동요일) · Daily Summary · 매체별 최근 7일 추이 · 성과 비교 표 |
-| weekly-report | 월 누적 예산 소진율·목표 진척도 · Weekly Summary(소진·효율) · 매체별 최근 5주 추이 · 주간 성과 비교 표 |
-| monthly-report | 예산 소진율 + 7 KPI · Executive Summary · 6개월 추이 · 매체별 추이 · 매체 비교 · 예산·목표 달성 표 |
+| weekly-report | 월 누적 예산 소진율·목표 진척도(+ 지표 메뉴로 ELT 지표 추가·해제) · Weekly Summary(소진·효율) · 매체별 최근 5주 추이 · 주간 성과 비교 표 |
+| monthly-report | 예산 소진율 + 7 KPI(+ 지표 메뉴로 ELT 지표 추가·해제) · Executive Summary · 6개월 추이 · 매체별 추이 · 매체 비교 · 예산·목표 달성 표 |
 
 - 호출은 두 번에 나눠 동시에 보낸다(차원 확인이 끝나야 표 데이터 차원이 정해진다). 응답 원문은 저장 훅 → `prepare.py`가
   빌더 입력과 요약 근거(`digest`)로 바꾼다 — 모델은 요약 문장만 쓴다.

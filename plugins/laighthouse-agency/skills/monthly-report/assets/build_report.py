@@ -95,15 +95,16 @@ def compute(payload, check_dims=True):
         cur, prev = tot(M0), tot(M1)
         target = kit.parse_target_progress((sec("s1") or {}).get("target_progress"))["cost_target"]
         if target and isinstance(cur.get(cost), (int, float)):
-            budget = {"label": "예산 소진율", "value": f"{cur[cost] / target * 100:.1f}%", "bar": cur[cost] / target,
+            budget = {"key": "__budget", "label": "예산 소진율", "value": f"{cur[cost] / target * 100:.1f}%", "bar": cur[cost] / target,
                       "sub": f"월 예산 {kit.fmt_metric(target, currency)}", "deltas": []}
         else:
-            budget = {"label": "예산 소진율", "value": "N/A", "sub": "이번 달 등록된 예산 목표가 없습니다", "deltas": []}
+            budget = {"key": "__budget", "label": "예산 소진율", "value": "N/A", "sub": "이번 달 등록된 예산 목표가 없습니다", "deltas": []}
         cards = kit.kpi_cards(cur, [("prev", "전월", prev)], keys, meta)
         for c, role in zip(cards, [r for r in kit.ROLES if keys.get(r)]):
             k = keys[role]
             c["sub"] = f"전월 {kit.fmt_metric(prev.get(k), mm[k]['unit'])}" if k in mm else None
-        sections["s1"] = {"cards": [budget] + cards}
+        # 기본 카드 = 예산 소진율 + 고정 7 역할, 그 밖의 서빙 지표는 전월 대비 카드로 덧붙여 지표 메뉴에서 켠다
+        sections["s1"] = kit.kpi_more([budget] + cards, cur, [("prev", "전월", prev)], meta, "monthly", sub_label="전월")
 
         cpv = keys.get("cpv")
         if cost in mm:   # CPV가 없는 브랜드(조회 지표 없음)는 광고비 막대만 그린다

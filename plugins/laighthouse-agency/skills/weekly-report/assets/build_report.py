@@ -144,7 +144,7 @@ def compute(payload, check_dims=True):
         sp = cur.get(cost)
         if targets.get(cost) and isinstance(sp, (int, float)):
             r = sp / targets[cost]
-            cards.append({"label": "예산 소진율", "value": f"{r * 100:.1f}%", "bar": r, "marker": elapsed,
+            cards.append({"key": "__budget", "label": "예산 소진율", "value": f"{r * 100:.1f}%", "bar": r, "marker": elapsed,
                           "lines": [{"text": f"MTD 광고비 {kit.fmt_metric(sp, currency)}"}],
                           "sub": f"월 예산 {kit.fmt_metric(targets[cost], currency)} · 세로선은 기간 진행률({elapsed * 100:.1f}%)",
                           "deltas": []})
@@ -157,7 +157,7 @@ def compute(payload, check_dims=True):
                 rr, gap = v / g, (v / g - elapsed) * 100
                 pr = rr / elapsed if elapsed else None
                 st = ("달성 예상", "green") if pr >= 1 else ("주의", "yellow") if pr >= 0.9 else ("미달 예상", "red")
-                cards.append({"label": kit.ROLE_LABELS[role], "value": kit.fmt_metric(v, unit), "tag": {"label": st[0], "tone": st[1]},
+                cards.append({"key": k, "label": kit.ROLE_LABELS[role], "value": kit.fmt_metric(v, unit), "tag": {"label": st[0], "tone": st[1]},
                               "bar": rr, "marker": elapsed, "bar_cls": BAR_CLS[st[1]],
                               "lines": [{"text": f"월 목표 대비 {rr * 100:.1f}% (진행률 대비 {gap:+.1f}%p)", "cls": "lh-kpi-line " + TONE_CLS[st[1]]}],
                               "sub": f"월 목표 {kit.fmt_metric(g, unit)} · 예상 월마감 {kit.fmt_metric(v / elapsed, unit)} ({pr * 100:.0f}%)",
@@ -169,7 +169,7 @@ def compute(payload, check_dims=True):
                 ok = diff >= -0.05 if higher else diff <= 0.05
                 word = ("목표 이상" if ok else "목표 미만") if higher else ("목표 이하" if ok else "목표 초과")
                 tone = "green" if ok else "red"
-                cards.append({"label": kit.ROLE_LABELS[role], "value": kit.fmt_metric(v, unit),
+                cards.append({"key": k, "label": kit.ROLE_LABELS[role], "value": kit.fmt_metric(v, unit),
                               "tag": {"label": "목표 달성" if ok else "목표 미달", "tone": tone}, "bar": att, "bar_cls": BAR_CLS[tone],
                               "lines": [{"text": f"목표 {kit.fmt_metric(g, unit)} 대비 {diff:+.1f}% ({word})", "cls": "lh-kpi-line " + TONE_CLS[tone]}],
                               "sub": ("높을수록" if higher else "낮을수록") + " 좋은 지표 · 막대는 목표 대비 달성도", "deltas": []})
@@ -185,7 +185,9 @@ def compute(payload, check_dims=True):
             notes.append(f"* 세로선은 기간 진행률({elapsed * 100:.1f}% = {E.day}/{dim}일)입니다.")
         if any(c.get("deltas") for c in cards):
             notes.append(f"* 목표가 없는 지표는 전월 동기간({pm.month}월 1일~{min(E.day, pm.day)}일) 대비 증감이며, 색은 방향만 나타냅니다(▲ 빨강 · ▼ 파랑).")
-        sections["s1"] = {"cards": cards, "note": "\n".join(notes)}
+        # 기본 카드 = 위 카드들, 그 밖의 서빙 지표는 전월 동기간 대비 카드로 덧붙여 지표 메뉴에서 켠다
+        sections["s1"] = dict(kit.kpi_more(cards, cur, [("prev", "전월 동기간", prev)], meta, "weekly", sub_label="전월 동기간"),
+                              note="\n".join(notes))
 
     # s2 — Weekly Summary (모델 작성)
     s2 = sec("s2")

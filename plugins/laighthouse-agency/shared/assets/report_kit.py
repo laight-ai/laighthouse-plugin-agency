@@ -470,37 +470,44 @@ def meta_map(meta):
 
 
 def kpi_cards(cur, bases, metric_keys, meta):
-    """고정 7 역할 카드. cur = {지표: 값}, bases = [(key, label, {지표: 값})]."""
+    """고정 7 역할 카드. cur = {지표: 값}, bases = [(key, label, {지표: 값})]. 카드마다 "key" = 지표 키."""
     mm = meta_map(meta)
     cards = []
     for role in ROLES:
         k = metric_keys.get(role)
         if not k:
             continue
-        unit = (mm.get(k) or {}).get("unit")
-        cards.append({"label": ROLE_LABELS[role], "value": fmt_metric(cur.get(k), unit),
-                      "deltas": [dict(key=bk, label=bl, x=delta_value(cur.get(k), (bv or {}).get(k), unit), pp=unit == "%",
-                                      **delta(cur.get(k), (bv or {}).get(k), unit))
-                                 for bk, bl, bv in bases]})
+        cards.append(_metric_card(k, ROLE_LABELS[role], cur, bases, (mm.get(k) or {}).get("unit")))
     return cards
 
 
-def kpi_pick(cur, bases, metric_keys, meta):
-    """지표를 고를 수 있는 KPI 카드(LHKit.kpiPick). 봉투 지표 전부의 카드를 만들고, 처음엔 고정 7 역할만 켠다.
-    → {"cards": [{key, ...카드}], "default": [역할 지표 키]} — 카드 순서 = 역할 순서, 그다음 서빙 순서."""
-    roles = [metric_keys[r] for r in ROLES if metric_keys.get(r)]
-    order = roles + [m["key"] for m in meta if m["key"] not in roles]
-    mm = meta_map(meta)
-    cards = []
-    for k in order:
-        if k not in mm:
+def _metric_card(k, label, cur, bases, unit):
+    return {"key": k, "label": label, "value": fmt_metric(cur.get(k), unit),
+            "deltas": [dict(key=bk, label=bl, x=delta_value(cur.get(k), (bv or {}).get(k), unit), pp=unit == "%",
+                            **delta(cur.get(k), (bv or {}).get(k), unit))
+                       for bk, bl, bv in bases]}
+
+
+def kpi_more(cards, cur, bases, meta, store, sub_label=None):
+    """지표를 고를 수 있는 KPI 카드(LHKit.kpiPick). cards = 스킬이 만든 기본 카드(각자 "key" — 지표 키 또는 '__budget' 같은
+    이름)는 처음부터 켜 두고, 그 밖의 봉투 지표마다 비교 카드를 덧붙여 메뉴에서 켤 수 있게 한다.
+    sub_label이 있으면 덧붙인 카드 아래에 '{sub_label} {첫 비교 기간 값}'을 적는다(전월 등).
+    → {"cards", "default": [기본 카드 key], "store"}"""
+    have = {c.get("key") for c in cards}
+    extra = []
+    for m in meta:
+        if m["key"] in have:
             continue
-        unit = mm[k].get("unit")
-        cards.append({"key": k, "label": mm[k]["label"], "value": fmt_metric(cur.get(k), unit),
-                      "deltas": [dict(key=bk, label=bl, x=delta_value(cur.get(k), (bv or {}).get(k), unit), pp=unit == "%",
-                                      **delta(cur.get(k), (bv or {}).get(k), unit))
-                                 for bk, bl, bv in bases]})
-    return {"cards": cards, "default": [k for k in roles if k in mm]}
+        c = _metric_card(m["key"], m["label"], cur, bases, m.get("unit"))
+        if sub_label and bases:
+            c["sub"] = f"{sub_label} {fmt_metric((bases[0][2] or {}).get(m['key']), m.get('unit'))}"
+        extra.append(c)
+    return {"cards": list(cards) + extra, "default": [c["key"] for c in cards], "store": store}
+
+
+def kpi_pick(cur, bases, metric_keys, meta, store="default"):
+    """고정 7 역할 카드를 기본으로, 봉투 지표 전부를 고를 수 있는 KPI 카드(daily)."""
+    return kpi_more(kpi_cards(cur, bases, metric_keys, meta), cur, bases, meta, store)
 
 
 def series_values(idx, periods, key, metrics):

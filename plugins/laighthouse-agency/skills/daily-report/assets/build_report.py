@@ -95,8 +95,8 @@ def compute(payload, check_dims=True):
     tot = lambda d: (i1.get(d) or {}).get(()) or {}  # noqa: E731
     if e1 and tot(D0):
         # 카드 = 서빙 지표 전부, 처음엔 고정 7 역할만 켠다 — 보는 사람이 지표 메뉴로 더하고 뺀다
-        sections["s1"] = dict(kit.kpi_pick(tot(D0), [("yday", "전일", tot(D1)), ("lastweek", "전주 동요일", tot(D7))],
-                                           keys, meta), store="daily")
+        sections["s1"] = kit.kpi_pick(tot(D0), [("yday", "전일", tot(D1)), ("lastweek", "전주 동요일", tot(D7))],
+                                      keys, meta, store="daily")
 
     sections["s2"] = None if skeleton else kit.bullets_of(payload.get("s2"))
 
