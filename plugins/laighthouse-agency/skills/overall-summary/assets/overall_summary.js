@@ -5,13 +5,13 @@
  * - 모든 표: 묶음 이름 옆 ▼/▶ 접기 + 제목 줄 '펼침 [미디어][…][전체]' 단계 접기, 오른쪽 목차(바로가기·맨 위로).
  * - 디멘전 설정·지표 설정(선택·순서)과 캠페인명은 localStorage에 남긴다.
  * 모양은 report_kit.css + 템플릿 <style>만 정한다(인라인 style 없음).
- * 전역: window.IntegratedReport = { mount(report) }
+ * 전역: window.OverallSummary = { mount(report) }
  */
 (function () {
-  const LS_METRICS = 'integrated-report-metrics';
-  const LS_DIMS = 'integrated-report-dims';
-  const LS_CAMP = 'integrated-report-camp';
-  const LS_MIX = 'integrated-report-mix';
+  const LS_METRICS = 'overall-summary-metrics';
+  const LS_DIMS = 'overall-summary-dims';
+  const LS_CAMP = 'overall-summary-camp';
+  const LS_MIX = 'overall-summary-mix';
   const MORE = 20;   // '더 보기' 한 번에 더 그리는 항목 수
   const FIRST = level => (level <= 1 ? 10 : 5);   // 묶음마다 처음 그리는 항목 수(광고비 상위) — 단계가 깊을수록 적게
 
@@ -154,7 +154,7 @@
   });
 
   function mount(rep) {
-    const root = document.getElementById('integrated');
+    const root = document.getElementById('overall-summary');
     const months = rep.months;
     const T = rep.table;
 
@@ -884,5 +884,5 @@
     el.appendChild(box);
   }
 
-  window.IntegratedReport = { mount };
+  window.OverallSummary = { mount };
 })();

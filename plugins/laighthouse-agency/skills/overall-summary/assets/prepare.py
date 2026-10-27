@@ -74,8 +74,8 @@ def main():
         sr.emit({"note": sr.no_records_note()})
         return
 
-    w = sr.Workdir(f"{a.brand}_integrated_{D}")
-    base = {"out": f"~/Downloads/laighthouse-reports/{a.brand}_integrated_{D}.html", "brand": a.brand, "target_date": str(D)}
+    w = sr.Workdir(f"{a.brand}_overall_summary_{D}")
+    base = {"out": f"~/Downloads/laighthouse-reports/{a.brand}_overall_summary_{D}.html", "brand": a.brand, "target_date": str(D)}
     if a.start_date:
         base["start_date"] = str(S)
     result = {}
