@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+__REPORT_KIT_CSS__
+</style>
+</head>
+<body>
+<main class="lh-page">
+  <header class="lh-header">
+    <div>
+      <h1>__TITLE__</h1>
+      <p class="lh-meta">기준일: __DATE_LABEL__</p>
+      <p class="lh-meta">비교: __CMP_LABEL__</p>
+    </div>
+    <button class="lh-print" type="button" onclick="window.print()">PDF 저장</button>
+  </header>
+
+  <section class="lh-section">
+    <div class="lh-section-head">
+      <div>
+        <h2>일간 성과 요약</h2>
+        <p class="lh-desc">__MEDIA_SUM____TARGET_MD__ 기준</p>
+      </div>
+      <div class="lh-cmp"><span>비교 기준</span><div id="cmp-tabs"></div></div>
+    </div>
+    <div data-sec="s1"></div>
+    <p class="lh-note">* 증감 색상은 상승(▲) 빨강, 하락(▼) 파랑으로 표기하며, 좋고 나쁨이 아닌 방향을 나타냅니다.</p>
+  </section>
+
+  <section class="lh-section">
+    <h2>Daily Summary</h2>
+    <div data-sec="s2"></div>
+  </section>
+
+  <section class="lh-section">
+    <div>
+      <h2>매체별 일별 추이 <span class="lh-muted">(최근 7일)</span></h2>
+      <p class="lh-desc">__RANGE_LABEL__. 지표를 바꿔 볼 수 있습니다. 회색 영역은 주말입니다.</p>
+    </div>
+    <div data-sec="s3"></div>
+  </section>
+
+  <section class="lh-section">
+    <h2>성과 비교 <span class="lh-muted">(<span id="s4-range"></span>) 및 <span id="s4-cmp">전일</span> 대비 증감율</span></h2>
+    <div data-sec="s4"></div>
+    <p class="lh-note">* __CUR_DAY__에 표시된 %는 비교일 대비 변화율입니다. 단위가 %인 지표(CTR 등)는 %p 차이입니다.
+* Dimension·지표 메뉴에서 표시할 열과 순서를 바꿀 수 있으며, 선택한 조합 단위로 합산해 기준일 광고비 순으로 정렬합니다(페이지당 10개).
+* 위 비교 기준(전일·전주 동요일)을 바꾸면 표도 함께 바뀝니다.
+* CTR = 클릭 ÷ 노출, CPM = 광고비 ÷ 노출 × 1,000, CPV = 광고비 ÷ 조회수.</p>
+  </section>
+
+
+
+  <footer class="lh-footer">Engineered by Laighthouse AI</footer>
+</main>
+<script>
+__CHART_JS_INLINE__
+</script>
+<script>
+__REPORT_KIT_JS__
+</script>
+<script>
+const REPORT = __REPORT_JSON__;
+(function () {
+  const K = window.LHKit;
+  const CMP = [{ key: 'yday', label: '전일' }, { key: 'lastweek', label: '전주 동요일' }];
+  K.compareTabs(document.getElementById('cmp-tabs'), CMP, 'yday');
+  const s4 = REPORT.sections.s4;
+  function cmpTitle(k) {
+    const c = s4 && s4.compares[k];
+    document.getElementById('s4-range').textContent = c ? c.base_label + ' vs ' + c.cur_label : '';
+    document.getElementById('s4-cmp').textContent = (CMP.find(x => x.key === k) || CMP[0]).label;
+  }
+  cmpTitle('yday');
+  K.onCompare(cmpTitle);
+  K.render(REPORT, {
+    s1: (el, d) => K.kpiGrid(el, d.cards),
+    s2: (el, d) => K.bullets(el, d),
+    s3: (el, d) => K.trend(el, d),
+    s4: (el, d) => K.pickTable(el, d),
+  });
+})();
+</script>
+</body>
+</html>

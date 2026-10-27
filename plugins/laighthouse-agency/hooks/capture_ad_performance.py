@@ -10,7 +10,7 @@ heredoc으로 **다시 타이핑**해야 했다 — 보고서 생성 시간의 �
 무엇을 하나 (Claude Code가 이 훅을 도구 응답 직후, 모델이 보기 전에 실행한다):
 1. stdin으로 받은 훅 입력(JSON)에 `tool_input.group_by`(문자열 리스트)가 있고 응답 텍스트가 충분히
    크면(MIN_CHARS 초과), 응답 원본(JSON 봉투 문자열)을 임시 디렉터리에 .json 파일로 저장한다.
-   (agency판: TBWA 보고서는 몇 달치 매체별 일별(`["media"]`)·Placement(`["media","ad_type","placement"]`)
+   (agency판: 종합 리포트는 몇 달치 매체별 일별(`["media"]`)·Placement(`["media","ad_type","placement"]`)
    응답도 커서 group_by가 있으면 차원과 관계없이 캡처한다.)
 2. `hookSpecificOutput.updatedToolOutput`으로 모델에게 보이는 응답을 "저장 경로 + 행 통계 +
    사용법 + 미리보기" 스텁으로 교체한다 — 원본은 컨텍스트에 들어가지 않는다.
@@ -20,8 +20,7 @@ heredoc으로 **다시 타이핑**해야 했다 — 보고서 생성 시간의 �
 응답 형식 참고: `get_ad_performance`는 마크다운 표가 아니라 **JSON 봉투**를 반환한다 —
 `{"source": "elt", "tenant": ..., "time_grain": ..., "dimensions": [...], "metrics": [...],
 "metric_units": {...}, "row_count": N, "rows": [ {...}, ... ]}`. 저장 파일에도 이 봉투가 그대로 담긴다.
-스텁 미리보기에는 `metric_units`(지표별 단위 기호)도 넣는다 — 원본이 컨텍스트에서 빠지는 만큼,
-모델이 지표명으로 단위를 추측하지 않도록 이 맵은 남겨 둔다.
+스텁 미리보기는 차원·지표 이름만 담는다 — 수치·단위는 prepare.py·빌더가 원본 파일에서 읽는다.
 
 이 훅이 실패해도 보고서 생성은 깨지지 않는다 — 응답이 예전처럼 원본 그대로 전달될 뿐이고,
 스킬들은 기존 heredoc(`json` 배열) 경로로 동작한다.
@@ -239,29 +238,18 @@ def main():
         f.write(text)
     _breadcrumb(f"captured: {path} chars={len(text)}")
 
-    dimensions, metrics, metric_units, n_rows, by_media, first_row = envelope_stats(text)
+    dimensions, metrics, _, n_rows, by_media, _ = envelope_stats(text)
     media_summary = ", ".join(f"{k}={v}" for k, v in sorted(by_media.items())) or "n/a"
-    preview_parts = []
-    if dimensions is not None:
-        preview_parts.append(f"dimensions={json.dumps(dimensions, ensure_ascii=False)}")
-    if metrics is not None:
-        preview_parts.append(f"metrics={json.dumps(metrics, ensure_ascii=False)}")
-    if metric_units is not None:
-        preview_parts.append(f"metric_units={json.dumps(metric_units, ensure_ascii=False)}")
-    if first_row is not None:
-        preview_parts.append(f"첫 행={json.dumps(first_row, ensure_ascii=False)[:400]}")
-    preview = "\n".join(preview_parts) or "(JSON 봉투 파싱 실패 — 파일에 원본 그대로 저장됨)"
+    # 미리보기는 짧게: 저장 훅 + prepare.py가 데이터를 다루므로 모델은 차원·지표 이름만 알면 된다(cost_metric 고르기).
+    # 첫 행·단위 맵은 넣지 않는다 — 호출이 많을 때 이 스텁이 매 턴 컨텍스트에 쌓인다.
+    preview = (f"dimensions={json.dumps(dimensions, ensure_ascii=False)} metrics={json.dumps(metrics, ensure_ascii=False)}"
+               if metrics is not None else "(JSON 봉투 파싱 실패 — 파일에 원본 그대로 저장됨)")
 
     stub = (
-        f"[laighthouse-capture-hook] 이 도구 응답 원본({len(text):,}자, 데이터 {n_rows}행; "
-        f"media={media}, time_grain={grain}, group_by={dims}, {start}~{end})은 아래 파일에 전문 저장됨:\n"
-        f"{path}\n"
-        f"media별 행 수: {media_summary}\n"
-        f"⚠️ 원본을 컨텍스트에 다시 타이핑하지 말 것. asset 스크립트(build_report.py 등)에 넘길 때는 "
-        f'{{"json_files": ["{path}", ...]}} 입력 형태(경로 배열)를 heredoc으로 넘기고, '
-        f"그 외 집계가 필요하면 Bash(python)에서 이 파일을 직접 읽어 처리한다. "
-        f"수치를 요약·추정으로 대체하지 않는다.\n"
-        f"미리보기:\n{preview}"
+        f"[laighthouse-capture-hook] 응답 원본({len(text):,}자, {n_rows}행; media={media}, time_grain={grain}, "
+        f"group_by={dims}, {start}~{end}, media별 행 수: {media_summary}) 저장됨:\n{path}\n"
+        f"원본을 옮겨 적지 않는다 — prepare.py가 저장된 응답을 읽는다(훅이 없는 호스트에서는 이 경로를 json_files에 넣는다).\n"
+        f"{preview}"
     )
 
     print(
