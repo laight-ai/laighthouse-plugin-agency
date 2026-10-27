@@ -21,8 +21,9 @@ MCP 응답 봉투 원문을 섹션별로 그대로 받아, 공용 킷(`shared/as
   "s2": {"bullets": [{"head": "...", "text": "...", "tone": "red|green|yellow|neutral"}]},
   "s4": {"json": "<month, group_by [\"media\"], M-5~M0 응답 원문>"},
   "s6": {"json": "<month, group_by = 제공 차원 전부(date·source 제외), M-1~M0 응답 원문>",   # 목표 달성 표(예전 ["media","상품"]도 받는다)
-         "targets": {"<매체>": "<get_target_progress_v2(month=M0, media=<매체>) 응답 원문>", ...}}   # 선택 — 없으면 매체 목표 '-'
-  # 브랜드 전체 목표는 s1.target_progress를 쓴다. 목표가 없는 지표·단위는 조용히 '-'.
+         "targets": {"<매체>": "<get_target_progress_v2(month=M0, media=<매체>) 응답 원문>", ...}}   # 선택 — 예전 입력
+  # 브랜드 전체 목표는 s1.target_progress 첫째 표, 매체 목표는 같은 원문의 둘째 표 매체 행을 쓴다(매체마다 부르지 않는다).
+  # 목표가 없는 지표·단위는 조용히 '-'.
 }
 - s3(월별 광고 성과)은 s1 봉투, s5(매체 성과 비교)는 s4 봉투에서 만든다 — 따로 넘기지 않는다.
 - 키가 없거나 null인 섹션은 "데이터 준비 중"으로 렌더링된다.
@@ -105,12 +106,13 @@ def compute(payload, check_dims=True):
         sections["s1"] = {"cards": [budget] + cards}
 
         cpv = keys.get("cpv")
-        if cost in mm and cpv in mm:
+        if cost in mm:   # CPV가 없는 브랜드(조회 지표 없음)는 광고비 막대만 그린다
             sections["s3"] = {"labels": [f"{b}월" for _, b in months],
                               "bar": {"label": kit.ROLE_LABELS["cost"], "unit": mm[cost]["unit"], "color": kit.BAR_COLOR,
-                                      "data": [tot(k).get(cost) for k in keys6]},
-                              "line": {"label": kit.ROLE_LABELS["cpv"], "unit": mm[cpv]["unit"], "color": kit.LINE_COLOR,
-                                       "data": [tot(k).get(cpv) for k in keys6]}}
+                                      "data": [tot(k).get(cost) for k in keys6]}}
+            if cpv in mm:
+                sections["s3"]["line"] = {"label": kit.ROLE_LABELS["cpv"], "unit": mm[cpv]["unit"], "color": kit.LINE_COLOR,
+                                          "data": [tot(k).get(cpv) for k in keys6]}
 
     sections["s2"] = None if skeleton else kit.bullets_of(payload.get("s2"))
 
@@ -132,8 +134,10 @@ def compute(payload, check_dims=True):
     if e6:   # 예산 및 목표 달성 결과: s6 = month grain, group_by = 제공 차원 전부 — M0만 쓴다
         fine = kit.split_by_period(e6, {M0: M0})
         t_all = kit.parse_targets((sec("s1") or {}).get("target_progress"), keys)
-        t_media = {str(x): t for x, raw in ((sec("s6") or {}).get("targets") or {}).items()
-                   if (t := kit.parse_targets(raw, keys))}
+        # 매체 목표 = s1 목표 원문(media 생략)의 둘째 표 매체 행. 매체마다 따로 부른 원문(s6.targets)이 있으면 그것이 우선
+        t_media = kit.parse_media_targets((sec("s1") or {}).get("target_progress"), keys)
+        t_media.update({str(x): t for x, raw in ((sec("s6") or {}).get("targets") or {}).items()
+                        if (t := kit.parse_targets(raw, keys))})
         tv = {"levels": [[], ["media"]], "values": {0: {"": t_all} if t_all else {}, 1: t_media}}
         sections["s6"] = kit.pick_section(fine, meta, keys, dots=colors, default_dims=["media", P],
                                           search_dim="campaign_name", totals={M0: tot(M0)} if e1 else None,
@@ -166,16 +170,10 @@ def digest(payload):
     _, _, _, c = compute(payload, check_dims=False)
     keys, metrics, units, cur_c, M0, M1 = c["keys"], c["metrics"], c["units"], c["currency"], c["M0"], c["M1"]
     cost = keys.get("cost")
-    roles = [r for r in kit.ROLES if keys.get(r)]
-    mm = {keys[r]: kit.ROLE_LABELS[r] for r in roles}
-    unit_of = lambda k: units.get(k) or (cur_c if k in {keys.get(r) for r in kit.MONEY_ROLES} else None)  # noqa: E731
-
-    def fmt(vals):
-        return {mm[k]: kit.fmt_metric(vals.get(k), unit_of(k), cur_c) for k in mm}
+    _, fmt, change = kit.digest_fmt(keys, units, cur_c)
 
     def row(name, a, b):
-        return {"이름": name, "당월": fmt(a), "전월": fmt(b),
-                "전월 대비": {mm[k]: kit.delta(a.get(k), b.get(k), unit_of(k))["text"] for k in mm}}
+        return {"이름": name, "당월": fmt(a), "전월": fmt(b), "전월 대비": change(a, b)}
 
     out = {"당월": M0, "전월": M1}
     t0 = c["tot"](M0)
@@ -195,8 +193,10 @@ def digest(payload):
     if e6 and all(d in (e6.get("dimensions") or []) for d in ("media", P)):
         split = kit.split_by_period(e6, {M0: M0, M1: M1})
         g = {k: kit.group_values(split.get(k), ["media", P], metrics, units, keys) for k in (M0, M1)}
-        out["매체-상품"] = [row(" ".join(k), g[M0][k], g[M1].get(k) or {})
-                         for k in sorted(g[M0], key=lambda k: -(g[M0][k].get(cost) or 0))]
+        ks = sorted(g[M0], key=lambda k: -(g[M0][k].get(cost) or 0))
+        out["매체-상품"] = [row(" ".join(k), g[M0][k], g[M1].get(k) or {}) for k in ks[:kit.DIGEST_TOP]]
+        if len(ks) > kit.DIGEST_TOP:
+            out["매체-상품 생략"] = f"광고비 상위 {kit.DIGEST_TOP}개만 — 나머지 {len(ks) - kit.DIGEST_TOP}개"
     return out
 
 

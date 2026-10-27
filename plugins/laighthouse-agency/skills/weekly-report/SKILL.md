@@ -40,8 +40,7 @@ MCP 데이터를 받아 **라이트하우스 Weekly 보고서**(HTML 한 파일)
 > 3. 저장 훅이 없는 호스트(prepare.py가 `note`)에서만 「저장 훅이 없을 때」대로 build.json을 직접 만든다.
 
 - 렌더링은 **미리 검증된 asset 스크립트**만 한다(`.py`/`.js` 신규 작성, HTML 직접 작성 금지).
-  - `assets/prepare.py` — `--discover`: 저장된 매체 일별 응답 → 지표 키. 기본: 저장된 응답 → build.json + `digest`
-    (이번주·전주 값과 변화, 월 누적 소진율·기간 진행률).
+  - `assets/prepare.py` — 저장된 응답 → build.json + `digest`(이번주·전주 값과 변화, 월 누적 소진율·기간 진행률).
   - `assets/build_report.py` — build.json + `dims` + `s2` → 최종 HTML 1개. 입력 스키마는 docstring.
   - `assets/discover.py`·`assets/digest.py` — 저장 훅이 없을 때만 쓴다.
 
@@ -62,29 +61,30 @@ MCP 데이터를 받아 **라이트하우스 Weekly 보고서**(HTML 한 파일)
      FINE_DIMS를 정한다(`pivot-table.md` 1절 — 목록에 없는 차원은 넣지 않는다).
    - s1: `time_grain:"month"`, `group_by` 생략, `day_offset` = E의 일, E의 **전월 1일** ~ E
    - s3: `time_grain:"day"`, `group_by:["media"]`, E-34 ~ E
-3. **지표 키**: `python3 assets/prepare.py --brand <브랜드> --target-date <D> --discover` → `metric_keys.cost`.
-   `metrics_absent`는 묻지 않는다 — 단 `cost`가 들어 있으면 어떤 지표가 광고비인지 사용자에게 묻는다.
-4. **2차 호출 — 한 메시지에 동시 3회**:
+
+   **광고비 지표 키**(`metric_keys.cost`, 목표 호출의 `cost_metric`) = 응답(또는 캡처 스텁)의 `metrics` 목록에서 `광고비`·`cost`·`spend`·`spending` 중
+   처음 있는 것(대소문자 무시, 정확히 같은 이름만). 없을 때만 사용자에게 묻는다 — 스크립트를 따로 돌리지 않는다.
+3. **2차 호출 — 한 메시지에 동시 3회**:
    - s1 목표: `get_target_progress_v2` — `month` = E의 달, `media` 생략, `as_of_date` = E, `cost_metric` = `metric_keys.cost`
      (한 줄 메시지·에러는 "목표 없음" — 그대로 둔다)
    - s4: 이번주(E-6 ~ E)·전주(E-13 ~ E-7) **각 1회** — `get_ad_performance` `time_grain:"total"`, `group_by` = FINE_DIMS.
      크기 오류(서버 5만 행·"larger than 16MB" 등)면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절).
-5. **빌드 입력 준비**:
+4. **빌드 입력 준비**:
    ```
    python3 assets/prepare.py --brand <브랜드> --target-date <D>
    ```
    → 출력의 `base`(build.json 경로)·`digest`. `missing`(다시 보낼 호출)이 있으면 그 호출만 다시 보내고 재실행한다(`errors`는
    그 응답이 에러였다는 뜻). `digest_error`(대조 검증 실패)면 그 응답을 다시 조회하고 prepare.py부터 다시 한다.
-6. **Weekly Summary 작성**: `digest` 수치만 근거로 `weekly-report-section-2-summary.md` 형식대로 쓴다.
-7. **빌드 1회**:
+5. **Weekly Summary 작성**: `digest` 수치만 근거로 `weekly-report-section-2-summary.md` 형식대로 쓴다.
+6. **빌드 1회**:
    ```
    python3 assets/build_report.py <<'PYEOF'
    {"base": "<prepare가 준 경로>", "dims": "<차원 확인 에러 메시지 원문>", "s2": {"groups": [...]}}
    PYEOF
    ```
    `out`은 `~/Downloads/laighthouse-reports/{브랜드명}_weekly_{기준_일자}.html`(base에 들어 있다 — 바꿀 때만 `"out"`을 함께 넣는다).
-8. 완성된 HTML을 낸다 — 빌더가 위 경로에 저장했다. 채팅에서 보여 줄 수 있는 호스트(Artifact 등)면 그 파일로 게시한다.
-9. 완료 메시지는 아래 형식 그대로.
+7. 완성된 HTML을 낸다 — 빌더가 위 경로에 저장했다. 채팅에서 보여 줄 수 있는 호스트(Artifact 등)면 그 파일로 게시한다.
+8. 완료 메시지는 아래 형식 그대로.
 
 ## 저장 훅이 없을 때
 

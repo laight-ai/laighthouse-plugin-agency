@@ -98,7 +98,9 @@ def compute(payload, check_dims=True):
     fine = {k: e for k in ("cur", "base") for e in [kit.section_envelope(s4.get(k))] if e} if isinstance(s4, dict) else {}
     e4 = dict(next(iter(fine.values())), rows=[r for e in fine.values() for r in e["rows"]]) if fine else None
     if fine and check_dims:
-        kit.require_dims(payload.get("dims"), [("s4 이번주", fine.get("cur")), ("s4 전주", fine.get("base"))], "s4 주간 비교 표")
+        # 받은 주만 검사한다 — 빠진 주는 차원 오류가 아니라 그 비교가 비는 것이다(prepare.py의 missing)
+        kit.require_dims(payload.get("dims"), [({"cur": "s4 이번주", "base": "s4 전주"}[k], v) for k, v in fine.items()],
+                         "s4 주간 비교 표")
 
     metrics, units = kit.metrics_units(e1, e3, e4)
     ratio_keys = {keys.get(r) for r in kit.RATIO_ROLES if keys.get(r)}
@@ -246,15 +248,8 @@ def digest(payload):
     """Weekly Summary 작성 근거 — 이번주·전주 값과 변화(매체, 매체-상품). 화면 표와 같은 규칙의 숫자다."""
     sections, rep, c = compute(payload, check_dims=False)
     keys, metrics, units, cur_c = c["keys"], c["metrics"], c["units"], c["currency"]
-    roles = [r for r in kit.ROLES if keys.get(r)]
-    mm = {keys[r]: kit.ROLE_LABELS[r] for r in roles}
+    mm, fmt, change = kit.digest_fmt(keys, units, cur_c)
     unit_of = lambda k: units.get(k) or (cur_c if k in {keys.get(r) for r in kit.MONEY_ROLES} else None)  # noqa: E731
-
-    def fmt(vals):
-        return {mm[k]: kit.fmt_metric(vals.get(k), unit_of(k), cur_c) for k in mm}
-
-    def change(a, b):
-        return {mm[k]: kit.delta(a.get(k), b.get(k), unit_of(k))["text"] for k in mm}
 
     out = {"이번주": rep["__CUR_SHORT__"], "전주": rep["__BASE_SHORT__"]}
     if c["tot"]:
@@ -271,11 +266,11 @@ def digest(payload):
                 continue   # 응답에 없는 차원은 건너뛴다
             a = kit.group_values(fine["cur"], ds, metrics, units, keys)
             b = kit.group_values(fine["base"], ds, metrics, units, keys)
-            rows = []
-            for k in sorted(a, key=lambda k: -((a[k].get(keys.get("cost")) or 0))):
-                rows.append({"이름": " ".join(k) or "전체", "이번주": fmt(a[k]), "전주": fmt(b.get(k) or {}),
-                             "변화": change(a[k], b.get(k) or {})})
-            out[name] = rows
+            ks = sorted(a, key=lambda k: -((a[k].get(keys.get("cost")) or 0)))
+            out[name] = [{"이름": " ".join(k) or "전체", "이번주": fmt(a[k]), "전주": fmt(b.get(k) or {}),
+                          "변화": change(a[k], b.get(k) or {})} for k in ks[:kit.DIGEST_TOP]]
+            if len(ks) > kit.DIGEST_TOP:
+                out[name + " 생략"] = f"광고비 상위 {kit.DIGEST_TOP}개만 — 나머지 {len(ks) - kit.DIGEST_TOP}개"
     return out
 
 

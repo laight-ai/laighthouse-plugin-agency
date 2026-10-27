@@ -20,10 +20,10 @@ MCP 응답 봉투 원문을 섹션별로 그대로 받아, 공용 킷(`shared/as
   "dims": "<차원 확인(group_by [\"__list_dimensions__\"]) 에러 메시지 원문>",   # 필수(표가 있을 때) — 빠진 차원이 있으면 멈춘다
   "s1": {"json": "<get_ad_performance day, group_by 없음, D-7~D0 응답 원문>"},
   "s2": {"bullets": [{"head": "Meta Reach", "text": "CPV가 ... <strong>+22.2%</strong> ...", "tone": "red|green|yellow|neutral"}]},
-  "s3": {"json": "<day, group_by [\"media\"], D-6~D0 응답 원문>"},
-  "s4": {"d0": {"json_files": [...]}, "d1": {...}, "d7": {...}}
-        # 피벗 표: 기준일·전일·전주 동요일을 total grain, group_by = 브랜드가 제공하는 차원 전부(date·source 제외)로 1회씩
-        # (예전 입력 {"json": <day, group_by ["media","상품"], D-7~D0>}도 받는다 — 그때 차원은 매체·상품뿐)
+  "s3": {"json": "<day, group_by [\"media\"], D-7~D0 응답 원문>"},   # 차트는 최근 7일, D-7은 전주 동요일 표 대조 검증용
+  "s4": {"json_files": ["<day, group_by = FINE_DIMS, D-7~D0 응답>"]}
+        # 피벗 표: 하루 단위로 D-7~D0을 1회 받아 기준일·전일·전주 동요일 행만 쓴다(하루치 값 = 그날 total 값)
+        # (기준일·전일·전주 동요일을 total grain으로 1회씩 받은 {"d0": ..., "d1": ..., "d7": ...}도 받는다)
 }
 - 키가 없거나 null인 섹션은 "데이터 준비 중"으로 렌더링된다(섹션 생략 없음).
 - 출력(stdout): {"out": 절대경로, "bytes": 크기, "sections": {"s1": "ok"|"placeholder", ...}}
@@ -77,7 +77,8 @@ def compute(payload, check_dims=True):
         e4 = dict(next(iter(fine.values())), rows=[r for e in fine.values() for r in e["rows"]])
     day_of = {"d0": D0, "d1": D1, "d7": D7}
     if fine and check_dims:
-        kit.require_dims(payload.get("dims"), [(f"s4 {day_of[k]}", fine.get(k)) for k in day_of], "s4 피벗 표")
+        # 받은 날짜만 검사한다 — 빠진 날짜는 차원 오류가 아니라 그 비교가 비는 것이다(prepare.py의 missing)
+        kit.require_dims(payload.get("dims"), [(f"s4 {day_of[k]}", v) for k, v in fine.items()], "s4 피벗 표")
     kit.require_rollup([("전체 ↔ 매체(s1·s3)", kit.check_rollup(e1, [], e3, [], keys))] +
                        [(f"매체 ↔ 표({day_of[k]})", kit.check_rollup(e3, ["media"], kit.with_period(v, "date", day_of[k]), ["media"], keys))
                         for k, v in fine.items()] +
@@ -111,7 +112,7 @@ def compute(payload, check_dims=True):
         totals = {k: tot(day_of[k]) for k in fine} if e1 else None
         compares = {"yday": {"base": "d1", "cur": "d0", "base_label": kit.day_label(d1), "cur_label": kit.day_label(target)},
                     "lastweek": {"base": "d7", "cur": "d0", "base_label": kit.day_label(d7), "cur_label": kit.day_label(target)}}
-        sections["s4"] = kit.pick_section(fine, meta, keys, dots=kit.media_colors(media or kit.ordered_names(kit.index_rows(e4, ["media"]))),
+        sections["s4"] = kit.pick_section(fine, meta, keys, dots=colors,
                                           search_dim="campaign_name", compares=compares, totals=totals)
 
     for k in ("s1", "s2", "s3", "s4"):
@@ -135,16 +136,8 @@ def compute(payload, check_dims=True):
 def digest(payload):
     """Daily Summary 작성 근거 — 기준일·전일·전주 동요일 값과 변화(전체, 매체, 매체-상품). 화면 표와 같은 규칙의 숫자다."""
     _, _, _, c = compute(payload, check_dims=False)
-    keys, metrics, units, cur_c, fine = c["keys"], c["metrics"], c["units"], c["currency"], c["fine"]
-    roles = [r for r in kit.ROLES if keys.get(r)]
-    mm = {keys[r]: kit.ROLE_LABELS[r] for r in roles}
-    unit_of = lambda k: units.get(k) or (cur_c if k in {keys.get(r) for r in kit.MONEY_ROLES} else None)  # noqa: E731
-
-    def fmt(vals):
-        return {mm[k]: kit.fmt_metric(vals.get(k), unit_of(k), cur_c) for k in mm}
-
-    def change(a, b):
-        return {mm[k]: kit.delta(a.get(k), b.get(k), unit_of(k))["text"] for k in mm}
+    keys, metrics, units, fine = c["keys"], c["metrics"], c["units"], c["fine"]
+    _, fmt, change = kit.digest_fmt(keys, units, c["currency"])
 
     def row(name, d0, d1, d7):
         return {"이름": name, "기준일": fmt(d0), "전일": fmt(d1), "전주 동요일": fmt(d7),
@@ -159,8 +152,10 @@ def digest(payload):
             if any(d not in dims for d in ds):
                 continue   # 응답에 없는 차원은 건너뛴다
             g = {k: kit.group_values(fine.get(k), ds, metrics, units, keys) for k in ("d0", "d1", "d7")}
-            out[name] = [row(" ".join(k), g["d0"][k], g["d1"].get(k) or {}, g["d7"].get(k) or {})
-                         for k in sorted(g["d0"], key=lambda k: -((g["d0"][k].get(keys.get("cost")) or 0)))]
+            ks = sorted(g["d0"], key=lambda k: -((g["d0"][k].get(keys.get("cost")) or 0)))
+            out[name] = [row(" ".join(k), g["d0"][k], g["d1"].get(k) or {}, g["d7"].get(k) or {}) for k in ks[:kit.DIGEST_TOP]]
+            if len(ks) > kit.DIGEST_TOP:
+                out[name + " 생략"] = f"광고비 상위 {kit.DIGEST_TOP}개만 — 나머지 {len(ks) - kit.DIGEST_TOP}개"
     return out
 
 

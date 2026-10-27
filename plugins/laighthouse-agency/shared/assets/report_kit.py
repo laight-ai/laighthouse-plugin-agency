@@ -292,8 +292,8 @@ def additive_metrics(total_idx, group_idx, metrics, units, metric_keys):
 
 
 def _target_row(text, metric):
-    m = re.search(r"^\|\s*" + metric + r"\s*\|\s*([0-9.]+)\s*\|", text or "", re.M)
-    v = float(m.group(1)) if m else None
+    m = re.search(r"^\|\s*" + metric + r"\s*\|\s*([0-9][0-9.,]*)\s*\|", text or "", re.M)
+    v = float(m.group(1).replace(",", "")) if m else None   # 천 단위 콤마도 읽는다
     return v if v else None
 
 
@@ -322,6 +322,44 @@ def parse_targets(text, metric_keys):
                 out[k] = v
                 break
     return out
+
+
+def parse_media_targets(text, metric_keys):
+    """get_target_progress_v2(media 생략) 원문의 둘째 표 → {매체: {지표 키: 월 목표}}. 매체 행(campaign_name `-`)만 읽는다
+    — 매체마다 따로 부르지 않아도 된다. 행 이름 규칙은 parse_targets와 같다."""
+    out = {}
+    for ln in (text or "").splitlines():
+        cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+        if len(cells) < 5 or cells[1] != "-" or cells[0] in ("media", "") or set(cells[0]) <= {"-", " "}:
+            continue
+        try:
+            v = float(cells[4].replace(",", ""))
+        except ValueError:
+            continue
+        for role, names in TARGET_ROW_NAMES.items():
+            k = metric_keys.get(role)
+            if k and v and cells[3] in names + [k]:
+                out.setdefault(cells[0], {})[k] = v
+    return out
+
+
+def digest_fmt(metric_keys, units, currency):
+    """요약 근거(digest)용 포맷터 — (역할 지표 → 한글 라벨, 값 dict 포맷, 두 값 dict 증감) 세 가지를 돌려준다.
+    daily·weekly·monthly 빌더의 digest가 같은 규칙으로 숫자를 쓰게 한다."""
+    labels = {metric_keys[r]: ROLE_LABELS[r] for r in ROLES if metric_keys.get(r)}
+    money = {metric_keys.get(r) for r in MONEY_ROLES}
+    unit_of = lambda k: units.get(k) or (currency if k in money else None)  # noqa: E731
+
+    def fmt(vals):
+        return {labels[k]: fmt_metric(vals.get(k), unit_of(k), currency) for k in labels}
+
+    def change(a, b):
+        return {labels[k]: delta(a.get(k), b.get(k), unit_of(k))["text"] for k in labels}
+
+    return labels, fmt, change
+
+
+DIGEST_TOP = 15   # 요약 근거의 상세 행(매체-상품 등) 상한 — 광고비 상위만. 요약 규칙은 상위 항목만 쓴다
 
 
 def metric_meta(metrics, units, currency, additive, metric_keys):

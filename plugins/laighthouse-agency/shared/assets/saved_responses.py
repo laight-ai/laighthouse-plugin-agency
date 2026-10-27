@@ -5,7 +5,7 @@
 빌더 입력(build.json)을 만든다 — 모델이 응답 원문을 읽거나 옮겨 적지 않는다.
 
 부품:
-- `load_records(brand)`      이 브랜드의 저장 응답(24시간 이내, 저장 순)
+- `load_records(brand)`      이 브랜드의 가장 최근 세션 응답(24시간 이내, 저장 순, 본문은 고를 때 읽는다)
 - `pick(recs, tool, **args)` 인자가 맞는 가장 최근 응답 (args 값이 None이면 "인자 생략"과 같다)
 - `response_text(rec)`       응답 본문(래퍼·호스트 저장 파일 안내문을 푼 것)
 - `Workdir`                  봉투를 작업 폴더에 저장하고 missing·errors를 모은다
@@ -42,6 +42,13 @@ def unwrap(text):
 
 def response_text(rec):
     text = rec.get("response")
+    if text is None and rec.get("_path"):   # 색인으로 고른 기록 — 본문은 이때 읽는다
+        try:
+            with open(rec["_path"], encoding="utf-8") as f:
+                full = json.load(f)
+            text, rec["spilled_path"] = full.get("response"), rec.get("spilled_path") or full.get("spilled_path")
+        except (OSError, ValueError):
+            text = ""
     if not isinstance(text, str):
         text = json.dumps(text, ensure_ascii=False)
     m = SPILL_RE.search(text) if len(text) < 5000 else None
@@ -55,33 +62,54 @@ def response_text(rec):
     return unwrap(text)
 
 
-def load_records(brand):
-    out, now = [], time.time()
-    try:
-        sessions = os.listdir(ROOT)
-    except OSError:
-        return out
-    for s in sessions:
-        folder = os.path.join(ROOT, s)
-        if not os.path.isdir(folder):
-            continue
+def _session_records(folder, now):
+    """세션 폴더의 기록(본문 제외). index.jsonl이 있으면 그것만 읽고, 없으면(색인을 남기지 않는 훅) 파일을 연다."""
+    out = []
+    index = os.path.join(folder, "index.jsonl")
+    if os.path.exists(index):
+        with open(index, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                rec["_path"] = os.path.join(folder, rec.get("file", ""))
+                out.append(rec)
+    else:
         for name in os.listdir(folder):
             path = os.path.join(folder, name)
             if not name.endswith(".json"):
                 continue
             try:
-                if now - os.path.getmtime(path) > MAX_AGE:
-                    continue
                 with open(path, encoding="utf-8") as f:
                     rec = json.load(f)
             except (OSError, ValueError):
                 continue
-            ti = rec.get("tool_input") or {}
-            if isinstance(ti, dict) and ti.get("brand_name") == brand:
-                rec["_tool"] = str(rec.get("tool_name") or "").rsplit("__", 1)[-1]
+            if isinstance(rec, dict):
                 out.append(rec)
-    out.sort(key=lambda r: r.get("saved_at") or 0)
-    return out
+    return [r for r in out if now - (r.get("saved_at") or 0) <= MAX_AGE]
+
+
+def load_records(brand):
+    """이 브랜드의 응답이 있는 세션 중 **가장 최근 세션**의 기록만(저장 순). 다른 실행의 응답을 섞지 않는다 —
+    이번 실행에서 빠진 호출은 옛 응답으로 채워지지 않고 missing으로 드러난다."""
+    now, latest = time.time(), []
+    try:
+        sessions = os.listdir(ROOT)
+    except OSError:
+        return []
+    for s in sessions:
+        folder = os.path.join(ROOT, s)
+        if not os.path.isdir(folder):
+            continue
+        recs = [r for r in _session_records(folder, now)
+                if isinstance(r.get("tool_input"), dict) and r["tool_input"].get("brand_name") == brand]
+        if recs and max(r.get("saved_at") or 0 for r in recs) > max((r.get("saved_at") or 0 for r in latest), default=0):
+            latest = recs
+    for r in latest:
+        r["_tool"] = str(r.get("tool_name") or "").rsplit("__", 1)[-1]
+    latest.sort(key=lambda r: r.get("saved_at") or 0)
+    return latest
 
 
 def _norm(key, value):
@@ -114,8 +142,6 @@ def pick(recs, tool, **args):
             got = _norm(k, ti.get(k))
             if k == "group_by" and want == "*":
                 ok = bool(got) and got != ["media"] and "__list_dimensions__" not in got
-            elif k == "media" and want == "*":
-                ok = bool(got)
             else:
                 ok = got == _norm(k, want)
             if not ok:
@@ -123,17 +149,6 @@ def pick(recs, tool, **args):
         if ok:
             return r
     return None
-
-
-def picks(recs, tool, key, **args):
-    """같은 인자에서 key 값마다 가장 최근 응답 → {값: 기록} (예: 매체별 목표)."""
-    out = {}
-    for r in recs:
-        if pick([r], tool, **args):
-            v = (r.get("tool_input") or {}).get(key)
-            if v not in (None, ""):
-                out[str(v)] = r
-    return out
 
 
 class Workdir:

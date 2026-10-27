@@ -2,8 +2,8 @@
 
 ## MCP 호출
 
-`get_ad_performance` ×1 — `time_grain:"day"`, `group_by:["media"]`, `start_date` = D0-6일, `end_date` = D0,
-`metrics`·`filters` 생략.
+`get_ad_performance` ×1 — `time_grain:"day"`, `group_by:["media"]`, `start_date` = D0-7일, `end_date` = D0,
+`metrics`·`filters` 생략. 차트는 최근 7일(D0-6~D0)만 그린다 — D0-7은 전주 동요일 표의 매체별 대조 검증에 쓴다.
 
 ## 빌더 입력 (`assets/prepare.py`가 채운다 — 저장 훅이 없을 때만 직접 만든다)
 

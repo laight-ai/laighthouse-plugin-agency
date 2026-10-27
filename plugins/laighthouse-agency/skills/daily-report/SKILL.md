@@ -53,15 +53,14 @@ MCP 데이터를 받아 **라이트하우스 Daily 보고서**(HTML 한 파일)�
 
 ## 실행 순서
 
-1. 파라미터를 파싱한다. D1 = D0-1일, D6 = D0-6일, D7 = D0-7일.
+1. 파라미터를 파싱한다. D1 = D0-1일, D7 = D0-7일.
 2. **1차 호출 — 한 메시지에 동시 3회** (`get_ad_performance`, `metrics`·`filters` 생략):
    - 차원 확인: D7~D0, `time_grain:"total"`, `group_by:["__list_dimensions__"]`, `metrics:[]` → 에러 메시지의 차원 목록에서
      FINE_DIMS를 정한다(`pivot-table.md` 1절 — 목록에 없는 차원은 넣지 않는다).
    - s1: D7~D0, `time_grain:"day"`, `group_by` 생략
-   - s3: D6~D0, `time_grain:"day"`, `group_by:["media"]`
-3. **2차 호출 — 한 메시지에 동시 3회**: s4 피벗 표 — 기준일·전일·전주 동요일 **각 1회**, `time_grain:"total"`,
-   `start_date` = `end_date` = 그 날짜, `group_by` = FINE_DIMS. 크기 오류(서버 5만 행·"larger than 16MB" 등)면 그 날짜만
-   `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절).
+   - s3: D7~D0, `time_grain:"day"`, `group_by:["media"]` (차트는 최근 7일, D7은 전주 동요일 표 대조 검증용)
+3. **2차 호출 — 1회**: s4 피벗 표 — D7~D0, `time_grain:"day"`, `group_by` = FINE_DIMS(빌더가 기준일·전일·전주 동요일 행만 쓴다).
+   크기 오류(서버 5만 행·"larger than 16MB" 등)면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절).
 4. **빌드 입력 준비**:
    ```
    python3 assets/prepare.py --brand <브랜드> --target-date <D0>

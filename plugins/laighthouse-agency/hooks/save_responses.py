@@ -13,6 +13,7 @@ list_promotions)을 원본 그대로 파일로 남긴다.
   저장한다. 읽지 못하면 안내문과 `spilled_path`를 남겨 prepare.py가 다시 시도하게 한다.
 - `brand_name` 인자가 없는 같은 이름의 다른 서버 도구는 무시한다.
 - 모델에게 보이는 응답은 바꾸지 않는다(stdout 없음). 실패해도 도구 호출을 깨지 않는다(예외 무시).
+- 같은 폴더의 index.jsonl에 응답 본문을 뺀 한 줄(도구·인자·저장 시각·파일명)을 덧붙인다.
 - 24시간 지난 세션 폴더는 정리한다.
 """
 
@@ -108,6 +109,10 @@ def main():
     name = "%d_%s.json" % (int(time.time() * 1000), rec["tool_name"].rsplit("__", 1)[-1])
     with open(os.path.join(folder, name), "w", encoding="utf-8") as f:
         json.dump(rec, f, ensure_ascii=False)
+    # 색인: prepare.py가 큰 응답 본문을 열지 않고 (도구 + 인자)로 고르게 한다 — 본문은 고른 것만 읽는다
+    meta = {k: v for k, v in rec.items() if k != "response"}
+    with open(os.path.join(folder, "index.jsonl"), "a", encoding="utf-8") as f:
+        f.write(json.dumps(dict(meta, file=name), ensure_ascii=False) + "\n")
     prune()
 
 

@@ -4,8 +4,9 @@
 플러그인 저장 훅(hooks/save_responses.py)이 laighthouse 응답 원본을 파일로 남긴다. 이 스크립트는 그중 이 브랜드·기준일의
 응답을 (도구 + 인자)로 골라 섹션 입력을 만든다 (D0 = 기준일, D1 = D0-1, D7 = D0-7):
   s1  get_ad_performance(day, group_by 생략, D7~D0)
-  s3  get_ad_performance(day, group_by ["media"], D0-6~D0)
-  s4  get_ad_performance(total, group_by = FINE_DIMS, D0·D1·D7 하루씩)
+  s3  get_ad_performance(day, group_by ["media"], D7~D0) — 차트는 최근 7일, D7은 전주 동요일 표 대조 검증용
+  s4  get_ad_performance(day, group_by = FINE_DIMS, D7~D0) 1회 — 빌더가 D0·D1·D7 행만 쓴다
+      (예전 방식: total grain으로 D0·D1·D7 하루씩 3회 받은 응답도 받는다)
 
 사용법 (MCP 호출을 모두 받은 직후, 1회):
   python3 assets/prepare.py --brand <브랜드> --target-date <D0>
@@ -41,7 +42,7 @@ def main():
     ap.add_argument("--target-date", required=True)
     a = ap.parse_args()
     d0 = date.fromisoformat(a.target_date)
-    D0, D1, D7, D6 = (str(d0 - timedelta(days=n)) for n in (0, 1, 7, 6))
+    D0, D1, D7 = (str(d0 - timedelta(days=n)) for n in (0, 1, 7))
     recs = sr.load_records(a.brand)
     if not recs:
         sr.emit({"note": sr.no_records_note()})
@@ -52,14 +53,17 @@ def main():
             "target_date": D0}
     s1 = w.envelope(sr.pick(recs, PERF, time_grain="day", group_by=None, start_date=D7, end_date=D0), "s1.json",
                     {"section": "s1", "time_grain": "day", "group_by": None, "range": f"{D7}~{D0}"})
-    s3 = w.envelope(sr.pick(recs, PERF, time_grain="day", group_by=["media"], start_date=D6, end_date=D0), "s3.json",
-                    {"section": "s3", "time_grain": "day", "group_by": ["media"], "range": f"{D6}~{D0}"})
-    s4 = {}
-    for k, d in (("d0", D0), ("d1", D1), ("d7", D7)):
-        e = w.envelope(sr.pick(recs, PERF, time_grain="total", group_by="*", start_date=d, end_date=d), f"s4_{k}.json",
-                       {"section": "s4", "time_grain": "total", "group_by": "FINE_DIMS", "range": f"{d}~{d}"})
-        if e:
-            s4[k] = e
+    s3 = w.envelope(sr.pick(recs, PERF, time_grain="day", group_by=["media"], start_date=D7, end_date=D0), "s3.json",
+                    {"section": "s3", "time_grain": "day", "group_by": ["media"], "range": f"{D7}~{D0}"})
+    day = sr.pick(recs, PERF, time_grain="day", group_by="*", start_date=D7, end_date=D0)
+    totals = {k: sr.pick(recs, PERF, time_grain="total", group_by="*", start_date=d, end_date=d)
+              for k, d in (("d0", D0), ("d1", D1), ("d7", D7))}
+    if day or not any(totals.values()):
+        s4 = w.envelope(day, "s4.json", {"section": "s4", "time_grain": "day", "group_by": "FINE_DIMS", "range": f"{D7}~{D0}"})
+    else:   # 예전 방식(하루씩 total 3회)
+        s4 = {k: e for k, d in (("d0", D0), ("d1", D1), ("d7", D7))
+              for e in [w.envelope(totals[k], f"s4_{k}.json",
+                                   {"section": "s4", "time_grain": "total", "group_by": "FINE_DIMS", "range": f"{d}~{d}"})] if e}
     base.update({k: v for k, v in (("s1", s1), ("s3", s3), ("s4", s4)) if v})
 
     result = {"missing": w.missing, "errors": w.errors}

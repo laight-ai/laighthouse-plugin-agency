@@ -4,13 +4,13 @@
 
 ## MCP 호출
 
-기준일(D0)·전일(D1)·전주 동요일(D7) **각 1회** — `time_grain:"total"`, `start_date` = `end_date` = 그 날짜,
-`group_by` = FINE_DIMS(차원 확인 결과), `metrics`·`filters` 생략.
+**1회** — `time_grain:"day"`, `start_date` = D7, `end_date` = D0, `group_by` = FINE_DIMS(차원 확인 결과), `metrics`·`filters` 생략.
+빌더가 기준일(D0)·전일(D1)·전주 동요일(D7) 행만 쓴다(하루치 행 값 = 그날만 따로 조회한 값).
 
 ## 빌더 입력 (`assets/prepare.py`가 채운다 — 저장 훅이 없을 때만 직접 만든다)
 
 ```json
-"s4": {"d0": {"json_files": ["<D0 응답 파일>"]}, "d1": {"json_files": ["<D1 응답 파일>"]}, "d7": {"json_files": ["<D7 응답 파일>"]}}
+"s4": {"json_files": ["<D7~D0 응답 파일>"]}
 ```
 
 ## 화면

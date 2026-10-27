@@ -47,8 +47,8 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
 >    🚫 값만 골라 옮겨 적기, 봉투를 새로 조립하기, 다른 호출의 값을 재사용하기는 전부 금지다.
 
 - 렌더링은 **미리 검증된 asset 스크립트**만 한다(`.py`/`.js` 신규 작성, HTML 직접 작성 금지).
-  - `assets/discover.py` — 매체별 일별 응답(파일 경로 또는 stdin) → `metric_keys`/`currency`/`missing`.
-  - `assets/prepare.py` — 저장된 응답 → build.json(매체별 일별·월별 표 데이터·Placement·월별 목표 원문).
+  - `assets/discover.py` — 저장 훅이 없을 때만: 매체별 일별 응답(파일 경로 또는 stdin) → `metric_keys`/`currency`/`missing`.
+  - `assets/prepare.py` — 저장된 응답 → build.json(매체별 일별·월별 표 데이터·Placement·월별 목표 원문), `--build`면 빌더까지.
   - `assets/build_report.py` — 봉투·목표 원문 → 최종 HTML 1개(Comment 생성 포함) + 같은 이름의 `.xlsx` 1개. 입력 스키마는 docstring.
   - `assets/integrated_xlsx.py` — 빌더가 import 한다(직접 부르지 않는다). 표준 라이브러리만으로 엑셀을 쓴다(openpyxl 불필요).
 
@@ -68,8 +68,10 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
 2. **차원 확인 + 매체별 일별 (한 메시지에 동시 2회)**:
    - `get_ad_performance`(S ~ E, `time_grain:"total"`, `group_by:["__list_dimensions__"]`, `metrics:[]`) → 에러 메시지의
      차원 목록에서 FINE_DIMS를 정한다(`pivot-table.md` 1절 — 목록에 없는 차원은 넣지 않는다).
-   - `get_ad_performance`(S ~ E, `time_grain:"day"`, `group_by:["media"]`, `metrics` 생략) → `python3 assets/discover.py <파일 경로>`
-     (스텁 없이 원본이 왔으면 stdin으로). `missing`이 있으면 사용자에게 한 번에 묻는다. 매체 목록도 여기서 얻는다.
+   - `get_ad_performance`(S ~ E, `time_grain:"day"`, `group_by:["media"]`, `metrics` 생략)
+
+   **광고비 지표 키**(`metric_keys.cost`, 목표 호출의 `cost_metric`) = 응답(또는 캡처 스텁)의 `metrics` 목록에서 `광고비`·`cost`·`spend`·`spending` 중
+   처음 있는 것(대소문자 무시, 정확히 같은 이름만). 없을 때만 사용자에게 묻는다 — 스크립트를 따로 돌리지 않는다.
 3. **데이터 호출을 한 메시지에 동시 발사** (`metrics`·`filters` 생략):
    - 표 데이터: `time_grain:"day"`, `group_by` = FINE_DIMS — **달마다 1회**(첫 달은 S부터, 마지막 달은 E까지 — 겹치지 않게 나눠 받는다).
      크기 오류면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절). 서버의 5만 행 오류뿐 아니라
@@ -80,19 +82,15 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
    - 예산·목표: `get_target_progress_v2` — `month` = 걸친 달마다, `cost_metric` = `metric_keys.cost`,
      `as_of_date` = 지난 달은 그 달 말일, 마지막 달은 E. **달마다 `media` 생략 1회**(응답 둘째 표에 매체·캠페인 행이 모두 온다 —
      매체마다 따로 부르지 않는다). 한 줄 메시지·에러는 "목표 없음"(원문 그대로, 에러면 빈 문자열).
-4. **빌드 입력 준비 + 빌드**: 응답 원문을 `build.json`에 옮겨 적지 않는다 — 플러그인 저장 훅(`hooks/save_responses.py`)이
-   2·3단계 응답 원본을 파일로 남겨 두었다.
+4. **빌드 입력 준비 + 빌드 (1회)**: 응답 원문을 `build.json`에 옮겨 적지 않는다 — 플러그인 저장 훅(`hooks/save_responses.py`)이
+   2·3단계 응답 원본을 파일로 남겨 두었다. prepare.py가 빌더까지 부른다 — 차원 확인 에러 메시지 원문만 stdin으로 넣는다:
    ```
-   python3 assets/prepare.py --brand <브랜드> --target-date <D> [--start-date <S>]
-   ```
-   → 출력의 `base`(build.json 경로). `missing`(다시 보낼 호출)이 있으면 그 호출만 다시 보내고 재실행한다(`errors`는 그 응답이
-   에러였다는 뜻). `discover.metrics_absent`는 브랜드가 주지 않는 지표라 묻지 않는다.
-   그다음 빌더 1회 — 차원 확인 에러 메시지 원문만 직접 넣는다:
-   ```
-   python3 assets/build_report.py <<'PYEOF'
-   {"base": "<prepare가 준 경로>", "dims": "<차원 확인 에러 메시지 원문>"}
+   python3 assets/prepare.py --brand <브랜드> --target-date <D> [--start-date <S>] --build <<'PYEOF'
+   <차원 확인 에러 메시지 원문>
    PYEOF
    ```
+   → 출력의 `build`가 빌더 출력이다. `missing`(다시 보낼 호출)이 있으면 빌드하지 않는다 — 그 호출만 다시 보내고 재실행한다
+   (`errors`는 그 응답이 에러였다는 뜻). `build_error`는 빌더가 멈춘 이유다. `discover.metrics_absent`는 브랜드가 주지 않는 지표라 묻지 않는다.
    `out`은 `~/Downloads/laighthouse-reports/{브랜드명}_integrated_{기준_일자}.html`(base에 들어 있다 — 바꿀 때만 `"out"`을 함께 넣는다).
    엑셀은 같은 폴더의 `{브랜드명}_integrated_{기준_일자}.xlsx` — 출력의 `xlsx`가 그 경로다. `xlsx_error`(예: 같은 파일이 엑셀에 열려 있음)면
    HTML은 정상이다 — 다시 부르지 말고 완료 메시지에 이유를 한 줄로 적는다(파일을 닫고 다시 만들 수 있다고 안내).

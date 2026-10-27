@@ -6,14 +6,16 @@ Dimension·지표 메뉴·검색·페이지 규칙은 `shared/references/pivot-t
 
 - `get_ad_performance` ×1 — `time_grain:"month"`, `group_by` = FINE_DIMS(차원 확인 결과), M-1 1일 ~ M0 말일, `metrics`·`filters` 생략.
   (M0만 쓴다. M-1은 예전 입력과의 호환을 위해 그대로 받아도 된다.)
-- `get_target_progress_v2` × `media_list` 각 매체 — `month` = M0, `media` = 그 매체, `as_of_date` = M0 말일, `cost_metric` = `metric_keys.cost`.
-  브랜드 전체 목표는 s1의 `target_progress`(media 생략)를 쓴다.
+- 목표는 따로 부르지 않는다 — s1의 `get_target_progress_v2`(media 생략) 원문 하나에서 첫째 표 = 브랜드 전체 목표,
+  둘째 표의 매체 행(campaign_name `-`) = 매체 목표를 빌더가 읽는다.
 
 ## 빌더 입력 (`assets/prepare.py`가 채운다 — 저장 훅이 없을 때만 직접 만든다)
 
 ```json
-"s6": {"json_files": ["<응답 파일>"], "targets": {"<매체>": "<get_target_progress_v2 응답 원문>"}}
+"s6": {"json_files": ["<응답 파일>"]}
 ```
+
+(예전 입력 `"targets": {"<매체>": "<get_target_progress_v2(media=<매체>) 원문>"}`도 받는다 — 있으면 그 매체는 이 원문이 우선이다.)
 
 ## 화면
 
