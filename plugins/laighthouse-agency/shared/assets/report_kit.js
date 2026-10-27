@@ -279,6 +279,45 @@
     K.onThreshold(() => paint(cmpKey));
   };
 
+  /* 지표를 고르는 KPI 카드. spec = report_kit.kpi_pick: {cards: [{key, ...카드}], default: [key]}
+   * 카드는 한 번만 그리고(비교 기준 탭 구독도 한 번) 지표 메뉴에서 켜고 끄거나 순서를 바꾸면 카드 요소를 다시 늘어놓는다.
+   * 고른 지표는 이 브라우저에 기억한다(저장이 막혀 있으면 기본값). */
+  K.kpiPick = function (el, spec) {
+    el.innerHTML = '';
+    const cards = spec.cards || [];
+    if (!cards.length) { K.placeholder(el); return; }
+    const keys = cards.map(c => c.key);
+    const LS = 'lh-kpi-pick:' + (spec.store || 'default');
+    const def = { order: keys.slice(), on: (spec.default || keys).filter(k => keys.includes(k)) };
+    const state = { order: def.order.slice(), on: new Set(def.on) };
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS) || 'null');
+      if (saved && Array.isArray(saved.order)) {
+        state.order = saved.order.filter(k => keys.includes(k)).concat(keys.filter(k => !saved.order.includes(k)));
+        state.on = new Set((saved.on || []).filter(k => keys.includes(k)));
+        if (!state.on.size) state.on = new Set(def.on);
+      }
+    } catch (e) { /* 저장소를 쓸 수 없으면 기본값 */ }
+    const bar = h('div', 'lh-pick-bar');
+    const left = h('div', 'lh-pick-left');
+    bar.appendChild(h('div'));
+    bar.appendChild(left);
+    const body = h('div');
+    el.appendChild(bar);
+    el.appendChild(body);
+    K.kpiGrid(body, cards);
+    const grid = body.firstChild;
+    const nodes = {};
+    Array.from(grid.children).forEach((n, i) => { nodes[keys[i]] = n; });
+    function arrange() {
+      state.order.forEach(k => { nodes[k].hidden = !state.on.has(k); grid.appendChild(nodes[k]); });
+      grid.classList.toggle('is-wide', state.on.size <= 2);
+      try { localStorage.setItem(LS, JSON.stringify({ order: state.order, on: Array.from(state.on) })); } catch (e) { /* 무시 */ }
+    }
+    left.appendChild(picker('지표', '표시할 지표 / 순서', cards.map(c => ({ key: c.key, label: c.label })), state, def, arrange));
+    arrange();
+  };
+
   /* 요약 불릿. item = {head?, text, tone: red|green|yellow|neutral} */
   K.bullets = function (el, items) {
     el.innerHTML = '';

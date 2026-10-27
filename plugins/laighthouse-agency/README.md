@@ -31,7 +31,7 @@
 
 | 스킬 | 섹션 |
 |---|---|
-| daily-report | 일간 성과 요약(7 KPI, 전일/전주 동요일) · Daily Summary · 매체별 최근 7일 추이 · 성과 비교 표 |
+| daily-report | 일간 성과 요약(기본 7 KPI + 지표 메뉴로 ELT 지표 추가·해제, 전일/전주 동요일) · Daily Summary · 매체별 최근 7일 추이 · 성과 비교 표 |
 | weekly-report | 월 누적 예산 소진율·목표 진척도 · Weekly Summary(소진·효율) · 매체별 최근 5주 추이 · 주간 성과 비교 표 |
 | monthly-report | 예산 소진율 + 7 KPI · Executive Summary · 6개월 추이 · 매체별 추이 · 매체 비교 · 예산·목표 달성 표 |
 

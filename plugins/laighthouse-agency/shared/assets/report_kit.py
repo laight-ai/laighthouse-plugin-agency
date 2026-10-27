@@ -485,6 +485,24 @@ def kpi_cards(cur, bases, metric_keys, meta):
     return cards
 
 
+def kpi_pick(cur, bases, metric_keys, meta):
+    """지표를 고를 수 있는 KPI 카드(LHKit.kpiPick). 봉투 지표 전부의 카드를 만들고, 처음엔 고정 7 역할만 켠다.
+    → {"cards": [{key, ...카드}], "default": [역할 지표 키]} — 카드 순서 = 역할 순서, 그다음 서빙 순서."""
+    roles = [metric_keys[r] for r in ROLES if metric_keys.get(r)]
+    order = roles + [m["key"] for m in meta if m["key"] not in roles]
+    mm = meta_map(meta)
+    cards = []
+    for k in order:
+        if k not in mm:
+            continue
+        unit = mm[k].get("unit")
+        cards.append({"key": k, "label": mm[k]["label"], "value": fmt_metric(cur.get(k), unit),
+                      "deltas": [dict(key=bk, label=bl, x=delta_value(cur.get(k), (bv or {}).get(k), unit), pp=unit == "%",
+                                      **delta(cur.get(k), (bv or {}).get(k), unit))
+                                 for bk, bl, bv in bases]})
+    return {"cards": cards, "default": [k for k in roles if k in mm]}
+
+
 def series_values(idx, periods, key, metrics):
     return {m: [((idx.get(p) or {}).get(key) or {}).get(m) for p in periods] for m in metrics}
 
