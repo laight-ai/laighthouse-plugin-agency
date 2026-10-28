@@ -311,7 +311,7 @@
         if (!state.on.size) state.on = new Set(def.on);
       }
     } catch (e) { /* 저장소를 쓸 수 없으면 기본값 */ }
-    const bar = h('div', 'lh-pick-bar');
+    const bar = h('div', 'lh-pick-bar lh-kpi-bar');
     const left = h('div', 'lh-pick-left');
     bar.appendChild(h('div'));
     bar.appendChild(left);
