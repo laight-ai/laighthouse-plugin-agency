@@ -226,7 +226,7 @@ def digest(payload):
     e6 = c["e6"]
     if e6:
         split = kit.split_by_period(e6, {M0: M0, M1: M1})
-        out.update(kit.digest_levels([split.get(M0), split.get(M1)], kit.DIGEST_LEVELS[:2], metrics, units, keys, row))
+        out.update(kit.digest_levels([split.get(M0), split.get(M1)], kit.DIGEST_LEVELS, metrics, units, keys, row))
         # 캠페인 월 예산이 있으면(dashboard 브랜드) 매체-캠페인 행에 예산·소진율을 붙인다 — 집행액은 표와 같은 광고비 값
         cur_camp = kit.group_values(split.get(M0), ["media", "campaign_name"], metrics, units, keys)
         for r in out.get("매체-캠페인") or []:
