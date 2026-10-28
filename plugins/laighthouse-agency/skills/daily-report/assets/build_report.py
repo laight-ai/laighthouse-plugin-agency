@@ -48,8 +48,6 @@ else:
     raise SystemExit("report_kit.py를 찾을 수 없다 (shared/assets)")
 import report_kit as kit  # noqa: E402
 
-P = kit.PRODUCT_DIM
-
 
 def compute(payload, check_dims=True):
     target = date.fromisoformat(payload["target_date"])
@@ -94,7 +92,7 @@ def compute(payload, check_dims=True):
 
     tot = lambda d: (i1.get(d) or {}).get(()) or {}  # noqa: E731
     if e1 and tot(D0):
-        # 카드 = 서빙 지표 전부, 처음엔 고정 7 역할만 켠다 — 보는 사람이 지표 메뉴로 더하고 뺀다
+        # 카드 = 서빙 지표 전부, 처음엔 KPI_ROLES(고정 7 역할 + VTR)만 켠다 — 보는 사람이 지표 메뉴로 더하고 뺀다
         sections["s1"] = kit.kpi_pick(tot(D0), [("yday", "전일", tot(D1)), ("lastweek", "전주 동요일", tot(D7))],
                                       keys, meta, store="daily")
 
@@ -105,7 +103,7 @@ def compute(payload, check_dims=True):
         periods = [d.isoformat() for d in days]
         sections["s3"] = {"labels": [kit.day_label(d) for d in days],
                           "weekend": [i for i, d in enumerate(days) if d.weekday() >= 5],
-                          "metrics": meta, "default_metric": keys.get("cost"),
+                          "metrics": meta, "default_metric": keys.get("cost"), "metric_select": True,
                           "series": [{"name": m, "color": colors[m],
                                       "values": kit.series_values(i3, periods, (m,), metrics)} for m in media]}
 
@@ -113,7 +111,10 @@ def compute(payload, check_dims=True):
         totals = {k: tot(day_of[k]) for k in fine} if e1 else None
         compares = {"yday": {"base": "d1", "cur": "d0", "base_label": kit.day_label(d1), "cur_label": kit.day_label(target)},
                     "lastweek": {"base": "d7", "cur": "d0", "base_label": kit.day_label(d7), "cur_label": kit.day_label(target)}}
-        sections["s4"] = kit.pick_section(fine, meta, keys, dots=colors,
+        # 기본 Dimension = 매체 → 상품. 상품 차원이 없으면 매체 → 캠페인(세부 단위 모니터링이 목적)
+        fdims = set(e4.get("dimensions") or [])
+        dd = ["media", kit.PRODUCT_DIM] if kit.PRODUCT_DIM in fdims else ["media", "campaign_name"]
+        sections["s4"] = kit.pick_section(fine, meta, keys, dots=colors, default_dims=dd,
                                           search_dim="campaign_name", compares=compares, totals=totals)
 
     for k in ("s1", "s2", "s3", "s4"):
@@ -135,7 +136,8 @@ def compute(payload, check_dims=True):
 
 
 def digest(payload):
-    """Daily Summary 작성 근거 — 기준일·전일·전주 동요일 값과 변화(전체, 매체, 매체-상품). 화면 표와 같은 규칙의 숫자다."""
+    """Daily Summary 작성 근거 — 기준일·전일·전주 동요일 값과 변화(전체, 매체, 매체-캠페인·광고그룹·광고).
+    세부 단위는 광고비 상위 + 전일 대비 광고비 변동 상위(kit.digest_levels). 화면 표와 같은 규칙의 숫자다."""
     _, _, _, c = compute(payload, check_dims=False)
     keys, metrics, units, fine = c["keys"], c["metrics"], c["units"], c["fine"]
     _, fmt, change = kit.digest_fmt(keys, units, c["currency"])
@@ -148,15 +150,12 @@ def digest(payload):
     if c["tot"](c["D0"]):
         out["전체"] = row("전체", c["tot"](c["D0"]), c["tot"](c["D1"]), c["tot"](c["D7"]))
     if "d0" in fine:
-        dims = fine["d0"].get("dimensions") or []
-        for name, ds in (("매체", ["media"]), ("매체-상품", ["media", P])):
-            if any(d not in dims for d in ds):
-                continue   # 응답에 없는 차원은 건너뛴다
-            g = {k: kit.group_values(fine.get(k), ds, metrics, units, keys) for k in ("d0", "d1", "d7")}
+        if "media" in (fine["d0"].get("dimensions") or []):
+            g = {k: kit.group_values(fine.get(k), ["media"], metrics, units, keys) for k in ("d0", "d1", "d7")}
             ks = sorted(g["d0"], key=lambda k: -((g["d0"][k].get(keys.get("cost")) or 0)))
-            out[name] = [row(" ".join(k), g["d0"][k], g["d1"].get(k) or {}, g["d7"].get(k) or {}) for k in ks[:kit.DIGEST_TOP]]
-            if len(ks) > kit.DIGEST_TOP:
-                out[name + " 생략"] = f"광고비 상위 {kit.DIGEST_TOP}개만 — 나머지 {len(ks) - kit.DIGEST_TOP}개"
+            out["매체"] = [row(k[0], g["d0"][k], g["d1"].get(k) or {}, g["d7"].get(k) or {}) for k in ks[:kit.DIGEST_TOP]]
+        out.update(kit.digest_levels([fine.get("d0"), fine.get("d1"), fine.get("d7")], kit.DIGEST_LEVELS,
+                                     metrics, units, keys, row))
     return out
 
 

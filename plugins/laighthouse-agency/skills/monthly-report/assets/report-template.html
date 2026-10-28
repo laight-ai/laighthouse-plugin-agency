@@ -37,7 +37,7 @@ __REPORT_KIT_CSS__
   <section class="lh-section">
     <div>
       <h2>월별 광고 성과</h2>
-      <p class="lh-desc">최근 6개월, 전체 광고비와 CPV 추이</p>
+      <p class="lh-desc">최근 6개월, 전체 광고비(막대)와 고른 지표(꺾은선) 추이</p>
     </div>
     <div data-sec="s3"></div>
   </section>
@@ -85,7 +85,7 @@ const REPORT = __REPORT_JSON__;
   const K = window.LHKit;
   K.render(REPORT, {
     s1: (el, d) => K.kpiPick(el, d),
-    s2: (el, d) => K.bullets(el, d),
+    s2: (el, d) => (d.groups ? K.groupSummary(el, d.groups) : K.bullets(el, d.bullets || d)),
     s3: (el, d) => K.barLine(el, d),
     s4: (el, d) => K.trend(el, d),
     s5: (el, d) => K.compareTable(el, d),

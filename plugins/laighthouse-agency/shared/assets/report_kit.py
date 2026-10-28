@@ -28,7 +28,11 @@ UNSET_LABEL = "(미지정)"
 # 상단 KPI 카드의 고정 7 역할 (순서 = 카드 순서)
 ROLES = ("cost", "impression", "click", "ctr", "views", "cpm", "cpv")
 ROLE_LABELS = {"cost": "광고비", "impression": "노출", "click": "클릭", "ctr": "CTR",
-               "views": "조회수", "cpm": "CPM", "cpv": "CPV"}
+               "views": "조회수", "cpm": "CPM", "cpv": "CPV", "vtr": "VTR"}
+# 있으면 쓰는 역할 — 없어도 missing으로 묻지 않는다
+OPTIONAL_ROLES = ("vtr",)
+# daily·weekly 상단 KPI 카드의 기본 순서(VTR은 서빙될 때만)
+KPI_ROLES = ("cost", "impression", "click", "ctr", "vtr", "views", "cpm", "cpv")
 # 역할별 후보 (대소문자 무시, 정확 일치만).
 ROLE_CANDIDATES = {
     "cost": ["광고비", "cost", "spend", "spending"],
@@ -38,6 +42,7 @@ ROLE_CANDIDATES = {
     "views": ["조회수", "조회", "views", "video_views", "view"],
     "cpm": ["CPM"],
     "cpv": ["CPV"],
+    "vtr": ["VTR"],
 }
 RATIO_ROLES = ("ctr", "cpm", "cpv")
 MONEY_ROLES = ("cost", "cpm", "cpv")
@@ -167,7 +172,7 @@ def resolve_roles(envelope):
         if PRODUCT_DIM in r and p not in products[m]:
             products[m].append(p)
     keys = {}
-    for role in ROLES:
+    for role in ROLES + OPTIONAL_ROLES:
         k = _resolve_role(role, metrics)
         if k:
             keys[role] = k
@@ -346,7 +351,7 @@ def parse_media_targets(text, metric_keys):
 def digest_fmt(metric_keys, units, currency):
     """요약 근거(digest)용 포맷터 — (역할 지표 → 한글 라벨, 값 dict 포맷, 두 값 dict 증감) 세 가지를 돌려준다.
     daily·weekly·monthly 빌더의 digest가 같은 규칙으로 숫자를 쓰게 한다."""
-    labels = {metric_keys[r]: ROLE_LABELS[r] for r in ROLES if metric_keys.get(r)}
+    labels = {metric_keys[r]: ROLE_LABELS[r] for r in ROLES + OPTIONAL_ROLES if metric_keys.get(r)}
     money = {metric_keys.get(r) for r in MONEY_ROLES}
     unit_of = lambda k: units.get(k) or (currency if k in money else None)  # noqa: E731
 
@@ -360,6 +365,34 @@ def digest_fmt(metric_keys, units, currency):
 
 
 DIGEST_TOP = 15   # 요약 근거의 상세 행(매체-상품 등) 상한 — 광고비 상위만. 요약 규칙은 상위 항목만 쓴다
+DIGEST_MOVERS = 10   # 캠페인·광고그룹·광고 단위: 광고비 상위 + 광고비 변동(절대액) 상위 각 이만큼
+# 요약 근거의 세부 단위(이름, 차원, 상한) — 응답에 없는 차원이 든 단위는 건너뛴다. 광고는 행이 많아 상한을 줄인다
+DIGEST_LEVELS = (("매체-캠페인", ["media", "campaign_name"], DIGEST_MOVERS),
+                 ("매체-캠페인-광고그룹", ["media", "campaign_name", "ad_group_name"], DIGEST_MOVERS),
+                 ("매체-캠페인-광고그룹-광고", ["media", "campaign_name", "ad_group_name", "ad_name"], 5))
+
+
+def digest_levels(envs, levels, metrics, units, metric_keys, row):
+    """요약 근거의 세부 단위 표. envs = [기준 기간 봉투, 비교 기간 봉투, ...](첫째와 둘째를 비교해 변동을 잰다).
+    단위(이름, 차원, 상한 top)마다 광고비 상위 top개와 광고비 변동(절대액) 상위 top개를 합쳐 기준 기간 광고비 순으로 돌려준다 —
+    작아도 크게 움직인 항목(급등·급감, 신규·중단)이 빠지지 않게 한다. row(이름, 기준 값, *비교 값) → dict.
+    → {단위 이름: [row...], "<단위 이름> 생략": "..."}"""
+    cost = metric_keys.get("cost")
+    dims = set((envs[0] or {}).get("dimensions") or [])
+    out = {}
+    for name, ds, top in levels:
+        if any(d not in dims for d in ds):
+            continue
+        g = [group_values(e, ds, metrics, units, metric_keys) for e in envs]
+        names = set(g[0]) | set(g[1] if len(g) > 1 else {})
+        c = lambda k, i: (g[i].get(k) or {}).get(cost) or 0  # noqa: E731
+        by_cost = sorted(names, key=lambda k: -c(k, 0))[:top]
+        by_move = sorted(names, key=lambda k: -abs(c(k, 0) - (c(k, 1) if len(g) > 1 else 0)))[:top]
+        pick = sorted(set(by_cost) | set(by_move), key=lambda k: (-c(k, 0), k))
+        out[name] = [row(" / ".join(k), *[x.get(k) or {} for x in g]) for k in pick]
+        if len(names) > len(pick):
+            out[name + " 생략"] = f"광고비 상위 {top}개 + 광고비 변동 상위 {top}개만 — 나머지 {len(names) - len(pick)}개"
+    return out
 
 
 def metric_meta(metrics, units, currency, additive, metric_keys):
@@ -469,12 +502,17 @@ def meta_map(meta):
     return {m["key"]: m for m in meta}
 
 
-def kpi_cards(cur, bases, metric_keys, meta):
-    """고정 7 역할 카드. cur = {지표: 값}, bases = [(key, label, {지표: 값})]. 카드마다 "key" = 지표 키."""
+def role_key(role, metric_keys, meta):
+    """역할 → 지표 키. metric_keys에 없는 선택 역할(VTR — 예전 build.json)은 봉투 지표에서 찾는다."""
+    return metric_keys.get(role) or (_resolve_role(role, [m["key"] for m in meta]) if role in OPTIONAL_ROLES else None)
+
+
+def kpi_cards(cur, bases, metric_keys, meta, roles=ROLES):
+    """역할 카드(기본 = 고정 7 역할, roles 순서). cur = {지표: 값}, bases = [(key, label, {지표: 값})]. 카드마다 "key" = 지표 키."""
     mm = meta_map(meta)
     cards = []
-    for role in ROLES:
-        k = metric_keys.get(role)
+    for role in roles:
+        k = role_key(role, metric_keys, meta)
         if not k:
             continue
         cards.append(_metric_card(k, ROLE_LABELS[role], cur, bases, (mm.get(k) or {}).get("unit")))
@@ -488,10 +526,11 @@ def _metric_card(k, label, cur, bases, unit):
                        for bk, bl, bv in bases]}
 
 
-def kpi_more(cards, cur, bases, meta, store, sub_label=None):
+def kpi_more(cards, cur, bases, meta, store, sub_label=None, default=None):
     """지표를 고를 수 있는 KPI 카드(LHKit.kpiPick). cards = 스킬이 만든 기본 카드(각자 "key" — 지표 키 또는 '__budget' 같은
     이름)는 처음부터 켜 두고, 그 밖의 봉투 지표마다 비교 카드를 덧붙여 메뉴에서 켤 수 있게 한다.
     sub_label이 있으면 덧붙인 카드 아래에 '{sub_label} {첫 비교 기간 값}'을 적는다(전월 등).
+    default = 처음 켤 카드 key(순서대로) — 없으면 cards 전부.
     → {"cards", "default": [기본 카드 key], "store"}"""
     have = {c.get("key") for c in cards}
     extra = []
@@ -502,12 +541,14 @@ def kpi_more(cards, cur, bases, meta, store, sub_label=None):
         if sub_label and bases:
             c["sub"] = f"{sub_label} {fmt_metric((bases[0][2] or {}).get(m['key']), m.get('unit'))}"
         extra.append(c)
-    return {"cards": list(cards) + extra, "default": [c["key"] for c in cards], "store": store}
+    out = list(cards) + extra
+    have = {c["key"] for c in out}
+    return {"cards": out, "default": [k for k in (default or [c["key"] for c in cards]) if k in have], "store": store}
 
 
 def kpi_pick(cur, bases, metric_keys, meta, store="default"):
-    """고정 7 역할 카드를 기본으로, 봉투 지표 전부를 고를 수 있는 KPI 카드(daily)."""
-    return kpi_more(kpi_cards(cur, bases, metric_keys, meta), cur, bases, meta, store)
+    """KPI_ROLES 카드(VTR 포함)를 기본으로, 봉투 지표 전부를 고를 수 있는 KPI 카드(daily)."""
+    return kpi_more(kpi_cards(cur, bases, metric_keys, meta, KPI_ROLES), cur, bases, meta, store)
 
 
 def series_values(idx, periods, key, metrics):

@@ -75,7 +75,7 @@ MCP 데이터를 받아 **라이트하우스 Weekly 보고서**(HTML 한 파일)
    ```
    → 출력의 `base`(build.json 경로)·`digest`. `missing`(다시 보낼 호출)이 있으면 그 호출만 다시 보내고 재실행한다(`errors`는
    그 응답이 에러였다는 뜻). `digest_error`(대조 검증 실패)면 그 응답을 다시 조회하고 prepare.py부터 다시 한다.
-5. **Weekly Summary 작성**: `digest` 수치만 근거로 `weekly-report-section-2-summary.md` 형식대로 쓴다.
+5. **Weekly Summary 작성**: `digest` 수치만 근거로 `guides/weekly-summary.md`(작성 규칙·예시)를 따라 `weekly-report-section-2-summary.md` 형식으로 쓴다.
 6. **빌드 1회**:
    ```
    python3 assets/build_report.py <<'PYEOF'
@@ -107,6 +107,6 @@ Summary 근거는 `python3 assets/digest.py <build.json>` 출력이다.
 | 순서 | 섹션 | 파일 | 빌더 키 |
 |---|---|---|---|
 | 1 | 월간 성과 요약 (월 누적 예산 소진율·목표 대비 진척도, 목표 없는 지표는 전월 동기간 대비) | `weekly-report-section-1-kpi.md` | `s1` |
-| 2 | Weekly Summary (소진·효율, 매체-상품 단위) | `weekly-report-section-2-summary.md` | `s2` |
-| 3 | 매체별 주단위 성과 추이 (최근 5주, 지표 탭) | `weekly-report-section-3-media-trend.md` | `s3` |
+| 2 | Weekly Summary (소진·효율, 매체-캠페인 단위) | `weekly-report-section-2-summary.md` | `s2` |
+| 3 | 매체별 주단위 성과 추이 (최근 5주, 지표 드롭다운) | `weekly-report-section-3-media-trend.md` | `s3` |
 | 4 | 주간 성과 비교 (Dimension·지표 메뉴, 전주 vs 이번주) | `weekly-report-section-4-compare.md` | `s4` |

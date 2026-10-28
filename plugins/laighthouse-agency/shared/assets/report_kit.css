@@ -297,6 +297,15 @@ button.lh-legend-item { border: 1px solid var(--line); background: #fff; border-
 .lh-pick-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .lh-pick-left { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .lh-pick-info { font-size: 12px; color: var(--label); }
+/* 검색: [검색 기준 | 차원 | 검색어] 한 덩어리 */
+.lh-searchbox { display: flex; align-items: stretch; flex: 0 1 380px; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; overflow: hidden; }
+.lh-searchbox:focus-within { border-color: var(--accent); }
+.lh-searchbox-label { display: flex; align-items: center; padding: 0 10px; font-size: 12px; font-weight: 600; color: var(--label);
+  background: var(--sub-bg); border-right: 1px solid var(--line); white-space: nowrap; }
+.lh-searchbox-dim { border: 0; border-right: 1px solid var(--line); padding: 5px 8px; font: inherit; font-size: 12px; font-weight: 600;
+  color: var(--ink); background: #fff; cursor: pointer; }
+.lh-searchbox .lh-search { flex: 1 1 auto; border: 0; border-radius: 0; outline: none; }
 .lh-picker { position: relative; }
 .lh-picker-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: #fff; border-radius: 8px;
   padding: 5px 10px; font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; }
@@ -336,7 +345,7 @@ button.lh-legend-item { border: 1px solid var(--line); background: #fff; border-
 }
 @media print {
   body { background: #fff; padding: 0; }
-  .lh-print, .lh-search, .lh-pager, .lh-cmp, .lh-thr, .lh-dd-wrap, .lh-chips, .lh-pick-left, .lh-showall { display: none !important; }
+  .lh-print, .lh-search, .lh-searchbox, .lh-pager, .lh-cmp, .lh-thr, .lh-dd-wrap, .lh-chips, .lh-pick-left, .lh-showall { display: none !important; }
   .lh-section { break-inside: avoid; }
   .lh-tree-bar, .lh-more { display: none !important; }
   .lh-tree-scroll { max-height: none; overflow: visible; }

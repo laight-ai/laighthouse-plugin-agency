@@ -148,9 +148,9 @@ def compute(payload, check_dims=True):
                           "lines": [{"text": f"MTD 광고비 {kit.fmt_metric(sp, currency)}"}],
                           "sub": f"월 예산 {kit.fmt_metric(targets[cost], currency)} · 세로선은 기간 진행률({elapsed * 100:.1f}%)",
                           "deltas": []})
-        roles = [r for r in kit.ROLES if keys.get(r) and (r != "cost" or not cards)]
+        roles = [r for r in kit.KPI_ROLES if kit.role_key(r, keys, meta)]
         for role in roles:
-            k = keys[role]
+            k = kit.role_key(role, keys, meta)
             unit = (mm.get(k) or {}).get("unit")
             v, g = cur.get(k), targets.get(k) if role != "cost" else None
             if g and isinstance(v, (int, float)) and role in VOL_ROLES:
@@ -174,7 +174,7 @@ def compute(payload, check_dims=True):
                               "lines": [{"text": f"목표 {kit.fmt_metric(g, unit)} 대비 {diff:+.1f}% ({word})", "cls": "lh-kpi-line " + TONE_CLS[tone]}],
                               "sub": ("높을수록" if higher else "낮을수록") + " 좋은 지표 · 막대는 목표 대비 달성도", "deltas": []})
             else:
-                c = kit.kpi_cards(cur, [("prev", "전월 동기간", prev)], {role: k}, meta)[0]
+                c = kit.kpi_cards(cur, [("prev", "전월 동기간", prev)], {role: k}, meta, (role,))[0]
                 c["sub"] = f"전월 동기간 {kit.fmt_metric(prev.get(k), unit)}"
                 cards.append(c)
         goal_labels = [kit.ROLE_LABELS[r] for r in GOAL_ROLES if keys.get(r) and targets.get(keys[r])]
@@ -182,11 +182,12 @@ def compute(payload, check_dims=True):
         if goal_labels:
             notes.append(f"* {'·'.join(goal_labels)}은(는) 월 목표 대비 진척도입니다(노출·클릭·조회수는 누적 달성률, CTR·CPM·CPV는 목표 대비 달성도).")
         if any(c.get("marker") is not None for c in cards):
-            notes.append(f"* 세로선은 기간 진행률({elapsed * 100:.1f}% = {E.day}/{dim}일)입니다.")
+            notes.append(f"* 예산 소진율·목표 카드의 세로선은 기간 진행률({elapsed * 100:.1f}% = {E.day}/{dim}일)입니다.")
         if any(c.get("deltas") for c in cards):
             notes.append(f"* 목표가 없는 지표는 전월 동기간({pm.month}월 1일~{min(E.day, pm.day)}일) 대비 증감이며, 색은 방향만 나타냅니다(▲ 빨강 · ▼ 파랑).")
-        # 기본 카드 = 위 카드들, 그 밖의 서빙 지표는 전월 동기간 대비 카드로 덧붙여 지표 메뉴에서 켠다
-        sections["s1"] = dict(kit.kpi_more(cards, cur, [("prev", "전월 동기간", prev)], meta, "weekly", sub_label="전월 동기간"),
+        # 기본 카드 = KPI_ROLES(광고비·노출·클릭·CTR·VTR·조회수·CPM·CPV). 예산 소진율과 그 밖의 서빙 지표는 메뉴에서 켠다
+        sections["s1"] = dict(kit.kpi_more(cards, cur, [("prev", "전월 동기간", prev)], meta, "weekly", sub_label="전월 동기간",
+                                           default=[kit.role_key(r, keys, meta) for r in roles]),
                               note="\n".join(notes))
 
     # s2 — Weekly Summary (모델 작성)
@@ -212,10 +213,11 @@ def compute(payload, check_dims=True):
         wv = kit.bucket_values(e3, ["media"], buckets, metrics, units, keys)
         series = [{"name": n, "color": colors[n],
                    "values": {x: [((wv.get(i) or {}).get((n,)) or {}).get(x) for i in range(5)] for x in metrics}} for n in media]
-        shown = [m for m in meta if any(v is not None for s in series for v in s["values"][m["key"]])]   # 값 없는 지표는 탭에서 뺀다
+        shown = [m for m in meta if any(v is not None for s in series for v in s["values"][m["key"]])]   # 값 없는 지표는 드롭다운에서 뺀다
         if shown:
             sections["s3"] = {"labels": [range_label(a, b, True) for a, b in weeks], "metrics": shown,
-                              "default_metric": cost if cost in {m["key"] for m in shown} else shown[0]["key"], "series": series}
+                              "default_metric": cost if cost in {m["key"] for m in shown} else shown[0]["key"], "series": series,
+                              "metric_select": True}
 
     # s4 — 주간 성과 비교 (Dimension·지표 선택)
     if fine:
@@ -235,7 +237,8 @@ def compute(payload, check_dims=True):
         "__PERIODS__": f"이번주: {range_label(*cur_w)} · 전주: {range_label(*base_w)} · 월 누적: {E.month}월 1일~{E.day}일",
         "__MEDIA_SUM__": (" + ".join(media) + " 합산, ") if media else "",
         "__MTD_RANGE__": f"{E.month}월 1일~{E.day}일 누적",
-        "__S1_DESC__": "월간 목표 대비 진척도" if targets else "전월 동기간 대비",
+        # 기본 카드에 목표 카드가 있을 때만 '목표 대비 진척도'(광고비 예산만 있으면 예산 카드는 메뉴에 있다)
+        "__S1_DESC__": "월간 목표 대비 진척도" if any(keys.get(r) and targets.get(keys[r]) for r in GOAL_ROLES) else "전월 동기간 대비",
         "__CUR_SHORT__": range_label(*cur_w, True), "__BASE_SHORT__": range_label(*base_w, True),
         "__WEEKS_RANGE__": f"{md(weeks[0][0])}~{md(weeks[-1][1])}",
         "__CMP_TITLE__": f"{range_label(*base_w)} vs {range_label(*cur_w)}",
@@ -247,7 +250,8 @@ def compute(payload, check_dims=True):
 
 
 def digest(payload):
-    """Weekly Summary 작성 근거 — 이번주·전주 값과 변화(매체, 매체-상품). 화면 표와 같은 규칙의 숫자다."""
+    """Weekly Summary 작성 근거 — 이번주·전주 값과 변화(전체, 매체, 매체-캠페인·광고그룹).
+    세부 단위는 광고비 상위 + 전주 대비 광고비 변동 상위(kit.digest_levels). 화면 표와 같은 규칙의 숫자다."""
     sections, rep, c = compute(payload, check_dims=False)
     keys, metrics, units, cur_c = c["keys"], c["metrics"], c["units"], c["currency"]
     mm, fmt, change = kit.digest_fmt(keys, units, cur_c)
@@ -261,18 +265,19 @@ def digest(payload):
                        "기간진행률": f"{c['elapsed'] * 100:.1f}%",
                        "목표": {mm[k]: kit.fmt_metric(v, unit_of(k), cur_c) for k, v in c["targets"].items() if k in mm}}
     fine = c["fine"]
+    def row(name, a, b):
+        return {"이름": name, "이번주": fmt(a), "전주": fmt(b), "변화": change(a, b)}
+
     if "cur" in fine and "base" in fine:
         dims = fine["cur"].get("dimensions") or []
-        for name, ds in (("전체", []), ("매체", ["media"]), ("매체-상품", ["media", P])):
+        for name, ds in (("전체", []), ("매체", ["media"])):
             if any(d not in dims for d in ds):
                 continue   # 응답에 없는 차원은 건너뛴다
             a = kit.group_values(fine["cur"], ds, metrics, units, keys)
             b = kit.group_values(fine["base"], ds, metrics, units, keys)
             ks = sorted(a, key=lambda k: -((a[k].get(keys.get("cost")) or 0)))
-            out[name] = [{"이름": " ".join(k) or "전체", "이번주": fmt(a[k]), "전주": fmt(b.get(k) or {}),
-                          "변화": change(a[k], b.get(k) or {})} for k in ks[:kit.DIGEST_TOP]]
-            if len(ks) > kit.DIGEST_TOP:
-                out[name + " 생략"] = f"광고비 상위 {kit.DIGEST_TOP}개만 — 나머지 {len(ks) - kit.DIGEST_TOP}개"
+            out[name] = [row(" ".join(k) or "전체", a[k], b.get(k) or {}) for k in ks[:kit.DIGEST_TOP]]
+        out.update(kit.digest_levels([fine["cur"], fine["base"]], kit.DIGEST_LEVELS[:2], metrics, units, keys, row))
     return out
 
 
