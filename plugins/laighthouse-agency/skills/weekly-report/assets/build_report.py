@@ -277,7 +277,7 @@ def digest(payload):
             b = kit.group_values(fine["base"], ds, metrics, units, keys)
             ks = sorted(a, key=lambda k: -((a[k].get(keys.get("cost")) or 0)))
             out[name] = [row(" ".join(k) or "전체", a[k], b.get(k) or {}) for k in ks[:kit.DIGEST_TOP]]
-        out.update(kit.digest_levels([fine["cur"], fine["base"]], kit.DIGEST_LEVELS[:2], metrics, units, keys, row))
+        out.update(kit.digest_levels([fine["cur"], fine["base"]], kit.DIGEST_LEVELS, metrics, units, keys, row))
     return out
 
 
