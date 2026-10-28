@@ -329,22 +329,51 @@ def parse_targets(text, metric_keys):
     return out
 
 
-def parse_media_targets(text, metric_keys):
-    """get_target_progress_v2(media 생략) 원문의 둘째 표 → {매체: {지표 키: 월 목표}}. 매체 행(campaign_name `-`)만 읽는다
-    — 매체마다 따로 부르지 않아도 된다. 행 이름 규칙은 parse_targets와 같다."""
-    out = {}
+def _target_key(name, metric_keys, metrics):
+    """목표 표의 metric 이름 → 지표 키. 역할 이름(cost·impression 등)을 먼저 보고, 없으면 서빙 지표 이름과 대소문자 무시로
+    정확히 같은 것(cpc·vtr 등 역할이 없는 지표). cost_net처럼 맞는 지표가 없으면 None."""
+    for role, names in TARGET_ROW_NAMES.items():
+        k = metric_keys.get(role)
+        if k and name in names + [k]:
+            return k
+    return next((m for m in metrics or [] if m.lower() == name.lower()), None)
+
+
+def _target_rows(text):
+    """get_target_progress_v2 원문의 둘째 표 → [(매체, 캠페인 또는 '-', metric, 목표)]. 목표가 0이거나 숫자가 아니면 뺀다."""
+    out = []
     for ln in (text or "").splitlines():
         cells = [c.strip() for c in ln.strip().strip("|").split("|")]
-        if len(cells) < 5 or cells[1] != "-" or cells[0] in ("media", "") or set(cells[0]) <= {"-", " "}:
+        if len(cells) < 5 or cells[0] in ("media", "") or set(cells[0]) <= {"-", " "}:
             continue
         try:
             v = float(cells[4].replace(",", ""))
         except ValueError:
             continue
-        for role, names in TARGET_ROW_NAMES.items():
-            k = metric_keys.get(role)
-            if k and v and cells[3] in names + [k]:
-                out.setdefault(cells[0], {})[k] = v
+        if v:
+            out.append((cells[0], cells[1], cells[3], v))
+    return out
+
+
+def parse_media_targets(text, metric_keys, metrics=None):
+    """get_target_progress_v2(media 생략) 원문의 둘째 표 → {매체: {지표 키: 월 목표}}. 매체 행(campaign_name `-`)만 읽는다
+    — 매체마다 따로 부르지 않아도 된다. metrics(서빙 지표)를 주면 역할이 없는 지표(cpc 등)의 목표도 읽는다."""
+    out = {}
+    for media, camp, name, v in _target_rows(text):
+        k = _target_key(name, metric_keys, metrics)
+        if camp == "-" and k:
+            out.setdefault(media, {})[k] = v
+    return out
+
+
+def parse_campaign_targets(text, metric_keys, metrics=None):
+    """같은 원문의 캠페인 행(dashboard 브랜드만 온다) → {(매체, 캠페인): {지표 키: 월 목표}}. 캠페인 이름은 서버 표기 그대로라
+    get_ad_performance의 campaign_name과 맞춰 쓴다. 매체 월 목표에 포함되지 않는 캠페인(included N)도 자기 목표는 읽는다."""
+    out = {}
+    for media, camp, name, v in _target_rows(text):
+        k = _target_key(name, metric_keys, metrics)
+        if camp != "-" and k:
+            out.setdefault((media, camp), {})[k] = v
     return out
 
 
@@ -1029,6 +1058,7 @@ def bucket_values(env, dims, buckets, metrics, units, metric_keys):
 # ── 목표 대비 판정 ───────────────────────────────────────────────────────────
 
 LOWER_BETTER_ROLES = ("cpm", "cpv")
+LOWER_BETTER_NAMES = ("cpc", "cpa")   # 역할은 없지만 낮을수록 좋은 단가 지표(서빙 지표 이름, 대소문자 무시)
 BURN_LOW, BURN_HIGH = 0.95, 1.05
 
 
@@ -1090,6 +1120,7 @@ def pick_section(envs_by_period, meta, metric_keys, dots=None, default_dims=None
     keys = [m["key"] for m in spec["metrics"]]
     dm = [k for k in (default_metrics or [cost]) if k in keys] or keys[:1]   # 기본 = 광고비만(사용자가 메뉴에서 늘린다)
     lower = [metric_keys[r] for r in LOWER_BETTER_ROLES if metric_keys.get(r)]
+    lower += [k for k in keys if k.lower() in LOWER_BETTER_NAMES and k not in lower]
     spec.update(default_metrics=dm, dots=dots or {}, dot_dims=["brand", "media"], lower=lower,
                 cost=cost, sort=sort or "cost")
     if search_dim in [d["key"] for d in spec["dims"]]:   # 검색 차원 기본값(없는 차원이면 화면 규칙을 따른다)
