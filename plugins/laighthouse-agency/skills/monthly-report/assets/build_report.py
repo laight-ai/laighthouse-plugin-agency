@@ -147,15 +147,20 @@ def compute(payload, check_dims=True):
                           "compares": {"prev": {"base_label": yy(M1), "cur_label": yy(M0)}},
                           "metric_pick": {"default": role_order, "pin": cost}}
 
-    t_media = {}
+    t_media, t_camp = {}, {}
     if e6:   # 예산 및 목표 달성 결과: s6 = month grain, group_by = 제공 차원 전부 — M0만 쓴다
         fine = kit.split_by_period(e6, {M0: M0})
         t_all = kit.parse_targets((sec("s1") or {}).get("target_progress"), keys)
         # 매체 목표 = s1 목표 원문(media 생략)의 둘째 표 매체 행. 매체마다 따로 부른 원문(s6.targets)이 있으면 그것이 우선
-        t_media = kit.parse_media_targets((sec("s1") or {}).get("target_progress"), keys)
+        tp = (sec("s1") or {}).get("target_progress")
+        t_media = kit.parse_media_targets(tp, keys, metrics)
         t_media.update({str(x): t for x, raw in ((sec("s6") or {}).get("targets") or {}).items()
                         if (t := kit.parse_targets(raw, keys))})
-        tv = {"levels": [[], ["media"]], "values": {0: {"": t_all} if t_all else {}, 1: t_media}}
+        # 캠페인 목표(dashboard 브랜드만) = 같은 원문의 캠페인 행 — 표의 캠페인 행 예산·소진율, CPM·CPC 목표 대비
+        t_camp = kit.parse_campaign_targets(tp, keys, metrics)
+        tv = {"levels": [[], ["media"], ["media", "campaign_name"]],
+              "values": {0: {"": t_all} if t_all else {}, 1: t_media,
+                         2: {"\u0001".join(k): v for k, v in t_camp.items()}}}
         sec6 = kit.pick_section(fine, meta, keys, dots=colors, default_dims=list(S6_DIMS),
                                 search_dim="campaign_name", totals={M0: tot(M0)} if e1 else None,
                                 goal={"cur": M0, "cur_label": f"{m}월", "targets": tv, "full": True})
@@ -181,7 +186,7 @@ def compute(payload, check_dims=True):
         "__CUR_RANGE__": f"{m}월 1일~{m}월 {last.day}일",
     }
     ctx = {"keys": keys, "currency": currency, "metrics": metrics, "units": units, "media": media, "tot": tot,
-           "i4": i4, "e6": e6, "M0": M0, "M1": M1, "t_media": t_media,
+           "i4": i4, "e6": e6, "M0": M0, "M1": M1, "t_media": t_media, "t_camp": t_camp,
            "target_all": kit.parse_target_progress((sec("s1") or {}).get("target_progress"))["cost_target"] if e1 else None}
     return sections, rep, report, ctx
 
@@ -222,6 +227,14 @@ def digest(payload):
     if e6:
         split = kit.split_by_period(e6, {M0: M0, M1: M1})
         out.update(kit.digest_levels([split.get(M0), split.get(M1)], kit.DIGEST_LEVELS[:2], metrics, units, keys, row))
+        # 캠페인 월 예산이 있으면(dashboard 브랜드) 매체-캠페인 행에 예산·소진율을 붙인다 — 집행액은 표와 같은 광고비 값
+        cur_camp = kit.group_values(split.get(M0), ["media", "campaign_name"], metrics, units, keys)
+        for r in out.get("매체-캠페인") or []:
+            k = tuple(r["이름"].split(" / ", 1))
+            bud, sp = (c["t_camp"].get(k) or {}).get(cost), (cur_camp.get(k) or {}).get(cost)
+            if bud:
+                r.update(월예산=kit.fmt_metric(bud, cur_c, cur_c),
+                         소진율=f"{sp / bud * 100:.1f}%" if isinstance(sp, (int, float)) else None)
     return out
 
 

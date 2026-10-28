@@ -689,6 +689,7 @@
       const vals = tv.values[lv.i] || {};
       const out = {};
       Object.keys(hasTarget).forEach(k => {
+        if (units.size > 1 && !(M.find(m => m.key === k) || {}).additive) return;   // 단가·비율 목표는 더할 수 없다 — 단위 하나일 때만
         let s = 0;
         for (const u of units) { const v = (vals[u] || {})[k]; if (typeof v !== 'number') return; s += v; }
         if (units.size) out[k] = s;
