@@ -31,9 +31,9 @@
 
 | 스킬 | 섹션 |
 |---|---|
-| daily-report | 일간 성과 요약(7 KPI, 전일/전주 동요일) · Daily Summary · 매체별 최근 7일 추이 · 성과 비교 표 |
-| weekly-report | 월 누적 예산 소진율·목표 진척도 · Weekly Summary(소진·효율) · 매체별 최근 5주 추이 · 주간 성과 비교 표 |
-| monthly-report | 예산 소진율 + 7 KPI · Executive Summary · 6개월 추이 · 매체별 추이 · 매체 비교 · 예산·목표 달성 표 |
+| daily-report | 일간 성과 요약(기본 8 KPI — 광고비·노출·클릭·CTR·VTR·조회수·CPM·CPV, 지표 메뉴로 추가·해제, 전일/전주 동요일) · Daily Summary(캠페인·광고그룹·광고 단위 급변 모니터링) · 매체별 최근 7일 추이(지표 드롭다운) · 성과 비교 표 |
+| weekly-report | 월 누적 성과 요약(기본 8 KPI, 목표가 있으면 진척도 · 예산 소진율 등은 지표 메뉴) · Weekly Summary(소진·효율, 매체-캠페인) · 매체별 최근 5주 추이(지표 드롭다운) · 주간 성과 비교 표 |
+| monthly-report | 예산 소진율 + 7 KPI(지표 메뉴로 추가·해제) · Executive Summary(소진·효율) · 6개월 추이(광고비 + 꺾은선 지표 선택) · 매체별 추이(지표 드롭다운) · 매체 비교(지표 메뉴) · 예산·목표 달성 표(매체-캠페인) |
 
 - 호출은 두 번에 나눠 동시에 보낸다(차원 확인이 끝나야 표 데이터 차원이 정해진다). 응답 원문은 저장 훅 → `prepare.py`가
   빌더 입력과 요약 근거(`digest`)로 바꾼다 — 모델은 요약 문장만 쓴다.
@@ -70,6 +70,29 @@ HTML과 같은 폴더에 같은 이름의 `.xlsx`가 함께 생긴다(`~/Downloa
   묻지 않고 보고서에서 조용히 빠진다.
 - 예산·목표는 `get_target_progress_v2`(전체·매체·캠페인 단위)에서 읽는다. 목표가 없으면 빈칸이다.
 - 렌더링 부품은 공용 킷 `shared/assets/report_kit.*`와 스킬의 `assets/overall_summary.js`에 있다.
+
+## 요약 가이드 (비개발자 편집)
+
+Daily·Weekly·Monthly 요약 문단을 **무엇을 어떻게 쓸지**는 스킬마다 `guides/`의 파일이 정한다. 이 파일들은 노션 페이지의 사본이다 —
+비개발자는 노션에서 고치고, 개발자가 Claude에게 **"노션 가이드 반영해줘"**라고 요청해 레포로 가져온다.
+
+- 노션: [프롬프트 및 레포트 라이브러리 › TBWA 리포트 스킬](https://app.notion.com/p/40760c83bb7e81548812f6ecf1fca3af) › "TBWA: 요약 가이드 라이브러리" DB
+
+| 가이드 | 레포 파일 | 노션 |
+|---|---|---|
+| Daily Summary | `skills/daily-report/guides/daily-summary.md` | [링크](https://app.notion.com/p/40760c83bb7e814a973ad9803168fcd6) |
+| Weekly Summary | `skills/weekly-report/guides/weekly-summary.md` | [링크](https://app.notion.com/p/40760c83bb7e8144a8b3cda1029e3893) |
+| Executive Summary (Monthly) | `skills/monthly-report/guides/executive-summary.md` | [링크](https://app.notion.com/p/40760c83bb7e81888aa3f5ca1ded7618) |
+
+**반영 절차** (Claude가 한다)
+
+1. DB에서 `현재 버전` ≠ `레포 반영 버전`인 행을 찾는다.
+2. 그 페이지의 "🟢 현재 가이드" 코드 블록 내용을 그대로 레포 파일에 옮긴다 — 첫 줄 주석(원본 링크·버전·날짜)만 새 버전으로 바꾼다.
+   코드 블록 밖의 메모는 옮기지 않는다.
+3. 홈키파 등 저장된 build.json의 `digest`로 고치기 전·후 가이드에 따라 요약을 한 번씩 써서 나란히 보여 준다.
+4. 브랜치·PR을 만들고(PR 본문에 노션 변경 사항), 머지 후 노션의 `레포 반영 버전`을 새 버전으로 바꾼다.
+
+가이드에는 문구·작성 규칙만 둔다. 근거 데이터(`digest`)·빌더 입력 형식·실행 순서는 섹션 문서와 SKILL.md(개발자 담당)가 정한다.
 
 ## MCP 서버
 

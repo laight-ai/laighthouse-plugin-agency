@@ -18,7 +18,8 @@ MCP 응답 봉투 원문을 섹션별로 그대로 받아, 공용 킷(`shared/as
   "dims": "<차원 확인(group_by [\"__list_dimensions__\"]) 에러 메시지 원문>",   # 필수(표가 있을 때) — 빠진 차원이 있으면 멈춘다
   "s1": {"json": "<month, group_by 없음, M-5 1일~M0 말일 응답 원문>",
          "target_progress": "<get_target_progress_v2(month=M0, media 생략) 응답 원문 그대로>"},
-  "s2": {"bullets": [{"head": "...", "text": "...", "tone": "red|green|yellow|neutral"}]},
+  "s2": {"groups": [{"title": "소진", "lead": "...", "media": [{"name", "desc", "bullets": [{"label", "text", "tone"}]}]}, ...]},
+        # weekly와 같은 [소진]·[효율] 그룹. 예전 {"bullets": [{"head", "text", "tone"}]}도 받는다
   "s4": {"json": "<month, group_by [\"media\"], M-5~M0 응답 원문>"},
   "s6": {"json": "<month, group_by = 제공 차원 전부(date·source 제외), M-1~M0 응답 원문>",   # 목표 달성 표(예전 ["media","상품"]도 받는다)
          "targets": {"<매체>": "<get_target_progress_v2(month=M0, media=<매체>) 응답 원문>", ...}}   # 선택 — 예전 입력
@@ -50,6 +51,7 @@ else:
 import report_kit as kit  # noqa: E402
 
 P = kit.PRODUCT_DIM
+S6_DIMS = ("media", "campaign_name")   # 예산 및 목표 달성 결과 표의 Dimension
 
 
 def shift(y, m, back):
@@ -95,32 +97,42 @@ def compute(payload, check_dims=True):
         cur, prev = tot(M0), tot(M1)
         target = kit.parse_target_progress((sec("s1") or {}).get("target_progress"))["cost_target"]
         if target and isinstance(cur.get(cost), (int, float)):
-            budget = {"label": "예산 소진율", "value": f"{cur[cost] / target * 100:.1f}%", "bar": cur[cost] / target,
+            budget = {"key": "__budget", "label": "예산 소진율", "value": f"{cur[cost] / target * 100:.1f}%", "bar": cur[cost] / target,
                       "sub": f"월 예산 {kit.fmt_metric(target, currency)}", "deltas": []}
         else:
-            budget = {"label": "예산 소진율", "value": "N/A", "sub": "이번 달 등록된 예산 목표가 없습니다", "deltas": []}
+            budget = {"key": "__budget", "label": "예산 소진율", "value": "N/A", "sub": "이번 달 등록된 예산 목표가 없습니다", "deltas": []}
         cards = kit.kpi_cards(cur, [("prev", "전월", prev)], keys, meta)
         for c, role in zip(cards, [r for r in kit.ROLES if keys.get(r)]):
             k = keys[role]
             c["sub"] = f"전월 {kit.fmt_metric(prev.get(k), mm[k]['unit'])}" if k in mm else None
-        sections["s1"] = {"cards": [budget] + cards}
+        # 기본 카드 = 예산 소진율 + 고정 7 역할, 그 밖의 서빙 지표는 전월 대비 카드로 덧붙여 지표 메뉴에서 켠다
+        sections["s1"] = kit.kpi_more([budget] + cards, cur, [("prev", "전월", prev)], meta, "monthly", sub_label="전월")
 
-        cpv = keys.get("cpv")
-        if cost in mm:   # CPV가 없는 브랜드(조회 지표 없음)는 광고비 막대만 그린다
+        if cost in mm:   # 막대 = 광고비 고정, 꺾은선 = 드롭다운으로 고르는 지표 하나(기본 CPV, 없으면 첫 지표). 다른 지표가 없으면 막대만
             sections["s3"] = {"labels": [f"{b}월" for _, b in months],
                               "bar": {"label": kit.ROLE_LABELS["cost"], "unit": mm[cost]["unit"], "color": kit.BAR_COLOR,
-                                      "data": [tot(k).get(cost) for k in keys6]}}
-            if cpv in mm:
-                sections["s3"]["line"] = {"label": kit.ROLE_LABELS["cpv"], "unit": mm[cpv]["unit"], "color": kit.LINE_COLOR,
-                                          "data": [tot(k).get(cpv) for k in keys6]}
+                                      "data": [tot(k).get(cost) for k in keys6]},
+                              "line_color": kit.LINE_COLOR,
+                              "line_options": [{"key": x["key"], "label": x["label"], "unit": x["unit"],
+                                                "data": [tot(k).get(x["key"]) for k in keys6]} for x in meta if x["key"] != cost],
+                              "line_default": keys.get("cpv")}
 
-    sections["s2"] = None if skeleton else kit.bullets_of(payload.get("s2"))
+    # s2 — Executive Summary (모델 작성): [소진]·[효율] 그룹(weekly와 같은 모양). 예전 불릿 입력도 받는다
+    s2 = sec("s2")
+    groups = (s2 or {}).get("groups") if isinstance(s2, dict) else None
+    if groups:
+        sections["s2"] = {"groups": [{"title": g.get("title", ""), "lead": g.get("lead", ""),
+                                      "media": [dict(x, dot=x.get("dot") or colors.get(x.get("name"))) for x in g.get("media") or []]}
+                                     for g in groups]}
+    elif s2:
+        b = kit.bullets_of(s2)
+        sections["s2"] = {"bullets": b} if b else None
 
     if e4:
         cur_by = {n: ((i4.get(M0) or {}).get((n,)) or {}) for n in media}
         legend = kit.share_legend(cur_by, meta, currency)
         sections["s4"] = {"labels": [f"{b}월" for _, b in months], "metrics": meta, "default_metric": cost,
-                          "legend_toggle": True,
+                          "legend_toggle": True, "metric_select": True,
                           "series": [{"name": n, "color": colors[n], "legend": legend[n],
                                       "values": kit.series_values(i4, keys6, (n,), metrics)} for n in media],
                           "note": f"* 범례 값은 {m}월 기준이며, 비중(%)은 합산 가능한 지표에만 표시합니다."}
@@ -128,9 +140,14 @@ def compute(payload, check_dims=True):
                  "base": {"prev": (i4.get(M1) or {}).get((n,)) or {}}} for n in media]
         if tot(M0):
             rows.append({"names": ["전체"], "kind": "total", "cur": tot(M0), "base": {"prev": tot(M1)}})
-        sections["s5"] = {"name_cols": ["매체"], "metrics": meta, "rows": rows,
-                          "compares": {"prev": {"base_label": yy(M1), "cur_label": yy(M0)}}}
+        # 지표 메뉴: 처음엔 고정 7 역할만 그 순서로(광고비 맨 앞 고정), 나머지 서빙 지표는 메뉴에서 켠다
+        role_order = [keys[r] for r in kit.ROLES if keys.get(r)]
+        s5_metrics = sorted(meta, key=lambda x: role_order.index(x["key"]) if x["key"] in role_order else len(role_order))
+        sections["s5"] = {"name_cols": ["매체"], "metrics": s5_metrics, "rows": rows,
+                          "compares": {"prev": {"base_label": yy(M1), "cur_label": yy(M0)}},
+                          "metric_pick": {"default": role_order, "pin": cost}}
 
+    t_media = {}
     if e6:   # 예산 및 목표 달성 결과: s6 = month grain, group_by = 제공 차원 전부 — M0만 쓴다
         fine = kit.split_by_period(e6, {M0: M0})
         t_all = kit.parse_targets((sec("s1") or {}).get("target_progress"), keys)
@@ -139,9 +156,13 @@ def compute(payload, check_dims=True):
         t_media.update({str(x): t for x, raw in ((sec("s6") or {}).get("targets") or {}).items()
                         if (t := kit.parse_targets(raw, keys))})
         tv = {"levels": [[], ["media"]], "values": {0: {"": t_all} if t_all else {}, 1: t_media}}
-        sections["s6"] = kit.pick_section(fine, meta, keys, dots=colors, default_dims=["media", P],
-                                          search_dim="campaign_name", totals={M0: tot(M0)} if e1 else None,
-                                          goal={"cur": M0, "cur_label": f"{m}월", "targets": tv, "full": True})
+        sec6 = kit.pick_section(fine, meta, keys, dots=colors, default_dims=list(S6_DIMS),
+                                search_dim="campaign_name", totals={M0: tot(M0)} if e1 else None,
+                                goal={"cur": M0, "cur_label": f"{m}월", "targets": tv, "full": True})
+        if sec6:   # Dimension은 매체·캠페인만 보여 준다(응답의 더 잘게 받은 차원은 요약 근거에만 쓴다)
+            sec6["dims"] = [d for d in sec6["dims"] if d["key"] in S6_DIMS] or sec6["dims"]
+            sec6["default_dims"] = [d["key"] for d in sec6["dims"]]
+        sections["s6"] = sec6
 
     for k in ("s1", "s2", "s3", "s4", "s5", "s6"):
         sections.setdefault(k, None)
@@ -160,13 +181,14 @@ def compute(payload, check_dims=True):
         "__CUR_RANGE__": f"{m}월 1일~{m}월 {last.day}일",
     }
     ctx = {"keys": keys, "currency": currency, "metrics": metrics, "units": units, "media": media, "tot": tot,
-           "i4": i4, "e6": e6, "M0": M0, "M1": M1,
+           "i4": i4, "e6": e6, "M0": M0, "M1": M1, "t_media": t_media,
            "target_all": kit.parse_target_progress((sec("s1") or {}).get("target_progress"))["cost_target"] if e1 else None}
     return sections, rep, report, ctx
 
 
 def digest(payload):
-    """Executive Summary 작성 근거 — 당월·전월 값과 변화(전체, 매체 + 광고비 비중, 매체-상품). 화면 표와 같은 규칙의 숫자다."""
+    """Executive Summary 작성 근거 — 당월·전월 값과 변화(전체, 매체 + 광고비 비중·월 예산·소진율, 매체-캠페인·광고그룹).
+    세부 단위는 광고비 상위 + 전월 대비 광고비 변동 상위(kit.digest_levels). 화면 표와 같은 규칙의 숫자다."""
     _, _, _, c = compute(payload, check_dims=False)
     keys, metrics, units, cur_c, M0, M1 = c["keys"], c["metrics"], c["units"], c["currency"], c["M0"], c["M1"]
     cost = keys.get("cost")
@@ -186,17 +208,20 @@ def digest(payload):
         i4 = c["i4"]
         cur_by = {n: (i4.get(M0) or {}).get((n,)) or {} for n in c["media"]}
         total_cost = sum(v.get(cost) or 0 for v in cur_by.values())
-        out["매체"] = [dict(row(n, cur_by[n], (i4.get(M1) or {}).get((n,)) or {}),
-                          광고비비중=f"{(cur_by[n].get(cost) or 0) / total_cost * 100:.1f}%" if total_cost else None)
-                     for n in sorted(c["media"], key=lambda n: -(cur_by[n].get(cost) or 0))]
+        def media_row(n):
+            r = dict(row(n, cur_by[n], (i4.get(M1) or {}).get((n,)) or {}),
+                     광고비비중=f"{(cur_by[n].get(cost) or 0) / total_cost * 100:.1f}%" if total_cost else None)
+            bud, sp = (c["t_media"].get(n) or {}).get(cost), cur_by[n].get(cost)
+            if bud:   # 매체 월 예산이 있으면 소진율(100% ± 10%p 밖이면 저조·초과)
+                r.update(월예산=kit.fmt_metric(bud, cur_c, cur_c),
+                         소진율=f"{sp / bud * 100:.1f}%" if isinstance(sp, (int, float)) else None)
+            return r
+
+        out["매체"] = [media_row(n) for n in sorted(c["media"], key=lambda n: -(cur_by[n].get(cost) or 0))]
     e6 = c["e6"]
-    if e6 and all(d in (e6.get("dimensions") or []) for d in ("media", P)):
+    if e6:
         split = kit.split_by_period(e6, {M0: M0, M1: M1})
-        g = {k: kit.group_values(split.get(k), ["media", P], metrics, units, keys) for k in (M0, M1)}
-        ks = sorted(g[M0], key=lambda k: -(g[M0][k].get(cost) or 0))
-        out["매체-상품"] = [row(" ".join(k), g[M0][k], g[M1].get(k) or {}) for k in ks[:kit.DIGEST_TOP]]
-        if len(ks) > kit.DIGEST_TOP:
-            out["매체-상품 생략"] = f"광고비 상위 {kit.DIGEST_TOP}개만 — 나머지 {len(ks) - kit.DIGEST_TOP}개"
+        out.update(kit.digest_levels([split.get(M0), split.get(M1)], kit.DIGEST_LEVELS[:2], metrics, units, keys, row))
     return out
 
 

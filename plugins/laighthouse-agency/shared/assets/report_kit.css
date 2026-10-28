@@ -24,7 +24,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR
 
 /* 섹션 = 카드 */
 .lh-section { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 20px;
-  display: flex; flex-direction: column; gap: 12px; }
+  display: flex; flex-direction: column; gap: 16px; }
 .lh-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .lh-section h2 { font-size: 15px; font-weight: 700; color: var(--ink); }
 .lh-section h2 .lh-muted, .lh-best-title .lh-muted { font-weight: 500; color: var(--label); }
@@ -46,6 +46,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR
 .lh-kpis { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .lh-kpi { padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px;
   border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -1px -1px 0; }
+.lh-kpi[hidden] { display: none; }   /* 지표 메뉴에서 끈 카드(LHKit.kpiPick) */
 .lh-kpi-label { font-size: 12px; color: var(--label); margin-bottom: 4px; }
 .lh-kpi-value { font-size: 28px; font-weight: 700; color: var(--ink); margin-bottom: 6px; font-variant-numeric: tabular-nums; }
 .lh-kpi-delta { font-size: 12px; font-weight: 600; color: var(--flat); }
@@ -85,6 +86,7 @@ button.lh-legend-item { border: 1px solid var(--line); background: #fff; border-
 .lh-swatch.box { width: 12px; height: 12px; border-radius: 2px; }
 .lh-legend-val { color: var(--label); font-variant-numeric: tabular-nums; }
 .lh-chart { position: relative; height: 320px; }
+.lh-chart + .lh-note { margin-top: 8px; }   /* 차트 축 라벨과 각주 사이 */
 
 /* 표 */
 .lh-table-wrap { overflow-x: auto; }
@@ -296,6 +298,19 @@ button.lh-legend-item { border: 1px solid var(--line); background: #fff; border-
 .lh-pick-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .lh-pick-left { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .lh-pick-info { font-size: 12px; color: var(--label); }
+/* 검색: [검색 기준 | 차원 | 검색어] 한 덩어리 */
+.lh-searchbox { display: flex; align-items: stretch; flex: 0 1 380px; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; overflow: hidden; }
+.lh-searchbox:focus-within { border-color: var(--accent); }
+.lh-searchbox-label { display: flex; align-items: center; padding: 0 10px; font-size: 12px; font-weight: 600; color: var(--label);
+  background: var(--sub-bg); border-right: 1px solid var(--line); white-space: nowrap; }
+.lh-searchbox-dim { border: 0; border-right: 1px solid var(--line); padding: 5px 8px; font: inherit; font-size: 12px; font-weight: 600;
+  color: var(--ink); background: #fff; cursor: pointer; }
+.lh-searchbox .lh-search { flex: 1 1 auto; border: 0; border-radius: 0; outline: none; padding: 0 12px; }
+/* 도구 막대의 버튼·드롭다운·검색창은 같은 높이 */
+.lh-tab, .lh-picker-btn, .lh-select, .lh-searchbox { height: 30px; }
+.lh-tab, .lh-picker-btn { padding-top: 0; padding-bottom: 0; }
+.lh-select, .lh-searchbox-dim { padding-top: 0; padding-bottom: 0; }
 .lh-picker { position: relative; }
 .lh-picker-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: #fff; border-radius: 8px;
   padding: 5px 10px; font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; }
@@ -306,6 +321,8 @@ button.lh-legend-item { border: 1px solid var(--line); background: #fff; border-
 .lh-picker-panel { display: none; position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; min-width: 220px; background: #fff;
   border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 23, 42, .12); padding: 6px; }
 .lh-picker.is-open .lh-picker-panel { display: block; }
+.lh-picker-panel { max-height: 360px; overflow-y: auto; }   /* 지표가 많아도 화면 안에서 스크롤 */
+.lh-kpi-bar .lh-picker-panel { left: auto; right: 0; }   /* 오른쪽 끝 버튼의 메뉴는 오른쪽에 맞춰 연다 */
 .lh-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px 8px;
   margin-bottom: 4px; border-bottom: 1px solid var(--line-soft); font-size: 11px; color: var(--label); }
 .lh-picker-reset { border: none; background: none; font: inherit; font-size: 11px; color: var(--accent); cursor: pointer; }
@@ -318,7 +335,10 @@ button.lh-legend-item { border: 1px solid var(--line); background: #fff; border-
 .lh-pick td.lh-name { white-space: nowrap; }
 .lh-pick td.lh-num { text-align: right; font-variant-numeric: tabular-nums; }
 .lh-pick td.lh-base { color: var(--label); }
-.lh-pick td.lh-rate { min-width: 120px; }
+.lh-pick td.lh-rate { min-width: 120px; text-align: right; }
+.lh-pick th.lh-sub { text-align: right; }   /* 숫자 열 머리글은 숫자와 같은 쪽으로 */
+/* 값 + 증감 두 줄 칸이 있는 표: 칸마다 첫 줄을 맞춘다 */
+.lh-pick td, .lh-compare td { vertical-align: top; }
 .lh-pick .lh-cellbar { justify-content: flex-start; }
 .lh-pick .lh-cellbar .lh-bar { flex: 1; width: auto; min-width: 48px; }
 .lh-pick .lh-cellbar span { min-width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
@@ -335,7 +355,7 @@ button.lh-legend-item { border: 1px solid var(--line); background: #fff; border-
 }
 @media print {
   body { background: #fff; padding: 0; }
-  .lh-print, .lh-search, .lh-pager, .lh-cmp, .lh-thr, .lh-dd-wrap, .lh-chips, .lh-pick-left, .lh-showall { display: none !important; }
+  .lh-print, .lh-search, .lh-searchbox, .lh-pager, .lh-cmp, .lh-thr, .lh-dd-wrap, .lh-chips, .lh-pick-left, .lh-showall { display: none !important; }
   .lh-section { break-inside: avoid; }
   .lh-tree-bar, .lh-more { display: none !important; }
   .lh-tree-scroll { max-height: none; overflow: visible; }

@@ -219,6 +219,18 @@
     });
   };
 
+  /* 라벨 붙은 드롭다운. items = [{key, label}] → onPick(key) */
+  K.selectBox = function (label, items, active, onPick) {
+    const wrap = h('label', 'lh-select-label');
+    wrap.appendChild(h('span', null, label));
+    const sel = h('select', 'lh-select');
+    items.forEach(it => { const o = h('option', null, it.label); o.value = it.key; sel.appendChild(o); });
+    sel.value = active;
+    sel.addEventListener('change', () => onPick(sel.value));
+    wrap.appendChild(sel);
+    return wrap;
+  };
+
   K.compareTabs = function (el, items, active) {
     cmpKey = active;
     K.tabs(el, items, active, setCompare);
@@ -279,6 +291,49 @@
     K.onThreshold(() => paint(cmpKey));
   };
 
+  /* 지표를 고르는 KPI 카드. spec = report_kit.kpi_pick: {cards: [{key, ...카드}], default: [key]}
+   * 카드는 한 번만 그리고(비교 기준 탭 구독도 한 번) 지표 메뉴에서 켜고 끄거나 순서를 바꾸면 카드 요소를 다시 늘어놓는다.
+   * 메뉴에서 바꾼 지표만 이 브라우저에 기억한다(저장이 막혀 있으면 기본값). 메뉴 순서 = 기본 카드(default 순서) 다음 나머지. */
+  K.kpiPick = function (el, spec) {
+    el.innerHTML = '';
+    const cards = spec.cards || [];
+    if (!cards.length) { K.placeholder(el); return; }
+    const keys = cards.map(c => c.key);
+    const LS = 'lh-kpi-pick:v2:' + (spec.store || 'default');   // v2: 기본 카드가 바뀌어 예전 저장값은 쓰지 않는다
+    const on0 = (spec.default || keys).filter(k => keys.includes(k));
+    const def = { order: on0.concat(keys.filter(k => !on0.includes(k))), on: on0 };
+    const state = { order: def.order.slice(), on: new Set(def.on) };
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS) || 'null');
+      if (saved && Array.isArray(saved.order)) {
+        state.order = saved.order.filter(k => keys.includes(k)).concat(keys.filter(k => !saved.order.includes(k)));
+        state.on = new Set((saved.on || []).filter(k => keys.includes(k)));
+        if (!state.on.size) state.on = new Set(def.on);
+      }
+    } catch (e) { /* 저장소를 쓸 수 없으면 기본값 */ }
+    const bar = h('div', 'lh-pick-bar lh-kpi-bar');
+    const left = h('div', 'lh-pick-left');
+    bar.appendChild(h('div'));
+    bar.appendChild(left);
+    const body = h('div');
+    el.appendChild(bar);
+    el.appendChild(body);
+    K.kpiGrid(body, cards);
+    const grid = body.firstChild;
+    const nodes = {};
+    Array.from(grid.children).forEach((n, i) => { nodes[keys[i]] = n; });
+    function arrange() {
+      state.order.forEach(k => { nodes[k].hidden = !state.on.has(k); grid.appendChild(nodes[k]); });
+      grid.classList.toggle('is-wide', state.on.size <= 2);
+    }
+    function save() {
+      arrange();
+      try { localStorage.setItem(LS, JSON.stringify({ order: state.order, on: Array.from(state.on) })); } catch (e) { /* 무시 */ }
+    }
+    left.appendChild(picker('지표', '표시할 지표 / 순서', cards.map(c => ({ key: c.key, label: c.label })), state, def, save));
+    arrange();
+  };
+
   /* 요약 불릿. item = {head?, text, tone: red|green|yellow|neutral} */
   K.bullets = function (el, items) {
     el.innerHTML = '';
@@ -316,13 +371,14 @@
   };
 
   /* 지표 선택 라인 추이. spec = {labels, weekend?, metrics:[meta], default_metric, series:[{name, color,
-   * values:{m:[..]}, legend?:{m:"..."}}], legend_toggle?, note?} */
+   * values:{m:[..]}, legend?:{m:"..."}}], legend_toggle?, note?, metric_select?}
+   * metric_select = true면 지표를 탭 대신 드롭다운으로 고른다. */
   K.trend = function (el, spec) {
     el.innerHTML = '';
     const bar = h('div', 'lh-toolbar');
     const tabs = h('div');
     const legend = h('div', 'lh-legend');
-    if (spec.tab_label) { const tw = h('div', 'lh-labeled'); tw.appendChild(h('span', 'lh-mini-label', spec.tab_label)); tw.appendChild(tabs); bar.appendChild(tw); }
+    if (spec.tab_label && !spec.metric_select) { const tw = h('div', 'lh-labeled'); tw.appendChild(h('span', 'lh-mini-label', spec.tab_label)); tw.appendChild(tabs); bar.appendChild(tw); }
     else bar.appendChild(tabs);
     if (spec.legend_label) { const lw = h('div', 'lh-labeled'); lw.appendChild(h('span', 'lh-mini-label', spec.legend_label)); lw.appendChild(legend); bar.appendChild(lw); }
     else bar.appendChild(legend);
@@ -375,27 +431,50 @@
       });
       if (showAll && hidden.size) legend.appendChild(showAll);
     }
-    K.tabs(tabs, spec.metrics.map(m => ({ key: m.key, label: m.label })), metric, k => { metric = k; draw(); });
+    const items = spec.metrics.map(m => ({ key: m.key, label: m.label }));
+    if (spec.metric_select) tabs.replaceWith(K.selectBox(spec.tab_label || '지표', items, metric, k => { metric = k; draw(); }));
+    else K.tabs(tabs, items, metric, k => { metric = k; draw(); });
     draw();
     if (spec.note) el.appendChild(h('p', 'lh-note', spec.note));
   };
 
-  /* 막대 + 선 이중 축. spec = {labels, bar:{label, unit, data, color}, line:{label, unit, data, color}} */
+  /* 막대 + 선 이중 축. spec = {labels, bar:{label, unit, data, color}, line?:{label, unit, data, color},
+   *   line_options?:[{key, label, unit, data}], line_default?, line_color?}
+   * line_options가 있으면 막대(광고비)는 고정하고 꺾은선 지표를 드롭다운으로 고른다. */
   K.barLine = function (el, spec) {
     el.innerHTML = '';
+    const opts = spec.line_options || null;
+    const optOf = k => Object.assign({ color: spec.line_color }, opts.find(o => o.key === k) || opts[0]);
+    let line = opts && opts.length ? optOf(spec.line_default) : spec.line;
+    const bar = h('div', 'lh-toolbar');
     const legend = h('div', 'lh-legend');
-    [[spec.bar, 'lh-swatch box'], [spec.line, 'lh-swatch']].filter(([s]) => s).forEach(([s, cls]) => {
-      const it = color(h('span', 'lh-legend-item'), s.color);
-      it.appendChild(h('span', cls));
-      it.appendChild(h('span', 'lh-legend-name', s.label));
-      legend.appendChild(it);
-    });
-    el.appendChild(legend);
+    function paintLegend() {
+      legend.innerHTML = '';
+      [[spec.bar, 'lh-swatch box'], [line, 'lh-swatch']].filter(([s]) => s).forEach(([s, cls]) => {
+        const it = color(h('span', 'lh-legend-item'), s.color);
+        it.appendChild(h('span', cls));
+        it.appendChild(h('span', 'lh-legend-name', s.label));
+        legend.appendChild(it);
+      });
+    }
+    paintLegend();
+    bar.appendChild(legend);
+    let chart;
+    if (opts && opts.length > 1) {
+      bar.appendChild(K.selectBox('꺾은선 지표', opts.map(o => ({ key: o.key, label: o.label })), line.key, k => {
+        line = optOf(k);
+        const ds = chart.data.datasets[1];
+        ds.label = line.label; ds.data = line.data;
+        chart.update();
+        paintLegend();
+      }));
+    }
+    el.appendChild(bar);
     const box = h('div', 'lh-chart');
     const cv = document.createElement('canvas');
     box.appendChild(cv);
     el.appendChild(box);
-    const line = spec.line;   // 없으면 막대만(Monthly 종합의 월간 전체 광고비 추이)
+    // line이 없으면 막대만(Monthly 종합의 월간 전체 광고비 추이)
     const datasets = [{ type: 'bar', label: spec.bar.label, data: spec.bar.data, backgroundColor: spec.bar.color, borderRadius: 4, yAxisID: 'y', order: 2, maxBarThickness: 64 }];
     if (line) datasets.push({ type: 'line', label: line.label, data: line.data, borderColor: line.color, backgroundColor: line.color,
       pointRadius: 3, borderWidth: 2, tension: 0.3, yAxisID: 'y2', order: 1, spanGaps: true });
@@ -404,7 +483,7 @@
       y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { callback: v => axis(v, spec.bar.unit) } },
     };
     if (line) scales.y2 = { position: 'right', grid: { display: false }, ticks: { callback: v => axis(v, line.unit) } };
-    new Chart(cv, {
+    chart = new Chart(cv, {
       data: { labels: spec.labels, datasets },
       options: {
         responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
@@ -559,12 +638,16 @@
     const left = h('div', 'lh-pick-left');
     left.appendChild(picker('Dimension', '표시할 Dimension / 순서', D, dimState, dimDef, () => { page = 0; paint(); }));
     left.appendChild(picker('지표', '표시할 지표 / 순서', M.map(m => ({ key: m.key, label: m.label })), metState, metDef, () => { page = 0; paint(); }));
-    const sdim = h('select', 'lh-select');
-    const q = h('input', 'lh-search'); q.type = 'search';
-    left.appendChild(sdim); left.appendChild(q);
-    bar.appendChild(left);
     const info = h('span', 'lh-pick-info');
-    bar.appendChild(info);
+    left.appendChild(info);
+    bar.appendChild(left);
+    // 검색: [검색 기준 | 차원 드롭다운 | 검색어] 한 덩어리 — 드롭다운이 "어느 차원에서 찾을지"임이 보이게
+    const sbox = h('div', 'lh-searchbox');
+    sbox.appendChild(h('span', 'lh-searchbox-label', '검색 기준'));
+    const sdim = h('select', 'lh-searchbox-dim'); sdim.title = '검색할 Dimension';
+    const q = h('input', 'lh-search'); q.type = 'search';
+    sbox.appendChild(sdim); sbox.appendChild(q);
+    bar.appendChild(sbox);
     el.appendChild(bar);
     const wrap = h('div', 'lh-table-wrap');
     const t = h('table', 'lh-table lh-pick' + (goal ? ' lh-pick-goal' : ''));
@@ -686,7 +769,7 @@
       sdim.innerHTML = '';
       sel.forEach(k => { const o = h('option', null, dimLabel(k)); o.value = k; sdim.appendChild(o); });
       sdim.value = sel.includes(searchPref) ? searchPref : sel[goal ? 0 : sel.length - 1];
-      q.placeholder = dimLabel(sdim.value) + ' 검색';
+      q.placeholder = dimLabel(sdim.value) + ' 이름으로 검색';
       const query = q.value.trim().toLowerCase();
       const groups = new Map(), all = newAgg(), rank = {}, byMedia = new Map();
       const subs = full && sel[0] === 'media' && sel.length > 1;   // 매체 소계 행
@@ -815,9 +898,24 @@
   };
 
   /* 비교 표. spec = {name_cols:["매체","상품"], metrics:[meta], compares:{key:{base_label, cur_label}},
-   * rows:[{names:[..], kind:"row|subtotal|total", dot?, cur:{m:v}, base:{key:{m:v}}}], note?} */
+   * rows:[{names:[..], kind:"row|subtotal|total", dot?, cur:{m:v}, base:{key:{m:v}}}], note?,
+   * metric_pick?:{default:[key], pin?}} — metric_pick이 있으면 "지표" 메뉴로 열을 고른다(처음엔 default만). */
   K.compareTable = function (el, spec) {
     el.innerHTML = '';
+    let shown = spec.metrics;
+    if (spec.metric_pick) {
+      const M = spec.metrics, mp = spec.metric_pick;
+      const on = (mp.default || []).filter(k => M.some(m => m.key === k));
+      const st = { order: M.map(m => m.key), on: new Set(on.length ? on : [M[0].key]), pin: mp.pin };
+      const def = { order: st.order.slice(), on: Array.from(st.on) };
+      const sync = () => { shown = st.order.filter(k => st.on.has(k)).map(k => M.find(m => m.key === k)); };
+      sync();
+      const pbar = h('div', 'lh-pick-bar');
+      const left = h('div', 'lh-pick-left');
+      left.appendChild(picker('지표', '표시할 지표 / 순서', M.map(m => ({ key: m.key, label: m.label })), st, def, () => { sync(); paint(cmpKey); }));
+      pbar.appendChild(left);
+      el.appendChild(pbar);
+    }
     const closed = new Set();
     if (spec.collapsible) {   // rows[].group 단위로 하위 행을 접는다(접으면 소계만)
       const bar = h('div', 'lh-toolbar lh-collapse-bar');
@@ -843,7 +941,7 @@
       const thead = h('thead');
       const r1 = h('tr'), r2 = h('tr');
       spec.name_cols.forEach(n => { const th = h('th', 'lh-name-col', n); th.rowSpan = 2; r1.appendChild(th); });
-      spec.metrics.forEach(m => {
+      shown.forEach(m => {
         const th = h('th', 'lh-group', m.label); th.colSpan = 2; r1.appendChild(th);
         r2.appendChild(h('th', 'lh-sub', cmp.base_label));
         r2.appendChild(h('th', 'lh-sub lh-group-end', cmp.cur_label));
@@ -882,7 +980,7 @@
           });
         }
         const base = (r.base || {})[k] || {};
-        spec.metrics.forEach(m => {
+        shown.forEach(m => {
           tr.appendChild(h('td', 'lh-num', K.fmt(base[m.key], m.unit)));
           const td = h('td', 'lh-num lh-group-end');
           td.appendChild(h('div', null, K.fmt(r.cur[m.key], m.unit)));

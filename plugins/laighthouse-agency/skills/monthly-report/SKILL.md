@@ -18,7 +18,7 @@ MCP 데이터를 받아 **라이트하우스 Monthly 보고서**(HTML 한 파일
 - **브랜드 비종속**: 사용자가 말한 브랜드명을 모든 MCP 호출의 `brand_name`과 제목·파일명에 그대로 쓴다.
 - **차원**: 브랜드가 제공하는 차원만 쓴다(차원 확인 1회). **없는 차원(예: 상품)은 호출에도 넣지 않고, 보고서에도
   조용히 나오지 않는다** — 사용자에게 묻거나 에러로 멈추지 않는다.
-- **지표**: 상단 카드는 예산 소진율 + 고정 7개(광고비·노출·클릭·CTR·조회수·CPM·CPV), 지표 탭·표는 ELT가 서빙하는 지표 전부다.
+- **지표**: 상단 카드는 처음에 예산 소진율 + 고정 7개(광고비·노출·클릭·CTR·조회수·CPM·CPV)가 켜지고 지표 메뉴로 더하고 뺀다. 드롭다운·메뉴·표는 ELT가 서빙하는 지표 전부다.
 - **목표**: 브랜드 전체·매체 단위만 있다. 목표가 없는 지표·단위는 묻지 않고 "-"로 둔다.
 - 도구 규칙: `shared/references/mcp-tools.md`, 차원 확인·선택 표: `shared/references/pivot-table.md`
   (플러그인 루트 기준 — 이 스킬 폴더에서는 `../../shared/references/`).
@@ -39,7 +39,7 @@ MCP 데이터를 받아 **라이트하우스 Monthly 보고서**(HTML 한 파일
 > 3. 저장 훅이 없는 호스트(prepare.py가 `note`)에서만 「저장 훅이 없을 때」대로 build.json을 직접 만든다.
 
 - 렌더링은 **미리 검증된 asset 스크립트**만 한다(`.py`/`.js` 신규 작성, HTML 직접 작성 금지).
-  - `assets/prepare.py` — 저장된 응답 → build.json + `digest`(전체·예산·매체(광고비 비중)·매체-상품의 당월·전월 값과 변화).
+  - `assets/prepare.py` — 저장된 응답 → build.json + `digest`(전체·예산·매체(광고비 비중·매체 예산 소진율)·매체-캠페인·광고그룹의 당월·전월 값과 변화).
   - `assets/build_report.py` — build.json + `dims` + `s2` → 최종 HTML 1개. 입력 스키마는 docstring.
   - `assets/discover.py`·`assets/digest.py` — 저장 훅이 없을 때만 쓴다.
 
@@ -74,7 +74,7 @@ MCP 데이터를 받아 **라이트하우스 Monthly 보고서**(HTML 한 파일
    ```
    → 출력의 `base`(build.json 경로)·`digest`. `missing`(다시 보낼 호출)이 있으면 그 호출만 다시 보내고 재실행한다(`errors`는
    그 응답이 에러였다는 뜻). `digest_error`(대조 검증 실패)면 그 응답을 다시 조회하고 prepare.py부터 다시 한다.
-5. **Executive Summary 작성**: `digest` 수치만 근거로 `monthly-report-section-2-executive-summary.md` 형식대로 불릿 4~5개를 쓴다.
+5. **Executive Summary 작성**: `digest` 수치만 근거로 `guides/executive-summary.md`(작성 규칙·예시)를 따라 `monthly-report-section-2-executive-summary.md` 형식([소진]·[효율] 그룹)으로 쓴다.
 6. **빌드 1회**:
    ```
    python3 assets/build_report.py <<'PYEOF'
@@ -108,6 +108,6 @@ Summary 근거는 `python3 assets/digest.py <build.json>` 출력이다.
 | 1 | 월간 성과 요약 (예산 소진율 + 고정 7 KPI, 전월 대비) | `monthly-report-section-1-kpi.md` | `s1` |
 | 2 | Executive Summary | `monthly-report-section-2-executive-summary.md` | `s2` |
 | 3 | 월별 광고 성과 (6개월 광고비 막대 + CPV 선) | `monthly-report-section-3-monthly-trend.md` | (s1 봉투) |
-| 4 | 매체별 성과 추이 (6개월, 지표 탭·범례 토글) | `monthly-report-section-4-media-trend.md` | `s4` |
+| 4 | 매체별 성과 추이 (6개월, 지표 드롭다운·범례 토글) | `monthly-report-section-4-media-trend.md` | `s4` |
 | 5 | 매체 성과 비교 (전월 vs 당월) | `monthly-report-section-5-media-compare.md` | (s4 봉투) |
 | 6 | 예산 및 목표 달성 결과 — Dimension·지표 메뉴 표(기본 매체 > 상품, 지표마다 목표·실적·달성률, 매체 소계) | `monthly-report-section-6-product-compare.md` | `s6` |

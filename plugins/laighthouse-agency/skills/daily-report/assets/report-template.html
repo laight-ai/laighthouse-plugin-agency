@@ -78,7 +78,7 @@ const REPORT = __REPORT_JSON__;
   cmpTitle('yday');
   K.onCompare(cmpTitle);
   K.render(REPORT, {
-    s1: (el, d) => K.kpiGrid(el, d.cards),
+    s1: (el, d) => K.kpiPick(el, d),
     s2: (el, d) => K.bullets(el, d),
     s3: (el, d) => K.trend(el, d),
     s4: (el, d) => K.pickTable(el, d),

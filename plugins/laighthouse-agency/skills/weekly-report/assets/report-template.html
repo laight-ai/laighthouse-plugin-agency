@@ -30,7 +30,7 @@ __REPORT_KIT_CSS__
   <section class="lh-section">
     <div>
       <h2>Weekly Summary</h2>
-      <p class="lh-desc">이번주(__CUR_SHORT__) 성과를 전주(__BASE_SHORT__)와 비교해 소진·효율 관점에서 매체-상품 단위로 정리했습니다.</p>
+      <p class="lh-desc">이번주(__CUR_SHORT__) 성과를 전주(__BASE_SHORT__)와 비교해 소진·효율 관점에서 매체-캠페인 단위로 정리했습니다.</p>
     </div>
     <div data-sec="s2"></div>
   </section>
@@ -66,7 +66,7 @@ const REPORT = __REPORT_JSON__;
   const K = window.LHKit;
   K.render(REPORT, {
     s1: (el, d) => {
-      K.kpiGrid(el, d.cards);
+      K.kpiPick(el, d);
       if (d.note) { const p = document.createElement('p'); p.className = 'lh-note'; p.textContent = d.note; el.appendChild(p); }
     },
     s2: (el, d) => (d.groups ? K.groupSummary(el, d.groups) : K.bullets(el, d.bullets)),

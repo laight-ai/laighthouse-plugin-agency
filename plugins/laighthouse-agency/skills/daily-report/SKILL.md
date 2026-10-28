@@ -18,7 +18,7 @@ MCP 데이터를 받아 **라이트하우스 Daily 보고서**(HTML 한 파일)�
 - **브랜드 비종속**: 사용자가 말한 브랜드명을 모든 MCP 호출의 `brand_name`과 제목·파일명에 그대로 쓴다.
 - **차원**: 브랜드가 제공하는 차원만 쓴다(차원 확인 1회). **없는 차원(예: 상품)은 호출에도 넣지 않고, 보고서에도
   조용히 나오지 않는다** — 사용자에게 묻거나 에러로 멈추지 않는다.
-- **지표**: 상단 카드는 고정 7개(광고비·노출·클릭·CTR·조회수·CPM·CPV), 지표 탭·표는 ELT가 서빙하는 지표 전부다.
+- **지표**: 상단 카드는 처음에 8개(광고비·노출·클릭·CTR·VTR·조회수·CPM·CPV — VTR은 서빙될 때만)가 켜지고 지표 메뉴로 더하고 뺀다. 추이 드롭다운·표는 ELT가 서빙하는 지표 전부다.
 - 도구 규칙: `shared/references/mcp-tools.md`, 차원 확인·선택 표: `shared/references/pivot-table.md`
   (플러그인 루트 기준 — 이 스킬 폴더에서는 `../../shared/references/`).
 
@@ -38,7 +38,7 @@ MCP 데이터를 받아 **라이트하우스 Daily 보고서**(HTML 한 파일)�
 > 3. 저장 훅이 없는 호스트(prepare.py가 `note`)에서만 「저장 훅이 없을 때」대로 build.json을 직접 만든다.
 
 - 렌더링은 **미리 검증된 asset 스크립트**만 한다(`.py`/`.js` 신규 작성, HTML 직접 작성 금지).
-  - `assets/prepare.py` — 저장된 응답 → build.json + `digest`(전체·매체·매체-상품의 D0·D1·D7 값과 변화) + 지표 키.
+  - `assets/prepare.py` — 저장된 응답 → build.json + `digest`(전체·매체·매체-캠페인·광고그룹·광고의 D0·D1·D7 값과 변화) + 지표 키.
   - `assets/build_report.py` — build.json + `dims` + `s2` → 최종 HTML 1개. 입력 스키마는 docstring.
   - `assets/discover.py`·`assets/digest.py` — 저장 훅이 없을 때만 쓴다.
 
@@ -68,7 +68,7 @@ MCP 데이터를 받아 **라이트하우스 Daily 보고서**(HTML 한 파일)�
    → 출력의 `base`(build.json 경로)·`digest`. `missing`(다시 보낼 호출)이 있으면 그 호출만 다시 보내고 재실행한다(`errors`는
    그 응답이 에러였다는 뜻). `discover.metrics_absent`는 브랜드가 주지 않는 지표라 묻지 않는다 — 단 `cost`가 들어 있으면
    어떤 지표가 광고비인지 사용자에게 묻는다. `digest_error`(대조 검증 실패)면 그 응답을 다시 조회하고 prepare.py부터 다시 한다.
-5. **Daily Summary 작성**: `digest` 수치만 근거로 `daily-report-section-2-summary.md` 형식대로 불릿 3~5개를 쓴다.
+5. **Daily Summary 작성**: `digest` 수치만 근거로 `guides/daily-summary.md`(작성 규칙·예시)를 따라 `daily-report-section-2-summary.md` 형식의 불릿을 쓴다.
 6. **빌드 1회**:
    ```
    python3 assets/build_report.py <<'PYEOF'
@@ -101,5 +101,5 @@ Summary 근거는 `python3 assets/digest.py <build.json>` 출력이다.
 |---|---|---|---|
 | 1 | 일간 성과 요약 (고정 7 KPI, 전일/전주 동요일 토글) | `daily-report-section-1-kpi.md` | `s1` |
 | 2 | Daily Summary | `daily-report-section-2-summary.md` | `s2` |
-| 3 | 매체별 일별 추이 (최근 7일, 지표 탭) | `daily-report-section-3-media-trend.md` | `s3` |
+| 3 | 매체별 일별 추이 (최근 7일, 지표 드롭다운) | `daily-report-section-3-media-trend.md` | `s3` |
 | 4 | 성과 비교 — Dimension·지표 메뉴 표(비교일 vs 기준일) | `daily-report-section-4-product-compare.md` | `s4` |
