@@ -9,14 +9,14 @@
   budgets get_target_progress_v2(month = 걸친 달, media 생략) 원문 — 달마다 가장 최근 응답
 
 사용법 (3단계 MCP 호출을 모두 보낸 직후, 1회):
-  python3 assets/prepare.py --brand <브랜드> --target-date <D> [--start-date <S>] --build <<'PYEOF'
+  python3 assets/prepare.py --brand <브랜드> --target-date <E> [--start-date <S>] --build <<'PYEOF'
   <차원 확인 에러 메시지 원문>
   PYEOF
 출력(stdout JSON): {"base": build.json 경로, "missing": [...], "errors": [...], "discover": {...}, "build"?: 빌더 출력, "note"?}
   --build: missing·errors가 없으면 stdin의 차원 확인 원문을 dims로 넣어 빌더(build_report.py)를 바로 부르고 그 출력을 "build"에 담는다.
   --build 없이: base만 만든다 → 빌더에 {"base": <경로>, "dims": "..."}를 넘긴다.
   missing: 저장된 응답이 없는 호출(그 호출만 다시 보내고 재실행). note: 저장된 응답이 하나도 없다 — 훅이 없는 환경.
-  --part comment|summary|tables|mix: 하위 스킬 — 그 섹션만 그린다. 파일 이름 {브랜드}_overall_summary_{part}_{D}.html.
+  --part comment|summary|tables|mix: 하위 스킬 — 그 섹션만 그린다. 파일 이름 {브랜드}_overall_summary_{part}_{E}.html.
     쓰지 않는 호출은 찾지 않는다: place는 전체·tables에서만, budgets는 tables에서 빼고.
   --tables product,target,place,weekly,daily: --part tables에서 고른 표만(없으면 다섯 표 모두).
 """
@@ -71,17 +71,19 @@ def main():
     ap.add_argument("--part", choices=("comment", "summary", "tables", "mix"))
     ap.add_argument("--tables", help="--part tables에서 고를 표(쉼표로): product,target,place,weekly,daily")
     a = ap.parse_args()
-    D = date.fromisoformat(a.target_date)
-    E = D - timedelta(days=1)
+    E = date.fromisoformat(a.target_date)   # 기준일 = 데이터 마지막 날(최대 어제)
+    if sr.future_date_error(E):
+        sr.emit({"date_error": sr.future_date_error(E)})
+        return
     S = date.fromisoformat(a.start_date) if a.start_date else (E.replace(day=1) - timedelta(days=1)).replace(day=1)
     recs = sr.load_records(a.brand)
     if not recs:
         sr.emit({"note": sr.no_records_note()})
         return
 
-    name = f"{a.brand}_overall_summary_{a.part + '_' if a.part else ''}{D}"
+    name = f"{a.brand}_overall_summary_{a.part + '_' if a.part else ''}{E}"
     w = sr.Workdir(name)
-    base = {"out": f"~/Downloads/laighthouse-reports/{name}.html", "brand": a.brand, "target_date": str(D)}
+    base = {"out": f"~/Downloads/laighthouse-reports/{name}.html", "brand": a.brand, "target_date": str(E)}
     if a.start_date:
         base["start_date"] = str(S)
     tables = [t.strip() for t in (a.tables or "").split(",") if t.strip()] if a.part == "tables" else []

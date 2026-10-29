@@ -1,6 +1,6 @@
 {
   "name": "laighthouse-agency",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "대행사 양식 보고서 플러그인 — MCP 연동 데이터를 종합 리포트(HTML + 시트를 나눈 엑셀)로 렌더링합니다. Daily/Weekly Comment, 예산·목표 영역을 담은 Total/Monthly Summary, 월·미디어 필터로 보는 Product·Target·Placement·Weekly·Daily 표, 예산·단가를 입력해 예상 성과를 보는 Mix 계획표를 한 화면에 담습니다(섹션 하나만 뽑는 하위 스킬도 있습니다). Daily·Weekly·Monthly 보고서(전일·전주·전월 비교, 매체 추이, Dimension·지표 선택 표)도 만듭니다. 어떤 브랜드에도 동작합니다.",
   "author": {
     "name": "LaightAI"

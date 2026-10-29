@@ -9,6 +9,7 @@
 - `pick(recs, tool, **args)` 인자가 맞는 가장 최근 응답 (args 값이 None이면 "인자 생략"과 같다)
 - `response_text(rec)`       응답 본문(래퍼·호스트 저장 파일 안내문을 푼 것)
 - `Workdir`                  봉투를 작업 폴더에 저장하고 missing·errors를 모은다
+- `future_date_error(day)`   보고서 날짜가 오늘(KST) 이후면 이유 문자열(데이터는 어제까지)
 """
 import json
 import os
@@ -193,6 +194,15 @@ class Workdir:
 
 def emit(obj):
     os.write(1, json.dumps(obj, ensure_ascii=False).encode("utf-8"))
+
+
+def future_date_error(last_day):
+    """보고서 날짜(= 데이터 마지막 날)가 오늘(KST) 이후면 그 이유 — 데이터는 어제까지만 있다. 괜찮으면 None."""
+    from datetime import datetime, timedelta, timezone
+    today = datetime.now(timezone(timedelta(hours=9))).date()
+    if last_day >= today:
+        return f"{last_day}은(는) 아직 데이터가 없다 — 보고서 날짜는 어제({today - timedelta(days=1)})까지만 된다."
+    return None
 
 
 def no_records_note():

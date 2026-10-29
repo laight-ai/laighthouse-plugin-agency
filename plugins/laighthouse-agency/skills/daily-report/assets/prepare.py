@@ -43,6 +43,9 @@ def main():
     a = ap.parse_args()
     d0 = date.fromisoformat(a.target_date)
     D0, D1, D7 = (str(d0 - timedelta(days=n)) for n in (0, 1, 7))
+    if sr.future_date_error(d0):
+        sr.emit({"date_error": sr.future_date_error(d0)})
+        return
     recs = sr.load_records(a.brand)
     if not recs:
         sr.emit({"note": sr.no_records_note()})

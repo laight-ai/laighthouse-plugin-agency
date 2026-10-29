@@ -15,7 +15,7 @@ metadata:
 스크립트·규칙·데이터 처리 원칙은 `overall-summary`와 같다 — **`../overall-summary/SKILL.md`를 먼저 읽고 그대로 따른다.**
 이 문서는 거기서 달라지는 점만 적는다. 스크립트는 `../overall-summary/assets/`에 있다(이 스킬 폴더 기준).
 
-- 파라미터(브랜드명·기준일 D·시작일 S)와 기간 계산(E = D-1, S 기본 = E의 전월 1일, 366일까지)은 `overall-summary`와 같다.
+- 파라미터(브랜드명·기준일 E = 데이터 마지막 날, 기본 어제·오늘 이후 불가·시작일 S)와 기간 계산(S 기본 = E의 전월 1일, 366일까지)은 `overall-summary`와 같다.
 - 섹션 규칙: `../overall-summary/overall-summary-section-2-summary.md`
 
 ## 실행 순서 (`overall-summary` 「실행 순서」에서 달라지는 점)
@@ -28,7 +28,7 @@ metadata:
    - Placement는 부르지 않는다(Summary에 쓰지 않는다).
 4. 빌드 (1회) — `--part summary`를 붙인다:
    ```
-   python3 ../overall-summary/assets/prepare.py --brand <브랜드> --target-date <D> [--start-date <S>] --part summary --build <<'PYEOF'
+   python3 ../overall-summary/assets/prepare.py --brand <브랜드> --target-date <E> [--start-date <S>] --part summary --build <<'PYEOF'
    <차원 확인 에러 메시지 원문>
    PYEOF
    ```
