@@ -2,7 +2,7 @@
 name: weekly-report
 description: >
   브랜드 비종속 Weekly(주간) 보고서 생성 스킬. "위클리 보고서", "주간 보고서", "weekly 보고서" 요청 시 사용.
-  기준일 전날까지의 이번주(7일)를 전주와 비교한다 — 월 누적 예산 소진율·목표 대비 진척도(목표 없는 지표는 전월 동기간 대비),
+  기준일(데이터 마지막 날, 기본 어제)까지의 이번주(7일)를 전주와 비교한다 — 월 누적 예산 소진율·목표 대비 진척도(목표 없는 지표는 전월 동기간 대비),
   소진·효율 관점의 Weekly Summary, 매체별 최근 5주 추이, Dimension·지표를 골라 보는 주간 성과 비교표를 담은 HTML 보고서.
   사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
@@ -16,7 +16,7 @@ metadata:
 MCP 데이터를 받아 **라이트하우스 Weekly 보고서**(HTML 한 파일)로 렌더링한다. 일간은 `daily-report`, 월간은 `monthly-report`.
 
 - **브랜드 비종속**: 사용자가 말한 브랜드명을 모든 MCP 호출의 `brand_name`과 제목·파일명에 그대로 쓴다.
-- **기간**: 기준일 D(없으면 오늘, KST), 데이터 마지막 날 **E = D-1**.
+- **기간**: 기준일 **E** = 데이터 마지막 날(없으면 어제, KST). 기준일은 **데이터 마지막 날**이다(최대 어제). 오늘 이후 날짜면 MCP를 부르지 말고 "보고서는 어제까지만 만들 수 있다"고 알리고 멈춘다.
   이번주 = E-6 ~ E, 전주 = E-13 ~ E-7, 최근 5주 = E-34 ~ E(7일 단위), 월 누적 = E가 속한 달 1일 ~ E.
 - **차원**: 브랜드가 제공하는 차원만 쓴다(차원 확인 1회). **없는 차원(예: 상품)은 호출에도 넣지 않고, 보고서에도
   조용히 나오지 않는다** — 사용자에게 묻거나 에러로 멈추지 않는다.
@@ -51,11 +51,11 @@ MCP 데이터를 받아 **라이트하우스 Weekly 보고서**(HTML 한 파일)
 | 파라미터 | 설명 | 예시 |
 |---|---|---|
 | brand_name | 사용자가 말한 브랜드명 그대로 | acme |
-| 기준 일자 | `target_date`(D). 없으면 오늘(KST). 데이터는 D-1(E)까지 | 2026-09-20 |
+| 기준 일자 | `target_date`(E) = 데이터 마지막 날. 없으면 어제(KST), 오늘 이후는 안 된다 | 2026-09-20 |
 
 ## 실행 순서
 
-1. 파라미터를 파싱한다. E = D-1, 그리고 위 기간들을 계산한다.
+1. 파라미터를 파싱한다. E = 기준일(오늘 이후면 멈춘다), 그리고 위 기간들을 계산한다.
 2. **1차 호출 — 한 메시지에 동시 3회** (`get_ad_performance`, `metrics`·`filters` 생략):
    - 차원 확인: E-6 ~ E, `time_grain:"total"`, `group_by:["__list_dimensions__"]`, `metrics:[]` → 에러 메시지의 차원 목록에서
      FINE_DIMS를 정한다(`pivot-table.md` 1절 — 목록에 없는 차원은 넣지 않는다).
@@ -71,9 +71,9 @@ MCP 데이터를 받아 **라이트하우스 Weekly 보고서**(HTML 한 파일)
      크기 오류(서버 5만 행·"larger than 16MB" 등)면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절).
 4. **빌드 입력 준비**:
    ```
-   python3 assets/prepare.py --brand <브랜드> --target-date <D>
+   python3 assets/prepare.py --brand <브랜드> --target-date <E>
    ```
-   → 출력의 `base`(build.json 경로)·`digest`. `missing`(다시 보낼 호출)이 있으면 그 호출만 다시 보내고 재실행한다(`errors`는
+   → 출력의 `base`(build.json 경로)·`digest`. `date_error`(기준일이 오늘 이후)면 그 문구를 사용자에게 알리고 멈춘다. `missing`(다시 보낼 호출)이 있으면 그 호출만 다시 보내고 재실행한다(`errors`는
    그 응답이 에러였다는 뜻). `digest_error`(대조 검증 실패)면 그 응답을 다시 조회하고 prepare.py부터 다시 한다.
 5. **Weekly Summary 작성**: `digest` 수치만 근거로 `guides/weekly-summary.md`(작성 규칙·예시)를 따라 `weekly-report-section-2-summary.md` 형식으로 쓴다.
 6. **빌드 1회**:

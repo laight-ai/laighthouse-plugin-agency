@@ -4,7 +4,7 @@
 MCP 응답 원문(봉투·목표 표)을 섹션별로 그대로 받아, 공용 킷(`shared/assets/report_kit.*`)으로 뷰 모델을 계산하고
 `assets/report-template.html`에 주입해 **최종 HTML 한 파일을 한 번의 호출로** 만든다.
 
-기간 (기준일 D, 데이터 마지막 날 E = D-1):
+기간 (기준일 E = 데이터 마지막 날, 최대 어제):
   이번주 = E-6 ~ E, 전주 = E-13 ~ E-7, 최근 5주 = E-34 ~ E(7일 단위), 월 누적 = E가 속한 달 1일 ~ E
 
 사용법:
@@ -15,7 +15,7 @@ MCP 응답 원문(봉투·목표 표)을 섹션별로 그대로 받아, 공용 �
 {
   "out": "~/Downloads/laighthouse-reports/{브랜드}_weekly_2026-09-20.html",   # 필수
   "title": "{브랜드} Weekly 보고서",                                         # 필수
-  "target_date": "2026-09-20",                                             # 필수 (기준일 D)
+  "target_date": "2026-09-20",                                             # 필수 (기준일 = 데이터 마지막 날 E)
   "skeleton": true,             # 선택 — 전 섹션 "데이터 준비 중"
   "metric_keys": {...}, "currency": "₩",          # discover.py 출력 그대로
   "dims": "<차원 확인(group_by [\"__list_dimensions__\"]) 에러 메시지 원문>",   # 필수(표가 있을 때) — 빠진 차원이 있으면 멈춘다
@@ -71,7 +71,7 @@ def range_label(a, b, short=False):
 
 
 def periods(target):
-    E = target - timedelta(days=1)
+    E = target
     cur = (E - timedelta(days=6), E)
     base = (E - timedelta(days=13), E - timedelta(days=7))
     weeks = [(E - timedelta(days=34 - 7 * i), E - timedelta(days=28 - 7 * i)) for i in range(5)]

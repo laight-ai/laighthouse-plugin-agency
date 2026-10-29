@@ -23,11 +23,13 @@
 
 > "breezm 종합 리포트 만들어줘" → `overall-summary`
 > "breezm 종합 리포트 7월 15일부터" → 시작일 지정(기본: 전월 1일, 366일까지)
+
+> 모든 보고서의 날짜는 **데이터 마지막 날**이다(기본 어제). 오늘 이후 날짜로는 만들 수 없다.
 > "breezm 종합 리포트 Mix만" → `overall-summary-mix` (Comment·Summary·표도 같은 식 — `overall-summary-comment`·`-summary`·`-tables`)
 > "breezm 종합 리포트 Product랑 Daily 표만" → `overall-summary-tables` (고른 표만)
 
 > "breezm 데일리 보고서" → `daily-report` (기준일 기본: 어제)
-> "breezm 주간 보고서" → `weekly-report` (기준일 기본: 오늘, 데이터는 어제까지)
+> "breezm 주간 보고서" → `weekly-report` (기준일 = 데이터 마지막 날, 기본: 어제)
 > "breezm 9월 월간 보고서" → `monthly-report` (대상 월 기본: 지난달)
 
 ### Daily · Weekly · Monthly 보고서 구성

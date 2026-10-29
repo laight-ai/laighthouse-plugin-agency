@@ -5,7 +5,7 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
 열 기반으로 HTML에 넣는다. Total/Monthly Summary와 Product·Target·Weekly·Daily 표는 브라우저(assets/overall_summary.js)가
 그 데이터로 묶어 그린다(월·미디어 필터, 디멘전·지표 설정, 접기).
 
-기간 (기준일 D, 데이터 마지막 날 E = D-1): 집계 기간 = start_date ~ E (start_date를 안 주면 E의 전월 1일).
+기간 (기준일 E = 데이터 마지막 날, 최대 어제): 집계 기간 = start_date ~ E (start_date를 안 주면 E의 전월 1일).
 집계 기간이 걸친 달마다 Monthly Summary·월 필터·Mix 월 칸이 생긴다(366일까지).
 
 사용법:
@@ -15,7 +15,7 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
 {
   "out": "~/Downloads/laighthouse-reports/{브랜드}_overall_summary_2026-10-08.html",   # 필수
   "brand": "{브랜드}",                                                     # 필수 (제목 = 브랜드명)
-  "target_date": "2026-10-08",                                           # 필수 (기준일 D)
+  "target_date": "2026-10-08",                                           # 필수 (기준일 = 데이터 마지막 날 E)
   "start_date": "2026-07-15",    # 선택 — 집계 시작일(사용자가 말한 날). 없으면 E의 전월 1일
   "skeleton": true,              # 선택 — 데이터 없이 틀만
   "metric_keys": {...}, "currency": "₩",          # discover.py 출력 그대로
@@ -496,11 +496,11 @@ def encode(rows, dims, start, end):
 
 def compute(payload):
     target = date.fromisoformat(payload["target_date"])
-    E = target - timedelta(days=1)
+    E = target
     if payload.get("start_date"):   # 사용자가 정한 시작일
         start = date.fromisoformat(payload["start_date"])
         if start > E:
-            raise SystemExit(f"start_date({start})가 데이터 마지막 날(기준일 전날 {E})보다 늦다.")
+            raise SystemExit(f"start_date({start})가 데이터 마지막 날(기준일 {E})보다 늦다.")
         if (E - start).days > 365:
             raise SystemExit("집계 기간은 366일까지다(get_ad_performance 상한) — start_date를 줄인다.")
     else:                           # 기본: E의 전월 1일
