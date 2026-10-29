@@ -32,7 +32,7 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
   "place": {"json_files": ["<첫 달 응답>", ...]}
         # 선택 — Placement 표. day grain, group_by = [media, (ad_type 또는 상품), 노출 위치 차원(PLACE_DIMS 중 브랜드가 주는 것)],
         # 달마다 나눠 받는다. 표 데이터와 따로 받아(행 수가 적다) Placement 표만 그린다. 없거나 노출 위치 차원이 없으면 표가 빠진다.
-  "part": "mix",                 # 선택 — 하위 스킬: comment | summary | tables | mix 중 그 섹션만 그린다(없으면 전부)
+  "part": "mix",                 # 선택 — 하위 스킬: comment | total | tables | mix 중 그 섹션만 그린다(없으면 전부)
   "tables": ["product", "daily"] # 선택 — part가 tables일 때 고른 표만(product·target·place·weekly·daily)
 }
 - 응답에 없는 차원(예: 상품)은 표·디멘전 설정에 나오지 않는다 — 조용히 빠진다.
@@ -80,7 +80,7 @@ for _src in PLACE_DIMS:
     SHORT[_src] = "pl"
 ATOMS = (("cost", "cost"), ("impression", "imp"), ("click", "click"), ("views", "view"))
 # 하위 스킬(part) → 보고서 머리 라벨 · 엑셀 시트. 화면에서 남길 섹션은 overall_summary.js의 PART_SECS.
-PARTS = {"comment": ("Comment", ()), "summary": ("Summary", ("summary",)),
+PARTS = {"comment": ("Comment", ()), "total": ("Summary", ("summary",)),
          "tables": ("세부 성과", ("media", "date", "raw")), "mix": ("Mix", ("mix",))}
 TABLES = ("product", "target", "place", "weekly", "daily")
 DROP_THRESHOLD = 20   # Daily Comment 급감 기준(%)

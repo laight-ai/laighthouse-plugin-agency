@@ -1,7 +1,7 @@
 ---
-name: overall-summary-summary
+name: overall-summary-total
 description: >
-  종합 리포트의 Total/Monthly Summary만 뽑는 스킬. "종합 리포트 summary만", "Total Summary·Monthly Summary", "overall summary summary" 요청 시 사용. 예산·비용·소진율·진행율과 목표(e.*)·달성률을 담은 Total Summary·Monthly Summary만 담은 HTML과 Summary 시트 엑셀을 만든다.
+  종합 리포트의 Total/Monthly Summary만 뽑는 스킬. "종합 리포트 summary만", "Total Summary·Monthly Summary", "overall summary total" 요청 시 사용. 예산·비용·소진율·진행율과 목표(e.*)·달성률을 담은 Total Summary·Monthly Summary만 담은 HTML과 Summary 시트 엑셀을 만든다.
   사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
   version: "1.0.0"
@@ -26,14 +26,14 @@ metadata:
    - 표 데이터: `time_grain:"day"`, `group_by` = FINE_DIMS — 달마다 1회(크기 오류 대응도 같다).
    - 예산·목표: `get_target_progress_v2` — 걸친 달마다 `media` 생략 1회(인자는 같다).
    - Placement는 부르지 않는다(Summary에 쓰지 않는다).
-4. 빌드 (1회) — `--part summary`를 붙인다:
+4. 빌드 (1회) — `--part total`를 붙인다:
    ```
-   python3 ../overall-summary/assets/prepare.py --brand <브랜드> --target-date <E> [--start-date <S>] --part summary --build <<'PYEOF'
+   python3 ../overall-summary/assets/prepare.py --brand <브랜드> --target-date <E> [--start-date <S>] --part total --build <<'PYEOF'
    <차원 확인 에러 메시지 원문>
    PYEOF
    ```
    `missing`·`errors`·`build_error` 처리는 `overall-summary`와 같다.
-   HTML은 `~/Downloads/laighthouse-reports/{브랜드명}_overall_summary_summary_{기준_일자}.html`, 엑셀은 같은 폴더·같은 이름의 `.xlsx`(Summary 시트).
+   HTML은 `~/Downloads/laighthouse-reports/{브랜드명}_overall_summary_total_{기준_일자}.html`, 엑셀은 같은 폴더·같은 이름의 `.xlsx`(Summary 시트).
 5. 완성된 HTML을 낸다(Artifact 등으로 보여 줄 수 있으면 게시). 엑셀은 경로만 알린다.
 6. 완료 메시지는 아래 형식 그대로.
 
