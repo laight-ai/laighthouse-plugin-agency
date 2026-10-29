@@ -20,6 +20,7 @@
 | 플러그인 | 스킬 | 설명 |
 |---|---|---|
 | `laighthouse-agency` | `overall-summary` | 종합 리포트(HTML + 엑셀) — 시작일(기본: 전월 1일)부터 어제까지 |
+| | `overall-summary-comment` · `-summary` · `-tables` · `-mix` | 종합 리포트의 섹션 하나만(Comment · Summary · 세부 표 · Mix) |
 | | `daily-report` | Daily 보고서(HTML) — 기준일 vs 전일·전주 동요일 |
 | | `weekly-report` | Weekly 보고서(HTML) — 이번주 vs 전주, 월 누적 진척도 |
 | | `monthly-report` | Monthly 보고서(HTML) — 대상 월 vs 전월, 예산·목표 달성 |

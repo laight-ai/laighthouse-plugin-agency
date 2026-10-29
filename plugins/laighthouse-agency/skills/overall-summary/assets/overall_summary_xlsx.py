@@ -1101,15 +1101,17 @@ def sheet_raw(book, ctx):
     return sh
 
 
-def write(report, rows, path):
-    """빌더의 report·원자 행 → .xlsx. 표 데이터가 없으면 만들지 않는다(None)."""
+SHEETS = {"summary": sheet_summary, "media": sheet_media, "date": sheet_date, "mix": sheet_mix, "raw": sheet_raw}
+
+
+def write(report, rows, path, sheets=None):
+    """빌더의 report·원자 행 → .xlsx. 표 데이터가 없으면 만들지 않는다(None).
+    sheets: 담을 시트 키(SHEETS 순서로 쓴다) — 하위 스킬이 그 섹션 시트만 담을 때. 없으면 전부."""
     if not report.get("table") or not report["table"].get("n") or not rows:
         return None
     ctx = Ctx(report, rows)
     book = Book()
-    sheet_summary(book, ctx)
-    sheet_media(book, ctx)
-    sheet_date(book, ctx)
-    sheet_mix(book, ctx)
-    sheet_raw(book, ctx)
+    for k, fn in SHEETS.items():
+        if sheets is None or k in sheets:
+            fn(book, ctx)
     return book.save(path)

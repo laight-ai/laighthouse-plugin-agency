@@ -7,10 +7,15 @@ description: >
   (디멘전·지표 설정, 접기), 예산·단가를 입력해 예상 성과를 보는 Mix 계획표를 담은 HTML 보고서와, 같은 내용을 시트로 나눈
   엑셀(.xlsx — Summary·By Media·By Date·Mix·Raw)을 함께 만든다. 사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
-  version: "1.4.0"
+  version: "1.5.0"
 ---
 
 > ⚡ **thinking 지침**: thinking은 최대한 짧게 유지한다. 바로 MCP 호출 → 스크립트 실행 → 완료 순서로 진행한다.
+
+> 🧩 **섹션 하나만** 원하면(예: "Mix만", "코멘트만", "Summary 표만", "Product 표만") 하위 스킬을 쓴다 —
+> `overall-summary-comment`(Daily·Weekly Comment) · `overall-summary-summary`(Total·Monthly Summary) ·
+> `overall-summary-tables`(Product·Target·Placement·Weekly·Daily 표, 표를 고를 수 있다) · `overall-summary-mix`(Mix 계획표).
+> 같은 스크립트에 `--part`를 붙여 그 섹션만 그리고, 쓰지 않는 호출은 보내지 않는다.
 
 ## 역할
 

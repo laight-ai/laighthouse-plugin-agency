@@ -16,6 +16,9 @@
   --build: missing·errors가 없으면 stdin의 차원 확인 원문을 dims로 넣어 빌더(build_report.py)를 바로 부르고 그 출력을 "build"에 담는다.
   --build 없이: base만 만든다 → 빌더에 {"base": <경로>, "dims": "..."}를 넘긴다.
   missing: 저장된 응답이 없는 호출(그 호출만 다시 보내고 재실행). note: 저장된 응답이 하나도 없다 — 훅이 없는 환경.
+  --part comment|summary|tables|mix: 하위 스킬 — 그 섹션만 그린다. 파일 이름 {브랜드}_overall_summary_{part}_{D}.html.
+    쓰지 않는 호출은 찾지 않는다: place는 전체·tables에서만, budgets는 tables에서 빼고.
+  --tables product,target,place,weekly,daily: --part tables에서 고른 표만(없으면 다섯 표 모두).
 """
 import argparse
 import io
@@ -65,6 +68,8 @@ def main():
     ap.add_argument("--target-date", required=True)
     ap.add_argument("--start-date")
     ap.add_argument("--build", action="store_true")
+    ap.add_argument("--part", choices=("comment", "summary", "tables", "mix"))
+    ap.add_argument("--tables", help="--part tables에서 고를 표(쉼표로): product,target,place,weekly,daily")
     a = ap.parse_args()
     D = date.fromisoformat(a.target_date)
     E = D - timedelta(days=1)
@@ -74,10 +79,17 @@ def main():
         sr.emit({"note": sr.no_records_note()})
         return
 
-    w = sr.Workdir(f"{a.brand}_overall_summary_{D}")
-    base = {"out": f"~/Downloads/laighthouse-reports/{a.brand}_overall_summary_{D}.html", "brand": a.brand, "target_date": str(D)}
+    name = f"{a.brand}_overall_summary_{a.part + '_' if a.part else ''}{D}"
+    w = sr.Workdir(name)
+    base = {"out": f"~/Downloads/laighthouse-reports/{name}.html", "brand": a.brand, "target_date": str(D)}
     if a.start_date:
         base["start_date"] = str(S)
+    tables = [t.strip() for t in (a.tables or "").split(",") if t.strip()] if a.part == "tables" else []
+    if a.part:
+        base["part"] = a.part
+        if tables:
+            base["tables"] = tables
+    want_place = not a.part or (a.part == "tables" and (not tables or "place" in tables))
     result = {}
     media = w.envelope(day_perf(recs, S, E, lambda gb: gb == ["media"]), "media.json",
                        {"tool": "get_ad_performance", "range": f"{S}~{E}", "time_grain": "day", "group_by": ["media"]})
@@ -96,7 +108,7 @@ def main():
                        {"tool": "get_ad_performance", "range": f"{s}~{e}", "time_grain": "day", "group_by": "FINE_DIMS"})
         if t:
             data_files += t["json_files"]
-        place = day_perf(recs, s, e, is_place)
+        place = day_perf(recs, s, e, is_place) if want_place else None
         if place:   # 노출 위치 차원이 없는 브랜드는 부르지 않는다 — 없어도 missing이 아니다
             p = w.envelope(place, f"place_{s}.json", {"tool": "get_ad_performance", "range": f"{s}~{e}", "group_by": "PLACE"})
             if p:
@@ -107,7 +119,7 @@ def main():
         base["place"] = {"json_files": place_files}
 
     budgets = []
-    for s, e in month_segments(S, E):
+    for s, e in month_segments(S, E) if a.part != "tables" else ():   # 표만 그리는 tables는 목표를 쓰지 않는다
         m = f"{s.year:04d}-{s.month:02d}"
         text = w.text(sr.pick(recs, "get_target_progress_v2", month=m, media=None),
                       {"tool": "get_target_progress_v2", "month": m, "media": None})
