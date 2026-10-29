@@ -16,7 +16,7 @@
   --build: missing·errors가 없으면 stdin의 차원 확인 원문을 dims로 넣어 빌더(build_report.py)를 바로 부르고 그 출력을 "build"에 담는다.
   --build 없이: base만 만든다 → 빌더에 {"base": <경로>, "dims": "..."}를 넘긴다.
   missing: 저장된 응답이 없는 호출(그 호출만 다시 보내고 재실행). note: 저장된 응답이 하나도 없다 — 훅이 없는 환경.
-  --part comment|summary|tables|mix: 하위 스킬 — 그 섹션만 그린다. 파일 이름 {브랜드}_overall_summary_{part}_{E}.html.
+  --part comment|total|tables|mix: 하위 스킬 — 그 섹션만 그린다. 파일 이름 {브랜드}_overall_summary_{part}_{E}.html.
     쓰지 않는 호출은 찾지 않는다: place는 전체·tables에서만, budgets는 tables에서 빼고.
   --tables product,target,place,weekly,daily: --part tables에서 고른 표만(없으면 다섯 표 모두).
 """
@@ -68,7 +68,7 @@ def main():
     ap.add_argument("--target-date", required=True)
     ap.add_argument("--start-date")
     ap.add_argument("--build", action="store_true")
-    ap.add_argument("--part", choices=("comment", "summary", "tables", "mix"))
+    ap.add_argument("--part", choices=("comment", "total", "tables", "mix"))
     ap.add_argument("--tables", help="--part tables에서 고를 표(쉼표로): product,target,place,weekly,daily")
     a = ap.parse_args()
     E = date.fromisoformat(a.target_date)   # 기준일 = 데이터 마지막 날(최대 어제)

@@ -789,9 +789,9 @@
     buildToc(root);
   }
 
-  /* 하위 스킬(overall-summary-comment·summary·tables·mix)은 고른 섹션만 남긴다 — rep.part가 없으면 전부.
+  /* 하위 스킬(overall-summary-comment·total·tables·mix)은 고른 섹션만 남긴다 — rep.part가 없으면 전부.
    * 다른 섹션도 그린 뒤 떼어 낸다(필터를 바꿔 다시 그려도 떼어 낸 섹션은 화면에 없다). */
-  const PART_SECS = { comment: ['c-daily', 'c-weekly'], summary: ['total', 'monthly'],
+  const PART_SECS = { comment: ['c-daily', 'c-weekly'], total: ['total', 'monthly'],
                       tables: ['filter', 'product', 'target', 'place', 'weekly', 'daily'], mix: ['mix'] };
   function prune(root, rep) {
     if (!rep.part) return;
