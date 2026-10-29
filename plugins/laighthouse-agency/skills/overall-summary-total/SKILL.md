@@ -1,7 +1,7 @@
 ---
-name: overall-summary-summary
+name: overall-summary-total
 description: >
-  종합 리포트의 Total/Monthly Summary만 뽑는 스킬. "종합 리포트 summary만", "Total Summary·Monthly Summary", "overall summary summary" 요청 시 사용. 예산·비용·소진율·진행율과 목표(e.*)·달성률을 담은 Total Summary·Monthly Summary만 담은 HTML과 Summary 시트 엑셀을 만든다.
+  종합 리포트의 Total/Monthly Summary만 뽑는 스킬. "종합 리포트 summary만", "Total Summary·Monthly Summary", "overall summary total" 요청 시 사용. 예산·비용·소진율·진행율과 목표(e.*)·달성률을 담은 Total Summary·Monthly Summary만 담은 HTML과 Summary 시트 엑셀을 만든다.
   사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
   version: "1.0.0"

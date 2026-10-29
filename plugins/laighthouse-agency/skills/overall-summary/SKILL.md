@@ -13,7 +13,7 @@ metadata:
 > ⚡ **thinking 지침**: thinking은 최대한 짧게 유지한다. 바로 MCP 호출 → 스크립트 실행 → 완료 순서로 진행한다.
 
 > 🧩 **섹션 하나만** 원하면(예: "Mix만", "코멘트만", "Summary 표만", "Product 표만") 하위 스킬을 쓴다 —
-> `overall-summary-comment`(Daily·Weekly Comment) · `overall-summary-summary`(Total·Monthly Summary) ·
+> `overall-summary-comment`(Daily·Weekly Comment) · `overall-summary-total`(Total·Monthly Summary) ·
 > `overall-summary-tables`(Product·Target·Placement·Weekly·Daily 표, 표를 고를 수 있다) · `overall-summary-mix`(Mix 계획표).
 > 같은 스크립트에 `--part`를 붙여 그 섹션만 그리고, 쓰지 않는 호출은 보내지 않는다.
 
