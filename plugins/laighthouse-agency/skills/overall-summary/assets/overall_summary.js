@@ -159,6 +159,7 @@
     const T = rep.table;
 
     /* 머리말 */
+    if (rep.part_label) document.querySelectorAll('.tb-eyebrow').forEach(e => { e.textContent = '종합 리포트 · ' + rep.part_label; });
     document.querySelectorAll('[data-h="period"]').forEach(e => { e.textContent = rep.header.period; });
     document.querySelectorAll('[data-h="media"]').forEach(e => { e.textContent = rep.header.media || '-'; });
 
@@ -175,7 +176,7 @@
     if (!PL) placePending(placeEl);   // 노출 위치 차원이 없는 브랜드 — 섹션은 두고 이유를 알린다(차원이 생기면 자동으로 채워진다)
     const tableEls = ['total', 'monthly', 'product', 'target', 'weekly', 'daily', 'mix'].map(id => root.querySelector('[data-sec="' + id + '"]'));
     const filterEl = root.querySelector('[data-sec="filter"]');
-    if (!T || !T.n) { tableEls.forEach(placeholder); filterEl.remove(); buildToc(root); return; }
+    if (!T || !T.n) { tableEls.forEach(placeholder); filterEl.remove(); prune(root, rep); buildToc(root); return; }
 
     /* 표 데이터 펼치기 */
     const DAYS = T.days;
@@ -596,7 +597,9 @@
       const reset = h('button', 'tb-reset', '필터 초기화'); reset.type = 'button';
       reset.addEventListener('click', () => { st.months = monthKeys.slice(); st.medias = MEDIA.slice(); paint(); });
       filterEl.appendChild(reset);
-      filterEl.appendChild(h('span', 'tb-fnote', (PL ? 'Product · Target · Placement · Weekly · Daily' : 'Product · Target · Weekly · Daily') + ' 표에 공통 적용'));
+      const shown = [['product', 'Product'], ['target', 'Target'], ['place', 'Placement'], ['weekly', 'Weekly'], ['daily', 'Daily']]
+        .filter(([k]) => (k !== 'place' || PL) && (!(rep.tables && rep.tables.length) || rep.tables.includes(k))).map(([, l]) => l);
+      filterEl.appendChild(h('span', 'tb-fnote', shown.join(' · ') + ' 표에 공통 적용'));
     }
 
     /* Mix (목업 buildMix — 목표 입력값 기준 월별 계획, 필터 미적용)
@@ -782,7 +785,22 @@
         [...prodDim, { key: 'dk', label: '일', fmt: k => DAYS[k].label, sort: (a, b) => a - b }]);
     }
     paint();
+    prune(root, rep);
     buildToc(root);
+  }
+
+  /* 하위 스킬(overall-summary-comment·summary·tables·mix)은 고른 섹션만 남긴다 — rep.part가 없으면 전부.
+   * 다른 섹션도 그린 뒤 떼어 낸다(필터를 바꿔 다시 그려도 떼어 낸 섹션은 화면에 없다). */
+  const PART_SECS = { comment: ['c-daily', 'c-weekly'], summary: ['total', 'monthly'],
+                      tables: ['filter', 'product', 'target', 'place', 'weekly', 'daily'], mix: ['mix'] };
+  function prune(root, rep) {
+    if (!rep.part) return;
+    let keep = PART_SECS[rep.part] || [];
+    if (rep.part === 'tables' && rep.tables && rep.tables.length) keep = ['filter', ...rep.tables];
+    root.querySelectorAll('[data-sec]').forEach(el => {
+      if (keep.includes(el.dataset.sec)) return;
+      (el.closest('section.lh-section') || el).remove();
+    });
   }
 
   /* 오른쪽 목차: 섹션 제목으로 만든 바로가기 + 지금 보는 섹션 표시 + 맨 위로.

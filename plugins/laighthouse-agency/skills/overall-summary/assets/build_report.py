@@ -32,11 +32,14 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
   "place": {"json_files": ["<첫 달 응답>", ...]}
         # 선택 — Placement 표. day grain, group_by = [media, (ad_type 또는 상품), 노출 위치 차원(PLACE_DIMS 중 브랜드가 주는 것)],
         # 달마다 나눠 받는다. 표 데이터와 따로 받아(행 수가 적다) Placement 표만 그린다. 없거나 노출 위치 차원이 없으면 표가 빠진다.
+  "part": "mix",                 # 선택 — 하위 스킬: comment | summary | tables | mix 중 그 섹션만 그린다(없으면 전부)
+  "tables": ["product", "daily"] # 선택 — part가 tables일 때 고른 표만(product·target·place·weekly·daily)
 }
 - 응답에 없는 차원(예: 상품)은 표·디멘전 설정에 나오지 않는다 — 조용히 빠진다.
 - 같은 실행에서 엑셀(.xlsx)도 만든다 — HTML과 같은 폴더·같은 이름(assets/overall_summary_xlsx.py, 표준 라이브러리만).
   시트 = Summary · By Media · By Date · Mix · Raw. 엑셀이 실패해도 HTML은 그대로 남고 xlsx_error만 알린다.
-- 출력(stdout): {"out", "bytes", "rows", "sections": {"comment", "tables"}: "ok"|"placeholder",
+- part를 주면 엑셀도 그 섹션의 시트만 담는다(PARTS). comment는 엑셀을 만들지 않는다.
+- 출력(stdout): {"out", "bytes", "rows", "part"?, "sections": {"comment", "tables"}: "ok"|"placeholder",
                 "xlsx": 경로|null, "xlsx_error"?: 실패 이유, "xlsx_note"?: 만들지 않은 이유(표 데이터 없음)}
 """
 import html as _html
@@ -76,6 +79,10 @@ PLACE_DIMS = ("placement", "노출위치", "노출 위치", "노출_위치", "po
 for _src in PLACE_DIMS:
     SHORT[_src] = "pl"
 ATOMS = (("cost", "cost"), ("impression", "imp"), ("click", "click"), ("views", "view"))
+# 하위 스킬(part) → 보고서 머리 라벨 · 엑셀 시트. 화면에서 남길 섹션은 overall_summary.js의 PART_SECS.
+PARTS = {"comment": ("Comment", ()), "summary": ("Summary", ("summary",)),
+         "tables": ("세부 성과", ("media", "date", "raw")), "mix": ("Mix", ("mix",))}
+TABLES = ("product", "target", "place", "weekly", "daily")
 DROP_THRESHOLD = 20   # Daily Comment 급감 기준(%)
 TOP_LINES = 5         # Comment 하위 불릿: 매체마다 이만큼만 적고 나머지는 "외 N개"로 묶는다(실데이터는 광고그룹·상품이 수백 개)
 # 목표 표 행 이름 → 목표 키 (cost = 예산, 나머지 = 목표 영역 e.*)
@@ -512,8 +519,14 @@ def compute(payload):
     skeleton = bool(payload.get("skeleton"))
     env = None if skeleton else kit.section_envelope(payload.get("data"))
     header = {"period": f"{start:%Y.%m.%d} – {E:%Y.%m.%d}", "media": ""}
+    part = payload.get("part")
+    if part and part not in PARTS:
+        raise SystemExit(f"part는 {', '.join(PARTS)} 중 하나다 — 받은 값: {part}")
+    tables = [t for t in (payload.get("tables") or []) if t in TABLES] if part == "tables" else []
     report = {"brand": payload["brand"], "currency": currency, "months": months, "header": header,
               "comment": None, "table": None}
+    if part:
+        report.update(part=part, part_label=PARTS[part][0], tables=tables)
     if not env or not keys.get("cost"):
         return report, []
     # 노출 위치 차원은 Placement 데이터(place)로 따로 받는다 — 표 데이터에는 요구하지 않는다
@@ -548,7 +561,11 @@ def compute(payload):
     has = {"imp": bool(keys.get("impression")), "click": bool(keys.get("click")), "view": bool(keys.get("views"))}
     report["table"] = dict(encode(rows, dims, start, E), dims=[{"key": k, "label": lb} for src, k, lb in DIMS if src in dims],
                            has=has, budgets=budgets)
-    report["place"] = build_place(payload.get("place"), menv, keys, start, E)
+    # Placement는 전체 보고서와 tables(표를 고르지 않았거나 place를 골랐을 때)에서만 쓴다
+    if not part or (part == "tables" and (not tables or "place" in tables)):
+        report["place"] = build_place(payload.get("place"), menv, keys, start, E)
+    if part == "comment":   # 문장은 위에서 만들었다 — 표 데이터는 HTML에 넣지 않는다(파일이 가벼워진다)
+        report["table"] = None
     return report, rows
 
 
@@ -592,9 +609,12 @@ def build_html(report, out):
 def build_xlsx(report, rows, html_path):
     """같은 데이터로 엑셀도 만든다 — HTML 옆 같은 이름(.xlsx). 실패해도 HTML은 그대로 두고 이유만 돌려준다."""
     out = os.path.splitext(html_path)[0] + ".xlsx"
+    part = report.get("part")
+    if part and not PARTS[part][1]:
+        return {"xlsx": None, "xlsx_note": "Comment만 담은 보고서라 엑셀을 만들지 않았다"}
     try:
         import overall_summary_xlsx
-        made = overall_summary_xlsx.write(report, rows, out)
+        made = overall_summary_xlsx.write(report, rows, out, PARTS[part][1] if part else None)
     except Exception as e:  # noqa: BLE001 — 엑셀 실패가 HTML 보고서를 막지 않는다(예: 같은 파일이 엑셀에 열려 있음)
         return {"xlsx": None, "xlsx_error": f"{type(e).__name__}: {e}"}
     return {"xlsx": made} if made else {"xlsx": None, "xlsx_note": "표 데이터가 없어 엑셀을 만들지 않았다"}
@@ -604,7 +624,7 @@ def main():
     payload = kit.read_payload()
     report, rows = compute(payload)
     path, size = build_html(report, payload["out"])
-    result = {"out": path, "bytes": size, "rows": len(rows),
+    result = {"out": path, "bytes": size, "rows": len(rows), **({"part": report["part"]} if report.get("part") else {}),
               "sections": {"comment": "ok" if report["comment"] else "placeholder",
                            "tables": "ok" if report["table"] else "placeholder"}}
     result.update(build_xlsx(report, rows, path))
