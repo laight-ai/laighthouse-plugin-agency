@@ -16,7 +16,7 @@ metadata:
 이 문서는 거기서 달라지는 점만 적는다. 스크립트는 `../overall-summary/assets/`에 있다(이 스킬 폴더 기준).
 
 - 파라미터(브랜드명·기준일 E = 데이터 마지막 날, 기본 어제·오늘 이후 불가·시작일 S)와 기간 계산(S 기본 = E의 전월 1일, 366일까지)은 `overall-summary`와 같다.
-- 섹션 규칙: `../overall-summary/overall-summary-section-4-mix.md`
+- 섹션 규칙: `../overall-summary/overall-summary-section-5-mix.md`
 
 ## 실행 순서 (`overall-summary` 「실행 순서」에서 달라지는 점)
 
@@ -26,6 +26,7 @@ metadata:
    - 표 데이터: `time_grain:"day"`, `group_by` = FINE_DIMS — 달마다 1회(크기 오류 대응도 같다).
    - 예산·목표: `get_target_progress_v2` — 걸친 달마다 `media` 생략 1회(인자는 같다). Mix의 월 예산·단가 초기값이다.
    - Placement는 부르지 않는다(Mix에 쓰지 않는다).
+   - 변경 이력(`list_campaign_change_raw`)과 이름 호출은 부르지 않는다(Mix에 쓰지 않는다).
 4. 빌드 (1회) — `--part mix`를 붙인다:
    ```
    python3 ../overall-summary/assets/prepare.py --brand <브랜드> --target-date <E> [--start-date <S>] --part mix --build <<'PYEOF'

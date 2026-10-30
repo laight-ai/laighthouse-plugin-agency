@@ -32,14 +32,19 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
   "place": {"json_files": ["<첫 달 응답>", ...]}
         # 선택 — Placement 표. day grain, group_by = [media, (ad_type 또는 상품), 노출 위치 차원(PLACE_DIMS 중 브랜드가 주는 것)],
         # 달마다 나눠 받는다. 표 데이터와 따로 받아(행 수가 적다) Placement 표만 그린다. 없거나 노출 위치 차원이 없으면 표가 빠진다.
-  "part": "mix",                 # 선택 — 하위 스킬: comment | total | tables | mix 중 그 섹션만 그린다(없으면 전부)
+  "history": {"json_files": ["<변경 이력 items 파일>"]},
+        # 선택 — Campaign History. list_campaign_change_raw 페이지의 items를 모은 {"items": [...]} (prepare.py가 만든다).
+        # 없으면 섹션이 '데이터 준비 중', 있는데 비면 '변경 이력 없음'. 규칙은 assets/campaign_history.py.
+  "names": {"json_files": [...]},
+        # 선택 — 변경 이력 ID에 붙일 이름: get_ad_performance(total, group_by에 source·media·*_id·*_name) 봉투
+  "part": "mix",                 # 선택 — 하위 스킬: comment | total | tables | history | mix 중 그 섹션만 그린다(없으면 전부)
   "tables": ["product", "daily"] # 선택 — part가 tables일 때 고른 표만(product·target·place·weekly·daily)
 }
 - 응답에 없는 차원(예: 상품)은 표·디멘전 설정에 나오지 않는다 — 조용히 빠진다.
 - 같은 실행에서 엑셀(.xlsx)도 만든다 — HTML과 같은 폴더·같은 이름(assets/overall_summary_xlsx.py, 표준 라이브러리만).
-  시트 = Summary · By Media · By Date · Mix · Raw. 엑셀이 실패해도 HTML은 그대로 남고 xlsx_error만 알린다.
+  시트 = Summary · By Media · By Date · History · Mix · Raw. 엑셀이 실패해도 HTML은 그대로 남고 xlsx_error만 알린다.
 - part를 주면 엑셀도 그 섹션의 시트만 담는다(PARTS). comment는 엑셀을 만들지 않는다.
-- 출력(stdout): {"out", "bytes", "rows", "part"?, "sections": {"comment", "tables"}: "ok"|"placeholder",
+- 출력(stdout): {"out", "bytes", "rows", "part"?, "sections": {"comment", "tables", "history"}: "ok"|"placeholder",
                 "xlsx": 경로|null, "xlsx_error"?: 실패 이유, "xlsx_note"?: 만들지 않은 이유(표 데이터 없음)}
 """
 import html as _html
@@ -65,6 +70,7 @@ for cand in (os.path.join(ASSETS_DIR, "..", "shared", "assets"),
 else:
     raise SystemExit("report_kit.py를 찾을 수 없다 (shared/assets)")
 import report_kit as kit  # noqa: E402
+import campaign_history  # noqa: E402
 
 P = kit.PRODUCT_DIM
 AD_TYPE = "ad_type"
@@ -81,7 +87,7 @@ for _src in PLACE_DIMS:
 ATOMS = (("cost", "cost"), ("impression", "imp"), ("click", "click"), ("views", "view"))
 # 하위 스킬(part) → 보고서 머리 라벨 · 엑셀 시트. 화면에서 남길 섹션은 overall_summary.js의 PART_SECS.
 PARTS = {"comment": ("Comment", ()), "total": ("Summary", ("summary",)),
-         "tables": ("세부 성과", ("media", "date", "raw")), "mix": ("Mix", ("mix",))}
+         "tables": ("세부 성과", ("media", "date", "raw")), "history": ("History", ("history",)), "mix": ("Mix", ("mix",))}
 TABLES = ("product", "target", "place", "weekly", "daily")
 DROP_THRESHOLD = 20   # Daily Comment 급감 기준(%)
 TOP_LINES = 5         # Comment 하위 불릿: 매체마다 이만큼만 적고 나머지는 "외 N개"로 묶는다(실데이터는 광고그룹·상품이 수백 개)
@@ -527,6 +533,11 @@ def compute(payload):
               "comment": None, "table": None}
     if part:
         report.update(part=part, part_label=PARTS[part][0], tables=tables)
+    if part in (None, "history"):
+        report["history"] = build_history(payload.get("history"), payload.get("names"), start, E)
+    if part == "history":   # 변경 이력만 — 성과 데이터를 쓰지 않는다
+        header["media"] = " · ".join((report["history"] or {}).get("media") or [])
+        return report, []
     if not env or not keys.get("cost"):
         return report, []
     # 노출 위치 차원은 Placement 데이터(place)로 따로 받는다 — 표 데이터에는 요구하지 않는다
@@ -567,6 +578,22 @@ def compute(payload):
     if part == "comment":   # 문장은 위에서 만들었다 — 표 데이터는 HTML에 넣지 않는다(파일이 가벼워진다)
         report["table"] = None
     return report, rows
+
+
+def build_history(spec, names_spec, start, E):
+    """변경 이력 items 파일 → 표 줄(campaign_history.build). 호출하지 않았으면 None(섹션이 '데이터 준비 중')."""
+    if not spec:
+        return None
+    items = []
+    for path in spec.get("json_files") or []:
+        with open(os.path.expanduser(path), encoding="utf-8") as f:
+            obj = json.load(f)
+        items += obj.get("items") or [] if isinstance(obj, dict) else obj
+    for text in ([spec["json"]] if isinstance(spec.get("json"), str) else spec.get("json") or []):
+        obj = json.loads(text)
+        items += obj.get("items") or [] if isinstance(obj, dict) else obj
+    names = kit.section_envelope(names_spec) if names_spec else None
+    return campaign_history.build(items, names, start, E)
 
 
 def build_place(spec, menv, keys, start, E):
@@ -626,7 +653,8 @@ def main():
     path, size = build_html(report, payload["out"])
     result = {"out": path, "bytes": size, "rows": len(rows), **({"part": report["part"]} if report.get("part") else {}),
               "sections": {"comment": "ok" if report["comment"] else "placeholder",
-                           "tables": "ok" if report["table"] else "placeholder"}}
+                           "tables": "ok" if report["table"] else "placeholder",
+                           "history": "ok" if report.get("history") is not None else "placeholder"}}
     result.update(build_xlsx(report, rows, path))
     json.dump(result, sys.stdout, ensure_ascii=False)
 
