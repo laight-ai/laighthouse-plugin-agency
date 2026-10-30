@@ -15,8 +15,9 @@
 | MCP | laighthouse | `https://app.laight.ai/api/mcp` 연동 |
 | 훅 | save_responses | laighthouse 응답 원본을 파일로 남긴다 — 각 스킬의 `assets/prepare.py`가 빌더 입력을 만든다 |
 | 훅 | capture_ad_performance | `get_ad_performance`의 큰 응답을 파일로 저장하고 경로만 모델에 보여 준다(재타이핑 방지) |
+| 훅 | capture_change_raw | `list_campaign_change_raw`(변경 이력 원본) 응답을 건수와 `next_cursor`만 보이게 바꾼다 |
 | 스킬 | overall-summary | 종합 리포트(HTML) + 같은 이름의 엑셀(.xlsx) 렌더링 |
-| 스킬 | overall-summary-comment · -total · -tables · -mix | 종합 리포트에서 섹션 하나만 뽑기(Comment / Total·Monthly Summary / Product·Target·Placement·Weekly·Daily 표 / Mix) |
+| 스킬 | overall-summary-comment · -total · -tables · -history · -mix | 종합 리포트에서 섹션 하나만 뽑기(Comment / Total·Monthly Summary / Product·Target·Placement·Weekly·Daily 표 / Campaign History / Mix) |
 | 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
 
 ## 사용법
@@ -27,6 +28,7 @@
 > 모든 보고서의 날짜는 **데이터 마지막 날**이다(기본 어제). 오늘 이후 날짜로는 만들 수 없다.
 > "breezm 종합 리포트 Mix만" → `overall-summary-mix` (Comment·Summary·표도 같은 식 — `overall-summary-comment`·`-total`·`-tables`)
 > "breezm 종합 리포트 Product랑 Daily 표만" → `overall-summary-tables` (고른 표만)
+> "breezm 캠페인 변경 이력만" → `overall-summary-history` (매체 변경 기록 → 일·미디어·대상·변경 사항 표)
 
 > "breezm 데일리 보고서" → `daily-report` (기준일 기본: 어제)
 > "breezm 주간 보고서" → `weekly-report` (기준일 = 데이터 마지막 날, 기본: 어제)

@@ -10,8 +10,8 @@
       "name": "laighthouse-agency",
       "displayName": "Laighthouse Agency",
       "source": "./plugins/laighthouse-agency",
-      "description": "대행사 양식 보고서 플러그인 — MCP 연동 데이터(ELT 기반 get_ad_performance·get_target_progress_v2)를 종합 리포트(Comment·Summary·Product/Target/Placement/Weekly/Daily 표·Mix 계획표, HTML + 엑셀)와 Daily·Weekly·Monthly 보고서(HTML)로 렌더링합니다.",
-      "version": "1.6.2",
+      "description": "대행사 양식 보고서 플러그인 — MCP 연동 데이터(ELT 기반 get_ad_performance·get_target_progress_v2·list_campaign_change_raw)를 종합 리포트(Comment·Summary·Product/Target/Placement/Weekly/Daily 표·Campaign History·Mix 계획표, HTML + 엑셀)와 Daily·Weekly·Monthly 보고서(HTML)로 렌더링합니다.",
+      "version": "1.7.0",
       "author": {
         "name": "LaightAI",
         "email": "minhyeok.son@laight.ai"

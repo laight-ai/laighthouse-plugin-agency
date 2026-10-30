@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """종합 리포트 엑셀(.xlsx) — build_report.py가 HTML과 같은 데이터로 함께 만든다(직접 부르지 않는다).
 
-시트 구성(대행사 기본 레포트 양식 — Summary · By Media · By Date · Mix + 원자료):
+시트 구성(대행사 기본 레포트 양식 — Summary · By Media · By Date · History · Mix + 원자료):
   Summary   Total Summary · Monthly Summary(기본 영역 + 목표 영역) · Daily/Weekly Comment
   By Media  Product · Target · Creative(소재 차원이 있을 때) · Placement(노출 위치 데이터가 있을 때, 없으면 '준비 중')
   By Date   Weekly · Daily (나란히)
+  History   Campaign History — 일 · 미디어 · 단계 · 대상 · 변경 사항 · 상세(빌더가 변경 이력 원본으로 만든 줄 그대로)
   Mix       목표 입력값 기준 월별 계획 — 월 예산·CPM·CPC·VTR(파란 글씨)은 값, 예산·예상치는 수식(바꾸면 다시 계산된다)
   Raw       표 데이터 원자 행(일 × 차원) — 필터·피벗용
 
@@ -1072,6 +1073,41 @@ def sheet_mix(book, ctx):
     return sh
 
 
+def sheet_history(book, ctx):
+    """Campaign History — 화면과 같은 줄(같은 날·같은 미디어는 첫 줄에만 적는다). 변경 이력을 받지 않았으면 안내 한 줄."""
+    sh = book.sheet("History")
+    title_block(sh, ctx)
+    H = ctx.report.get("history")
+    section_title(sh, 5, 2, "■ Campaign History")
+    if not H or not H["rows"]:
+        sh.set(6, 2, "변경 이력 데이터 준비 중 — 이 보고서를 만들 때 캠페인 변경 이력을 받지 않았습니다." if not H else
+               "변경 이력 없음 — 집계 기간에 매체에서 받은 캠페인·광고그룹·광고 변경 기록이 없습니다.", {"fc": "808080"}, fit=False)
+        return sh
+    n = sum(r["count"] for r in H["rows"])
+    section_title(sh, 5, 2, f"■ Campaign History  ({len(H['rows'])}줄 · 변경 {n:,}건"
+                  + (f" · 매체 자동 기록·계정 설정 {H['skipped']}건 제외)" if H["skipped"] else ")"))
+    head_row(sh, 6, 2, ["일", "미디어", "단계", "대상", "변경 사항", "상세"])
+    tone = lambda k: "C00000" if re.search(r"OFF|감액|삭제", k) else "00803C" if re.search(r"ON|증액|생성|추가", k) else None  # noqa: E731
+    last = (None, None)
+    for i, r in enumerate(H["rows"]):
+        rr = 7 + i
+        d = date.fromisoformat(r["day"])
+        new_day = r["day"] != last[0]
+        sh.set(rr, 2, d if new_day else None, {"bd": True, "al": "center", "b": True, "fmt": F_DATE})
+        sh.set(rr, 3, r["m"] if new_day or r["m"] != last[1] else None, {"bd": True, "al": "center", "b": True})
+        last = (r["day"], r["m"])
+        sh.set(rr, 4, r["lvl"], {"bd": True, "al": "center"})
+        sh.set(rr, 5, r["obj"], {"bd": True})
+        kst = {"bd": True, "al": "center", "b": True}
+        if tone(r["kind"]):
+            kst["fc"] = tone(r["kind"])
+        sh.set(rr, 6, r["kind"] + (f" ×{r['count']}" if r["count"] > 1 else ""), kst)
+        sh.set(rr, 7, r["detail"], {"bd": True, "wrap": True}, fit=False)
+    sh.widths[7] = 70
+    sh.freeze = (7, 1)
+    return sh
+
+
 def sheet_raw(book, ctx):
     """표 데이터 원자 행(일 × 차원) — 실적이 전부 0인 행은 빌더가 이미 뺐다."""
     sh = book.sheet("Raw")
@@ -1101,12 +1137,24 @@ def sheet_raw(book, ctx):
     return sh
 
 
-SHEETS = {"summary": sheet_summary, "media": sheet_media, "date": sheet_date, "mix": sheet_mix, "raw": sheet_raw}
+SHEETS = {"summary": sheet_summary, "media": sheet_media, "date": sheet_date, "history": sheet_history, "mix": sheet_mix,
+          "raw": sheet_raw}
+
+
+class HistoryCtx:
+    """History 시트만 담을 때(하위 스킬 history) — 표 데이터 없이 머리말과 변경 이력만 쓴다."""
+
+    def __init__(self, report):
+        self.report, self.brand = report, report["brand"]
 
 
 def write(report, rows, path, sheets=None):
-    """빌더의 report·원자 행 → .xlsx. 표 데이터가 없으면 만들지 않는다(None).
+    """빌더의 report·원자 행 → .xlsx. 표 데이터가 없으면 만들지 않는다(None) — History만 담을 때는 표 데이터 없이 만든다.
     sheets: 담을 시트 키(SHEETS 순서로 쓴다) — 하위 스킬이 그 섹션 시트만 담을 때. 없으면 전부."""
+    if tuple(sheets or ()) == ("history",):
+        book = Book()
+        sheet_history(book, HistoryCtx(report))
+        return book.save(path)
     if not report.get("table") or not report["table"].get("n") or not rows:
         return None
     ctx = Ctx(report, rows)

@@ -1,6 +1,6 @@
 # MCP 도구 라우팅 규칙 (laighthouse 서버 — agency 플러그인 공용)
 
-이 플러그인의 스킬이 쓰는 도구는 `get_ad_performance`·`get_target_progress_v2`(필요하면 `get_brand_list`)뿐이다.
+이 플러그인의 스킬이 쓰는 도구는 `get_ad_performance`·`get_target_progress_v2`·`list_campaign_change_raw`(필요하면 `get_brand_list`)뿐이다.
 
 ## 1. `get_ad_performance` — 광고 성과 (유일한 성과 조회 도구)
 
@@ -42,7 +42,22 @@
 - 응답 원문을 그대로 빌더에 넘긴다 — `actual` 열은 쓰지 않는다(실적은 `get_ad_performance` 값).
 - `cost_metric`을 구버전 서버가 거절하면 그 인자를 빼고 1회 재호출한다. 그 밖의 에러는 목표 없음(빈 문자열)으로 두고 계속한다.
 
-## 3. `get_brand_list` — 브랜드 목록
+## 3. `list_campaign_change_raw` — 캠페인 변경 이력 원본 (종합 리포트 Campaign History)
+
+```json
+{ "brand_name": "<brand>", "date_from": "YYYY-MM-DD", "date_to": "YYYY-MM-DD", "limit": 1000,
+  "streams": ["change_event", "activities", "changelog", "campaigns", "campaign_detail", "adgroups", "ad_groups", "ad_group_detail"],
+  "cursor": "<이전 응답의 next_cursor>" }   // 첫 호출은 cursor 생략
+```
+
+- 응답 `{"contract": "elt.change_raw.v1", "items": [{"source", "stream", "dt", "connection_id", "row": {매체 원본}}], "next_cursor"}`.
+  로그 매체(Google `change_event`·Meta `activities`·TikTok `changelog`)는 행 1개 = 로그 1건, 네이버·카카오는 날마다 받은 목록(스냅샷)이다.
+- 플러그인 훅이 응답을 저장하고 모델에게는 건수와 `next_cursor`만 보여 준다 — `next_cursor`가 있으면 **같은 인자에 `cursor`만 바꿔**
+  `null`이 될 때까지 이어 부른다. 원본은 `prepare.py`·빌더가 읽는다(옮겨 적지 않는다).
+- 이력 API가 없는 매체·연결이 없는 브랜드는 `items`가 빈 채로 온다 — 오류가 아니라 "변경 이력 없음"이다.
+- 스트림 이름이 틀리면 알려진 목록을 담은 ValueError — 위 목록을 그대로 쓴다.
+
+## 4. `get_brand_list` — 브랜드 목록
 
 - 서버가 `Unknown brand`로 거절할 때만 정확한 브랜드명을 확인하는 데 쓴다.
 
