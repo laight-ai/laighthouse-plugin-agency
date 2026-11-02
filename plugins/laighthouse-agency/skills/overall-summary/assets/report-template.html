@@ -123,6 +123,14 @@ td.tb-inp .tb-in-text, td .tb-in-text { color: var(--accent); }
   border-radius: 8px; color: var(--label); font-size: 13px; text-align: center; }
 .tb-pending strong { color: var(--ink); }
 
+/* Campaign History: 날짜가 바뀌는 줄 위에 선, 변경 사항 배지(OFF·감액·삭제 = 빨강, ON·증액·생성 = 초록, 그 밖 = 회색) */
+.tb-hist tr.tb-hday td { border-top: 1px solid var(--line); }
+.tb-hist td.tb-hdetail > span { display: inline-block; max-width: 640px; padding: 4px 0; white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }
+.tb-kind { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.tb-k-off { background: #fef2f2; color: var(--up); }
+.tb-k-on { background: #f0fdf4; color: var(--green); }
+.tb-k-chg { background: var(--head-bg); color: var(--label); }
+
 /* '외 N개' 줄 — 접힌 나머지의 합계 + 더 보기 */
 .tb-table tr.tb-morerow td.tb-more, .tb-table tr.tb-morerow td.tb-num { background: #fff; color: var(--label); font-weight: 400; border-bottom: 1px dashed var(--line); }
 .tb-table td.tb-more { white-space: nowrap; }
@@ -207,6 +215,7 @@ td.tb-inp .tb-in-text, td .tb-in-text { color: var(--accent); }
   <section class="lh-section" data-sec="place"></section>
   <section class="lh-section" data-sec="weekly"></section>
   <section class="lh-section" data-sec="daily"></section>
+  <section class="lh-section" data-sec="history"></section>
   <section class="lh-section" data-sec="mix"></section>
 
   <footer class="lh-footer">Engineered by Laighthouse AI</footer>

@@ -26,6 +26,7 @@ metadata:
    - 표 데이터: `time_grain:"day"`, `group_by` = FINE_DIMS — 달마다 1회(크기 오류 대응도 같다).
    - 예산·목표: `get_target_progress_v2` — 걸친 달마다 `media` 생략 1회(인자는 같다).
    - Placement는 부르지 않는다(Summary에 쓰지 않는다).
+   - 변경 이력(`list_campaign_change_raw`)과 이름 호출은 부르지 않는다(Summary에 쓰지 않는다).
 4. 빌드 (1회) — `--part total`를 붙인다:
    ```
    python3 ../overall-summary/assets/prepare.py --brand <브랜드> --target-date <E> [--start-date <S>] --part total --build <<'PYEOF'

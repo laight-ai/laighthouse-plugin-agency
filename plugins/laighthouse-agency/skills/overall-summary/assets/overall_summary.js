@@ -2,6 +2,7 @@
  * - Daily/Weekly Comment: 빌더가 만든 문장을 그대로 그린다.
  * - Total/Monthly Summary(필터 미적용): 미디어 → 디멘전 계층, 예산·소진율·진행율 + 목표 영역(e.* 목표·달성률).
  * - 월·미디어 필터 → Product·Target·Placement·Weekly·Daily 표(Placement는 노출 위치 데이터 REPORT.place가 있을 때만).
+ * - Campaign History: 빌더가 변경 이력 원본으로 만든 줄(REPORT.history)을 날짜순 표로 그린다(필터와 무관).
  * - 모든 표: 묶음 이름 옆 ▼/▶ 접기 + 제목 줄 '펼침 [미디어][…][전체]' 단계 접기, 오른쪽 목차(바로가기·맨 위로).
  * - 디멘전 설정·지표 설정(선택·순서)과 캠페인명은 localStorage에 남긴다.
  * 모양은 report_kit.css + 템플릿 <style>만 정한다(인라인 style 없음).
@@ -170,6 +171,8 @@
       drawDaily(dailyEl, rep.comment.daily);
       drawWeekly(weeklyEl, rep.comment.weekly);
     } else { placeholder(dailyEl); placeholder(weeklyEl); }
+
+    drawHistory(root.querySelector('[data-sec="history"]'), rep.history);
 
     const placeEl = root.querySelector('[data-sec="place"]');
     const PL = rep.place && rep.place.n ? rep.place : null;
@@ -789,10 +792,10 @@
     buildToc(root);
   }
 
-  /* 하위 스킬(overall-summary-comment·total·tables·mix)은 고른 섹션만 남긴다 — rep.part가 없으면 전부.
+  /* 하위 스킬(overall-summary-comment·total·tables·history·mix)은 고른 섹션만 남긴다 — rep.part가 없으면 전부.
    * 다른 섹션도 그린 뒤 떼어 낸다(필터를 바꿔 다시 그려도 떼어 낸 섹션은 화면에 없다). */
   const PART_SECS = { comment: ['c-daily', 'c-weekly'], total: ['total', 'monthly'],
-                      tables: ['filter', 'product', 'target', 'place', 'weekly', 'daily'], mix: ['mix'] };
+                      tables: ['filter', 'product', 'target', 'place', 'weekly', 'daily'], history: ['history'], mix: ['mix'] };
   function prune(root, rep) {
     if (!rep.part) return;
     let keep = PART_SECS[rep.part] || [];
@@ -852,6 +855,60 @@
     box.appendChild(h('strong', null, '노출 위치 데이터 준비 중'));
     box.appendChild(h('span', null, '이 브랜드 데이터에 노출 위치(placement) 차원이 아직 없습니다. 차원이 추가되면 다음 보고서부터 이 표가 채워집니다.'));
     el.appendChild(box);
+  }
+
+  /* Campaign History: 일 · 미디어 · 단계 · 대상 · 변경 사항 · 상세 (같은 날·같은 미디어는 첫 줄에만 적는다).
+   * H가 없으면(변경 이력을 받지 않음) 준비 중, 줄이 없으면 '변경 이력 없음'. */
+  const KIND_TONE = [[/OFF|감액|삭제/, 'tb-k-off'], [/ON|증액|생성|추가/, 'tb-k-on']];
+  function drawHistory(el, H) {
+    if (!el) return;
+    el.innerHTML = '';
+    const hd = h('div', 'lh-section-head');
+    const tt = h('div');
+    const h2 = h('h2', null, 'Campaign History ');
+    const n = H ? H.rows.reduce((a, r) => a + r.count, 0) : 0;
+    h2.appendChild(h('span', 'lh-muted', !H ? '캠페인 변경 이력' :
+      H.rows.length + '줄 · 변경 ' + n.toLocaleString('en-US') + '건' + (H.skipped ? ' · 매체 자동 기록·계정 설정 ' + H.skipped + '건 제외' : '')));
+    tt.appendChild(h2);
+    hd.appendChild(tt);
+    el.appendChild(hd);
+    if (!H || !H.rows.length) {
+      const box = h('div', 'tb-pending');
+      box.appendChild(h('strong', null, !H ? '변경 이력 데이터 준비 중' : '변경 이력 없음'));
+      box.appendChild(h('span', null, !H ? '이 보고서를 만들 때 캠페인 변경 이력을 받지 않았습니다.' :
+        '집계 기간에 매체에서 받은 캠페인·광고그룹·광고 변경 기록이 없습니다.'));
+      el.appendChild(box);
+      return;
+    }
+    const ms = h('div', 'tb-menus');
+    ms.appendChild(copyButton(el, 'Campaign History'));
+    hd.appendChild(ms);
+    const wrap = h('div', 'tb-wrap' + (H.rows.length > 20 ? ' is-tall' : ''));
+    const t = h('table', 'tb-table tb-hist');
+    t.dataset.labels = '2';   // 복사할 때 비워 둔 일·미디어 칸을 채운다
+    const th = h('thead'), hr = h('tr');
+    ['일', '미디어', '단계', '대상', '변경 사항', '상세'].forEach(x => hr.appendChild(h('th', null, x)));
+    th.appendChild(hr); t.appendChild(th);
+    const tb = h('tbody');
+    const cell = (cls, text, scls) => { const td = h('td', cls); td.appendChild(h('span', scls || null, text)); return td; };   // 복사는 span 글자를 읽는다
+    let lastDay = null, lastM = null;
+    H.rows.forEach(r => {
+      const tr = h('tr');
+      const newDay = r.day !== lastDay;
+      if (newDay) tr.className = 'tb-hday';
+      tr.appendChild(cell('tb-c tb-b', newDay ? r.day.replace(/-/g, '.') : ''));
+      tr.appendChild(cell('tb-c tb-b', newDay || r.m !== lastM ? r.m : ''));
+      lastDay = r.day; lastM = r.m;
+      tr.appendChild(cell('tb-c', r.lvl));
+      tr.appendChild(cell('tb-lab', r.obj));
+      const tone = (KIND_TONE.find(([re]) => re.test(r.kind)) || [null, 'tb-k-chg'])[1];
+      tr.appendChild(cell('tb-c', r.kind + (r.count > 1 ? ' ×' + r.count : ''), 'tb-kind ' + tone));
+      tr.appendChild(cell('tb-hdetail', r.detail));
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    wrap.appendChild(t);
+    el.appendChild(wrap);
   }
 
   /* Daily Comment: 요약 → 매체별 불릿(급감 광고그룹 하위 불릿) → 맺음 */

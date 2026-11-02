@@ -4,17 +4,18 @@ description: >
   종합 리포트 생성 스킬. "종합 리포트", "종합 보고서", "overall summary" 요청 시 사용.
   시작일(기본: 전월 1일)부터 어제까지를 한 화면에 담는다 — 전일 대비 급감 광고그룹을 짚는 Daily Comment, 소진·효율 관점의 Weekly Comment,
   예산·소진율·진행율과 목표(e.*)·달성률을 담은 Total/Monthly Summary, 월·미디어 필터로 보는 Product·Target·Placement·Weekly·Daily 표
-  (디멘전·지표 설정, 접기), 예산·단가를 입력해 예상 성과를 보는 Mix 계획표를 담은 HTML 보고서와, 같은 내용을 시트로 나눈
-  엑셀(.xlsx — Summary·By Media·By Date·Mix·Raw)을 함께 만든다. 사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
+  (디멘전·지표 설정, 접기), 매체 변경 기록으로 만든 캠페인 변경 이력(Campaign History), 예산·단가를 입력해 예상 성과를 보는 Mix 계획표를
+  담은 HTML 보고서와, 같은 내용을 시트로 나눈 엑셀(.xlsx — Summary·By Media·By Date·History·Mix·Raw)을 함께 만든다. 사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
-  version: "1.5.0"
+  version: "1.6.0"
 ---
 
 > ⚡ **thinking 지침**: thinking은 최대한 짧게 유지한다. 바로 MCP 호출 → 스크립트 실행 → 완료 순서로 진행한다.
 
-> 🧩 **섹션 하나만** 원하면(예: "Mix만", "코멘트만", "Summary 표만", "Product 표만") 하위 스킬을 쓴다 —
+> 🧩 **섹션 하나만** 원하면(예: "Mix만", "코멘트만", "Summary 표만", "Product 표만", "변경 이력만") 하위 스킬을 쓴다 —
 > `overall-summary-comment`(Daily·Weekly Comment) · `overall-summary-total`(Total·Monthly Summary) ·
-> `overall-summary-tables`(Product·Target·Placement·Weekly·Daily 표, 표를 고를 수 있다) · `overall-summary-mix`(Mix 계획표).
+> `overall-summary-tables`(Product·Target·Placement·Weekly·Daily 표, 표를 고를 수 있다) · `overall-summary-history`(Campaign History) ·
+> `overall-summary-mix`(Mix 계획표).
 > 같은 스크립트에 `--part`를 붙여 그 섹션만 그리고, 쓰지 않는 호출은 보내지 않는다.
 
 ## 역할
@@ -31,6 +32,7 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
 - **예산·목표**: `get_target_progress_v2`의 cost 행 = 예산(**Gross**), impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표.
   단위는 전체·매체·캠페인(대시보드 브랜드)까지다. 행이 없는 칸은 빈칸이다(묻지 않는다).
 - **Comment는 빌더가 규칙으로 쓴다** — 모델이 요약 문장을 쓰지 않는다(`overall-summary-section-1-comment.md`).
+- **Campaign History도 빌더가 규칙으로 만든다** — 변경 이력 원본(`list_campaign_change_raw`)을 모델이 읽지 않는다(`overall-summary-section-4-history.md`).
 - 도구 규칙: `shared/references/mcp-tools.md`, 차원 확인·크기 대응: `shared/references/pivot-table.md`
   (플러그인 루트 기준 — 이 스킬 폴더에서는 `../../shared/references/`).
 
@@ -55,6 +57,7 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
   - `assets/discover.py` — 저장 훅이 없을 때만: 매체별 일별 응답(파일 경로 또는 stdin) → `metric_keys`/`currency`/`missing`.
   - `assets/prepare.py` — 저장된 응답 → build.json(매체별 일별·월별 표 데이터·Placement·월별 목표 원문), `--build`면 빌더까지.
   - `assets/build_report.py` — 봉투·목표 원문 → 최종 HTML 1개(Comment 생성 포함) + 같은 이름의 `.xlsx` 1개. 입력 스키마는 docstring.
+  - `assets/campaign_history.py` — 빌더가 import 한다. 변경 이력 원본 → History 줄(매체별 규칙).
   - `assets/overall_summary_xlsx.py` — 빌더가 import 한다(직접 부르지 않는다). 표준 라이브러리만으로 엑셀을 쓴다(openpyxl 불필요).
 
 > ℹ️ 이 호스트의 Bash 기본 셸은 `sh`(dash)일 수 있다 — bash 전용 문법은 쓰지 않는다. `python3`이 없으면 `python`으로 부른다.
@@ -87,6 +90,13 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
    - 예산·목표: `get_target_progress_v2` — `month` = 걸친 달마다, `cost_metric` = `metric_keys.cost`,
      `as_of_date` = 지난 달은 그 달 말일, 마지막 달은 E. **달마다 `media` 생략 1회**(응답 둘째 표에 매체·캠페인 행이 모두 온다 —
      매체마다 따로 부르지 않는다). 한 줄 메시지·에러는 "목표 없음"(원문 그대로, 에러면 빈 문자열).
+   - 변경 이력: `list_campaign_change_raw`(`date_from` = S, `date_to` = E, `limit` = 1000,
+     `streams` = `["change_event","activities","changelog","campaigns","campaign_detail","adgroups","ad_groups","ad_group_detail"]`).
+     응답은 훅이 `next_cursor` 안내로 바꿔 보여 준다 — `next_cursor`가 있으면 **같은 인자에 `cursor`만 바꿔** 다시 부르고,
+     `null`이 될 때까지 이어 부른다(이 페이지들만 차례로, 다른 호출과 같은 메시지에 보내도 된다).
+   - 이름(변경 이력의 ID → 이름): **차원 목록에 `*_id`가 있을 때만** `get_ad_performance`(S ~ E, `time_grain:"total"`,
+     `group_by` = `source`·`media` + 목록에 있는 `campaign_id`·`campaign_name`·`ad_group_id`·`ad_group_name`·`ad_id`·`ad_name`,
+     `metrics` = [`metric_keys.cost`]) 1회. 크기 오류면 `ad_id`·`ad_name`을 빼고 다시 받는다.
 4. **빌드 입력 준비 + 빌드 (1회)**: 응답 원문을 `build.json`에 옮겨 적지 않는다 — 플러그인 저장 훅(`hooks/save_responses.py`)이
    2·3단계 응답 원본을 파일로 남겨 두었다. prepare.py가 빌더까지 부른다 — 차원 확인 에러 메시지 원문만 stdin으로 넣는다:
    ```
@@ -95,6 +105,7 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
    PYEOF
    ```
    → 출력의 `build`가 빌더 출력이다. `missing`(다시 보낼 호출)이 있으면 빌드하지 않는다 — 그 호출만 다시 보내고 재실행한다
+   (변경 이력 `missing`에 `cursor`가 있으면 그 페이지부터 이어 부른다)
    (`errors`는 그 응답이 에러였다는 뜻). `build_error`는 빌더가 멈춘 이유다. `date_error`(기준일이 오늘 이후)면 그 문구를 사용자에게 알리고 멈춘다. `discover.metrics_absent`는 브랜드가 주지 않는 지표라 묻지 않는다.
    `out`은 `~/Downloads/laighthouse-reports/{브랜드명}_overall_summary_{기준_일자}.html`(base에 들어 있다 — 바꿀 때만 `"out"`을 함께 넣는다).
    엑셀은 같은 폴더의 `{브랜드명}_overall_summary_{기준_일자}.xlsx` — 출력의 `xlsx`가 그 경로다. `xlsx_error`(예: 같은 파일이 엑셀에 열려 있음)면
@@ -116,7 +127,9 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
  "media": {"json_files": ["<매체별 일별 파일>"]},
  "place": {"json_files": ["<첫 달 Placement 파일>", ...]},   ← 노출 위치 차원이 있을 때만
  "budgets": [{"month": "2026-09", "target_progress": "<첫 달 원문>"},
-             {"month": "2026-10", "target_progress": "<다음 달 원문>"}]}   ← 걸친 달마다 1개
+             {"month": "2026-10", "target_progress": "<다음 달 원문>"}],   ← 걸친 달마다 1개
+ "history": {"json": ["<변경 이력 첫 페이지 원문>", "<다음 페이지 원문>", ...]},   ← 페이지마다 원문 그대로
+ "names": {"json_files": ["<이름 호출 파일>"]}}   ← 차원에 *_id가 있을 때만
 ```
 
 - 스텁(파일)으로 온 응답은 `json_files`, 원본이 그대로 온 응답은 `json`(문자열 또는 문자열 배열)에 넣는다.
@@ -126,7 +139,7 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
 
 ```
 {브랜드명} 종합 리포트({기준_일자}) 생성 완료.
-엑셀: {xlsx 경로} (Summary · By Media · By Date · Mix · Raw)
+엑셀: {xlsx 경로} (Summary · By Media · By Date · History · Mix · Raw)
 가장 인상적인 부분: {Daily/Weekly Comment에서 고른 한 문장}.
 — by LaightAI
 ```
@@ -140,6 +153,7 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
 | Summary | Total Summary · Monthly Summary(기본 영역 + 목표 영역) · Daily/Weekly Comment |
 | By Media | Product · Target · Creative(소재 차원이 있을 때) · Placement(없으면 '준비 중' 안내) |
 | By Date | Weekly · Daily (나란히) |
+| History | Campaign History — 일 · 미디어 · 단계 · 대상 · 변경 사항 · 상세(화면과 같은 줄) |
 | Mix | 목표 초기값 기준 계획표 — 월 예산·CPM·CPC·VTR(파란 글씨)은 값, 예산·예상치·묶음 행은 수식(고치면 다시 계산) |
 | Raw | 표 데이터 원자 행(일 × 차원 × 비용·노출·클릭·조회) — 필터·피벗용 |
 
@@ -153,4 +167,5 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
 | 1 | Daily Comment · Weekly Comment (빌더 규칙 생성) | `overall-summary-section-1-comment.md` |
 | 2 | Total Summary · Monthly Summary (필터 미적용, 예산·목표 영역) | `overall-summary-section-2-summary.md` |
 | 3 | 월·미디어 필터 + Product · Target · Placement · Weekly · Daily 표 | `overall-summary-section-3-tables.md` |
-| 4 | Mix (목표 입력값 기준 월별 계획 — 예산·CPM·CPC·VTR 입력 → 예상 노출·클릭·조회) | `overall-summary-section-4-mix.md` |
+| 4 | Campaign History (매체 변경 기록 → 빌더 규칙 줄, 필터 미적용) | `overall-summary-section-4-history.md` |
+| 5 | Mix (목표 입력값 기준 월별 계획 — 예산·CPM·CPC·VTR 입력 → 예상 노출·클릭·조회) | `overall-summary-section-5-mix.md` |
