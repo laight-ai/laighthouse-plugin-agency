@@ -14,10 +14,10 @@
 
 - 빌더 입력 `budgets` = `[{"month", "target_progress": "<원문>"}]` — 달마다 `get_target_progress_v2`(media 생략) 원문 1개.
   응답 규약(2026-10-16 report-backend 확정):
-  - 헤더 `month` · `as_of_date` · `media` · `target_mode`(dashboard | advertiser)
+  - 헤더 `month` · `as_of_date` · `media`
   - 첫째 표 `| metric | target | actual | progress_ratio |` = 호출 범위 합계(cost = Gross 예산 합) → 전체 범위.
   - 둘째 표 `| media | campaign_name | included | metric | target | actual | achievement |` = 매체 행(campaign_name `-`) 뒤에
-    그 매체의 캠페인 행(dashboard 브랜드만, included Y/N — 미포함 캠페인도 온다). 단위는 캠페인이 끝이다.
+    그 매체의 캠페인 행(저장된 경우에만, included Y/N — 미포함 캠페인도 온다). 단위는 캠페인이 끝이다.
 - `cost` 행 = 예산(Gross), `impression`·`click`·`views`·`ctr`·`vtr`·`cpm`·`cpc`·`cpv` 행 = e.* 목표.
   `cost_net`·`revenue`·`roas` 행과 `actual`·`achievement` 열은 쓰지 않는다(실적은 get_ad_performance 값).
   (호출에 `media`를 넣어 받은 원문이면 그 범위로 읽고, 범위 열을 가진 다른 표 형식도 같은 방식으로 읽는다.)
