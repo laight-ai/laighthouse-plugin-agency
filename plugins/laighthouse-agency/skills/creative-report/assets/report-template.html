@@ -12,7 +12,6 @@
    섹션 카드 · 머리말 · KPI 격자 · 알약 탭 · 요약 불릿 · 범례 · 표. 아래는 킷에 없는 소재 전용 부품만.
    --------------------------------------------------------------------- */
 .lh-page { max-width: 1040px; }
-.lh-kpis.cr-k5 { grid-template-columns: repeat(5, 1fr); }
 .lh-kpi-value { font-size: 24px; }
 .cr-ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cr-ctl > .lh-muted { font-size: 12px; margin-right: 2px; }
@@ -79,8 +78,8 @@
 .cr-zoom img { max-width: 100%; max-height: 100%; border-radius: 8px; background: #fff; }
 .print-only { display: none; }
 
-@media (max-width: 860px) { .cr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lh-kpis.cr-k5 { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 560px) { .cr-grid { grid-template-columns: 1fr; } .lh-kpis.cr-k5 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 860px) { .cr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lh-kpis { grid-template-columns: repeat(3, 1fr) !important; } }
+@media (max-width: 560px) { .cr-grid { grid-template-columns: 1fr; } .lh-kpis { grid-template-columns: repeat(2, 1fr) !important; } }
 @page { size: A4 landscape; margin: 10mm; }
 @media print {
   body { padding: 0; background: #fff; }
@@ -110,8 +109,8 @@
   </header>
 
   <section class="lh-section">
-    <div class="lh-section-head"><div><h2>기간 성과 요약</h2><p class="lh-desc" id="kpi-desc"></p></div></div>
-    <div class="lh-kpis cr-k5" id="kpis"></div>
+    <div class="lh-section-head"><div><h2>기간 성과 요약</h2><p class="lh-desc" id="kpi-desc"></p></div><div class="no-print lh-kpi-bar" id="pick-kpi"></div></div>
+    <div class="lh-kpis" id="kpis"></div>
   </section>
 
   <section class="lh-section">
@@ -120,7 +119,7 @@
     </div>
     <div class="lh-toolbar no-print">
       <div class="cr-ctl"><span class="lh-muted">매체</span><span class="cr-ctl" id="media-tabs"></span></div>
-      <div class="cr-ctl"><span class="lh-muted">순위 기준</span><span class="lh-tabs" id="sort-tabs"></span></div>
+      <div class="cr-ctl"><span class="lh-muted">순위 기준</span><span class="lh-tabs" id="sort-tabs"></span><span class="lh-kpi-bar" id="pick-card"></span></div>
     </div>
     <div id="groups"></div>
   </section>
@@ -144,7 +143,7 @@
     <div class="lh-section-head"><div><h2>세부 광고 성과</h2><p class="lh-desc" id="dt-meta"></p></div></div>
     <div class="lh-toolbar no-print">
       <input id="dt-q" class="lh-search" type="search" placeholder="캠페인·광고 이름 검색" aria-label="세부 광고 성과 검색">
-      <div class="cr-ctl"><span class="lh-muted">펼칠 단계</span><span class="lh-tabs" id="dt-depth"></span></div>
+      <div class="cr-ctl"><span class="lh-muted">펼칠 단계</span><span class="lh-tabs" id="dt-depth"></span><span class="lh-kpi-bar" id="pick-table"></span></div>
     </div>
     <div class="cr-tree-wrap"><table class="lh-table cr-tree" id="dt"></table></div>
   </section>
@@ -171,20 +170,29 @@ const f = {
 };
 const ratio = (a, b, k = 1) => b ? a / b * k : null;
 const dots = d => d.replace(/-/g, '.');
-const ZERO = [0, 0, 0, 0, 0];
+const ZERO = [0, 0, 0, 0, 0, 0];
 const add = (a, b) => a.map((x, i) => x + (b ? b[i] : 0));
 const mdot = m => `<span class="lh-mdot" style="--c:${colorOf(m)}"></span>`;
 
-// 원자 지표 [광고비, 노출, 클릭, 전환, 매출] → 지표
+// 원자 지표 [광고비, 노출, 클릭, 전환, 매출, 조회수] → 지표. 브랜드 데이터에 있는 것만 고를 수 있다
 const METRICS = [
   { k: 'cost', l: '광고비', v: a => a[0], fm: 'money' },
   { k: 'impression', l: '노출', v: a => a[1], fm: 'int' },
   { k: 'click', l: '클릭', v: a => a[2], fm: 'int' },
   { k: 'ctr', l: 'CTR', v: a => ratio(a[2], a[1], 100), fm: 'pct', pp: 1 },
   { k: 'cpc', l: 'CPC', v: a => ratio(a[0], a[2]), fm: 'money' },
-].concat(D.has.conversion ? [{ k: 'conversion', l: '전환', v: a => a[3], fm: 'int' },
-                             { k: 'cvr', l: 'CVR', v: a => ratio(a[3], a[2], 100), fm: 'pct', pp: 1 }] : [])
- .concat(D.has.revenue ? [{ k: 'roas', l: 'ROAS', v: a => ratio(a[4], a[0], 100), fm: 'pct', pp: 1 }] : []);
+  { k: 'cpm', l: 'CPM', v: a => ratio(a[0], a[1], 1000), fm: 'money' },
+].concat(D.has.conversion ? [
+  { k: 'conversion', l: '전환', v: a => a[3], fm: 'int' },
+  { k: 'cvr', l: 'CVR', v: a => ratio(a[3], a[2], 100), fm: 'pct', pp: 1 },
+  { k: 'cpa', l: 'CPA', v: a => ratio(a[0], a[3]), fm: 'money' }] : [])
+ .concat(D.has.revenue ? [
+  { k: 'revenue', l: '매출', v: a => a[4], fm: 'money' },
+  { k: 'roas', l: 'ROAS', v: a => ratio(a[4], a[0], 100), fm: 'pct', pp: 1 }] : [])
+ .concat(D.has.view ? [
+  { k: 'view', l: '조회수', v: a => a[5], fm: 'int' },
+  { k: 'cpv', l: 'CPV', v: a => ratio(a[0], a[5]), fm: 'money' },
+  { k: 'vtr', l: 'VTR', v: a => ratio(a[5], a[1], 100), fm: 'pct', pp: 1 }] : []);
 const M = k => METRICS.find(m => m.k === k);
 
 // 직전 기간 대비: 비율 지표는 %p 차, 나머지는 변화율, 직전 값이 0·없으면 '—'. 증가 빨강 ▲ · 감소 파랑 ▼(다른 보고서와 같음)
@@ -196,7 +204,61 @@ function change(a, b, m) {
   return { r, cls: r > 0 ? 'up' : r < 0 ? 'down' : 'flat', t: `${r > 0 ? '▲ +' : r < 0 ? '▼ ' : ''}${r.toFixed(1)}${m.pp ? '%p' : '%'}` };
 }
 const deltaHtml = (a, b, m) => { const c = change(a, b, m); return c ? `<span class="lh-delta ${c.cls}">${c.t}</span>` : '<span class="lh-delta lh-muted">—</span>'; };
-const atoms = x => [x.cost, x.impression, x.click, x.conversion, x.revenue];
+const atoms = x => [x.cost, x.impression, x.click, x.conversion, x.revenue, x.view || 0];
+const has = k => METRICS.some(m => m.k === k);
+const pickDefaults = {
+  kpi: ['cost', 'impression', 'click', 'ctr'].concat(has('roas') ? ['roas'] : has('conversion') ? ['conversion'] : ['cpc']),
+  card: ['cost', 'ctr', 'cpc', 'click'].concat(has('conversion') ? ['conversion'] : ['impression']).concat(has('roas') ? ['roas'] : has('cvr') ? ['cvr'] : []),
+  table: ['cost', 'impression', 'click', 'ctr', 'cpc'].concat(has('conversion') ? ['conversion', 'cvr'] : []).concat(has('roas') ? ['roas'] : []),
+};
+const PICK_KEY = 'lh-creative-metrics:' + D.brand;
+const pick = {};
+(function loadPick() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(PICK_KEY) || '{}') || {}; } catch (e) { saved = {}; }
+  Object.keys(pickDefaults).forEach(id => {
+    const all = METRICS.map(m => m.k), s0 = saved[id] || {};
+    const order = (s0.order || []).filter(k => all.includes(k));
+    all.forEach(k => { if (!order.includes(k)) order.push(k); });
+    const on = (s0.on || pickDefaults[id]).filter(k => all.includes(k));
+    // 기본 순서: 켜진 지표를 기본 순서대로 앞에
+    if (!s0.order) order.sort((x, y) => (pickDefaults[id].indexOf(x) + 1 || 99) - (pickDefaults[id].indexOf(y) + 1 || 99));
+    pick[id] = { order, on: new Set(on.length ? on : pickDefaults[id]) };
+  });
+})();
+function savePick() {
+  try { localStorage.setItem(PICK_KEY, JSON.stringify(Object.fromEntries(Object.entries(pick).map(([k, v]) => [k, { order: v.order, on: [...v.on] }])))); } catch (e) { /* 저장 못 해도 화면은 그대로 */ }
+}
+const picked = id => pick[id].order.filter(k => pick[id].on.has(k)).map(M);
+function drawPicker(el, id, title) {
+  const stt = pick[id], n = stt.order.filter(k => stt.on.has(k)).length, wasOpen = el.querySelector('.lh-picker.is-open');
+  el.innerHTML = `<div class="lh-picker${wasOpen ? ' is-open' : ''}"><button type="button" class="lh-picker-btn" aria-haspopup="true">
+      <span class="lh-picker-title">${title}</span><span class="lh-picker-n">${n}/${stt.order.length}</span><span class="lh-picker-caret">▾</span></button>
+    <div class="lh-picker-panel"><div class="lh-picker-head"><span>보여 줄 지표와 순서</span><button type="button" class="lh-picker-reset" data-reset="1">기본값으로</button></div>
+    ${stt.order.map((k, i) => { const on = stt.on.has(k), lock = on && n === 1;
+      return `<div class="lh-picker-item"><label${lock ? ' title="지표를 하나 이상 골라야 합니다"' : ''}><input type="checkbox" data-k="${k}"${on ? ' checked' : ''}${lock ? ' disabled' : ''}> ${M(k).l}</label>
+        <button type="button" class="lh-picker-mv" data-mv="${i}" data-d="-1" title="위로"${i === 0 ? ' disabled' : ''}>↑</button>
+        <button type="button" class="lh-picker-mv" data-mv="${i}" data-d="1" title="아래로"${i === stt.order.length - 1 ? ' disabled' : ''}>↓</button></div>`; }).join('')}
+    </div></div>`;
+}
+const PICKERS = [['pick-kpi', 'kpi', '지표 설정'], ['pick-card', 'card', '카드 지표'], ['pick-table', 'table', '표 지표']];
+function drawPickers() { PICKERS.forEach(([el, id, t]) => drawPicker($(el), id, t)); }
+PICKERS.forEach(([el, id, t]) => {
+  $(el).addEventListener('click', e => {
+    const stt = pick[id];
+    if (e.target.closest('.lh-picker-btn')) { e.currentTarget.querySelector('.lh-picker').classList.toggle('is-open'); return; }
+    if (e.target.dataset.reset) { stt.order = METRICS.map(m => m.k).sort((x, y) => (pickDefaults[id].indexOf(x) + 1 || 99) - (pickDefaults[id].indexOf(y) + 1 || 99)); stt.on = new Set(pickDefaults[id]); }
+    else if (e.target.dataset.mv != null) { const i = +e.target.dataset.mv, j = i + +e.target.dataset.d; [stt.order[i], stt.order[j]] = [stt.order[j], stt.order[i]]; }
+    else return;
+    savePick(); draw();
+  });
+  $(el).addEventListener('change', e => {
+    const k = e.target.dataset.k; if (!k) return;
+    e.target.checked ? pick[id].on.add(k) : pick[id].on.delete(k); savePick(); draw();
+  });
+});
+document.addEventListener('click', e => { document.querySelectorAll('.lh-picker.is-open').forEach(pk => { if (!pk.contains(e.target)) pk.classList.remove('is-open'); }); });
+
 const visible = () => ALL_MEDIA.filter(m => !st.hidden.has(m));
 
 // ── 머리말 ──
@@ -208,10 +270,11 @@ function drawKpis() {
   const vis = new Set(visible());
   const c = D.tree.filter(n => vis.has(n.n)).reduce((acc, n) => add(acc, n.c), ZERO);
   const p = D.prev.ok ? Object.keys(D.prev_media || {}).filter(k => vis.has(k)).reduce((acc, k) => add(acc, D.prev_media[k]), ZERO) : null;
-  const keys = ['cost', 'impression', 'click', 'ctr'].concat(D.has.revenue ? ['roas'] : D.has.conversion ? ['conversion'] : ['cpc']);
+  const ks = picked('kpi');
+  $('kpis').style.gridTemplateColumns = `repeat(${Math.min(5, ks.length)}, 1fr)`;
   $('kpi-desc').textContent = `${visible().join(' + ') || '선택한 매체 없음'} 합산, ${dots(D.start)} ~ ${dots(D.end)}`;
-  $('kpis').innerHTML = keys.map(k => {
-    const m = M(k), ch = p ? change(c, p, m) : null;
+  $('kpis').innerHTML = ks.map(m => {
+    const ch = p ? change(c, p, m) : null;
     return `<div class="lh-kpi"><div class="lh-kpi-label">${m.l}</div><div class="lh-kpi-value">${f[m.fm](m.v(c))}</div>
       ${p ? `<div class="lh-kpi-delta ${ch ? ch.cls : ''}">직전 기간 대비 ${ch ? ch.t : '—'}</div><div class="lh-kpi-sub">직전 기간 ${f[m.fm](m.v(p))}</div>` : ''}</div>`;
   }).join('');
@@ -247,8 +310,6 @@ function rank(rows, sort) {
   pool = pool.slice().sort((a, b) => (b[sort] || 0) - (a[sort] || 0) || b.cost - a.cost);
   return { top: pool.slice(0, D.top), fallback };
 }
-const CARD_MX = ['cost', 'ctr', 'cpc', 'click'].concat(D.has.conversion ? ['conversion'] : ['impression'])
-  .concat(D.has.revenue ? ['roas'] : D.has.conversion ? ['cvr'] : []);
 function card(x, i, mediaCost, noImages) {
   const share = mediaCost ? x.cost / mediaCost * 100 : 0;
   const isNew = D.prev.ok && (!x.prev || !x.prev[0]);
@@ -263,8 +324,8 @@ function card(x, i, mediaCost, noImages) {
         ${path.length ? `<div class="cr-path" title="${esc(path.join(' › '))}">${esc(path.join(' › '))}</div>` : ''}</div>
       <div class="cr-share" title="이 소재가 매체 광고비에서 차지하는 비중"><div class="lh-bar"><div class="lh-bar-fill" style="--w:${Math.min(100, share).toFixed(1)}%"></div></div>
         <span>매체 광고비의 <b>${share.toFixed(1)}%</b></span></div>
-      <dl class="cr-mx">${CARD_MX.map(k => { const m = M(k);
-        return `<div class="${k === st.sort ? 'hl' : ''}"><dt>${m.l}</dt><dd><span>${f[m.fm](m.v(a))}</span>${isNew ? '' : deltaHtml(a, x.prev, m)}</dd></div>`; }).join('')}</dl>
+      <dl class="cr-mx">${picked('card').map(m => {
+        return `<div class="${m.k === st.sort ? 'hl' : ''}"><dt>${m.l}</dt><dd><span>${f[m.fm](m.v(a))}</span>${isNew ? '' : deltaHtml(a, x.prev, m)}</dd></div>`; }).join('')}</dl>
     </div></article>`;
 }
 function drawGroups() {
@@ -301,7 +362,7 @@ function drawGroups() {
 
 // ── 매체별 일별 추이(다른 보고서의 추이 그래프와 같은 탭·범례) ──
 const TR = { view: 'media', metric: 'cost', chart: null, off: new Set() };
-const TRM = METRICS.filter(m => m.k !== 'cvr');
+const TRM = METRICS;
 function drawTrend() {
   if (!D.trend || !window.Chart) { $('trend-sec').style.display = 'none'; return; }
   const names = Object.keys(D.trend.media), media = names.filter(n => !st.hidden.has(n));
@@ -354,18 +415,18 @@ const hasImg = ns => ns.some(n => n.t || hasImg(n.k));
 const maxLv = ns => ns.reduce((a, n) => Math.max(a, n.d, maxLv(n.k)), 0);
 const matches = n => n.n.toLowerCase().includes(dt.q) || n.k.some(matches);
 function sorted(ns) {
-  if (!dt.sort) return ns;
-  const m = METRICS[dt.sort.i], s = dt.sort.dir === 'asc' ? 1 : -1, val = n => { const v = fin(m.v(n.c)); return v == null ? -Infinity : v; };
+  if (!dt.sort || !M(dt.sort.k)) return ns;
+  const m = M(dt.sort.k), s = dt.sort.dir === 'asc' ? 1 : -1, val = n => { const v = fin(m.v(n.c)); return v == null ? -Infinity : v; };
   return ns.slice().sort((a, b) => (val(a) - val(b)) * s);
 }
 function drawTree() {
   const roots = D.tree.filter(n => !st.hidden.has(n.n));
   if (!roots.length) { $('dt').innerHTML = '<tbody><tr><td class="lh-empty">선택한 매체가 없습니다.</td></tr></tbody>'; $('dt-depth').innerHTML = ''; return; }
-  const img = hasImg(roots), levels = LV.slice(0, maxLv(roots) + 1);
+  const img = hasImg(roots), levels = LV.slice(0, maxLv(roots) + 1), cols = picked('table');
   const head = '<thead><tr>' + levels.map((l, i) => `<th class="lv${i ? '' : ' sticky'}">${l}</th>`).join('')
     + (img ? '<th>이미지</th>' : '')
-    + METRICS.map((m, i) => { const on = dt.sort && dt.sort.i === i;
-      return `<th class="num sortable${on ? ' sorted' : ''}" data-i="${i}" aria-sort="${on ? (dt.sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}">${m.l}<span class="sort">${on ? (dt.sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span></th>`; }).join('')
+    + cols.map(m => { const on = dt.sort && dt.sort.k === m.k;
+      return `<th class="num sortable${on ? ' sorted' : ''}" data-k="${m.k}" aria-sort="${on ? (dt.sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}">${m.l}<span class="sort">${on ? (dt.sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span></th>`; }).join('')
     + '</tr></thead>';
   const out = [];
   (function walk(ns) {
@@ -379,11 +440,11 @@ function drawTree() {
         return `<td class="lv${lv ? '' : ' sticky'}">${s}</td>`;
       }).join('');
       out.push(`<tr class="lv-${n.d}">${cells}` + (img ? `<td style="text-align:center">${n.t ? `<img class="cr-thumb" src="${n.t}" alt="${esc(n.n)}" tabindex="0">` : ''}</td>` : '')
-        + METRICS.map(m => `<td class="num"><span class="vc"><span>${f[m.fm](m.v(n.c))}</span>${deltaHtml(n.c, n.p, m)}</span></td>`).join('') + '</tr>');
+        + cols.map(m => `<td class="num"><span class="vc"><span>${f[m.fm](m.v(n.c))}</span>${deltaHtml(n.c, n.p, m)}</span></td>`).join('') + '</tr>');
       if (kids && open) walk(n.k);
     });
   })(roots);
-  $('dt').innerHTML = head + '<tbody>' + (out.join('') || `<tr><td class="lh-empty" colspan="${levels.length + METRICS.length + 1}">검색어와 맞는 캠페인·광고가 없습니다.</td></tr>`) + '</tbody>';
+  $('dt').innerHTML = head + '<tbody>' + (out.join('') || `<tr><td class="lh-empty" colspan="${levels.length + cols.length + 1}">검색어와 맞는 캠페인·광고가 없습니다.</td></tr>`) + '</tbody>';
   $('dt-depth').innerHTML = LV.slice(1, levels.length).map((l, i) => `<button type="button" class="lh-tab${dt.depth === i + 1 ? ' is-on' : ''}" data-d="${i + 1}">${l}</button>`).join('');
 }
 function openTo(depth) {
@@ -395,8 +456,8 @@ $('dt').addEventListener('click', e => {
   if (c) { const id = +c.dataset.id; dt.open.has(id) ? dt.open.delete(id) : dt.open.add(id); return drawTree(); }
   const th = e.target.closest('th.sortable');
   if (th) {   // 오름 → 내림 → 해제(웹과 같음)
-    const i = +th.dataset.i;
-    dt.sort = !dt.sort || dt.sort.i !== i ? { i, dir: 'asc' } : dt.sort.dir === 'asc' ? { i, dir: 'desc' } : null;
+    const k = th.dataset.k;
+    dt.sort = !dt.sort || dt.sort.k !== k ? { k, dir: 'asc' } : dt.sort.dir === 'asc' ? { k, dir: 'desc' } : null;
     drawTree();
   }
 });
@@ -426,7 +487,7 @@ let saved = null;
 window.addEventListener('beforeprint', () => { saved = { open: new Set(dt.open), depth: dt.depth }; openTo(LV.length - 1); drawTree(); if (TR.chart) TR.chart.resize(); });
 window.addEventListener('afterprint', () => { if (saved) { dt.open = saved.open; dt.depth = saved.depth; saved = null; drawTree(); } if (TR.chart) TR.chart.resize(); });
 
-function draw() { drawControls(); drawKpis(); drawGroups(); drawTrend(); drawTree(); }
+function draw() { drawPickers(); drawControls(); drawKpis(); drawGroups(); drawTrend(); drawTree(); }
 draw();
 </script>
 </body>

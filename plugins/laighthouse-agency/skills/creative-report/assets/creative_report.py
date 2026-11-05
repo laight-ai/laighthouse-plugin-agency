@@ -46,12 +46,13 @@ KEYS = {   # 지표 키 후보(대소문자 무시, 정확히 같은 이름) —
     "click": ("클릭", "click", "clicks"),
     "conversion": ("전환", "conversions", "conversion"),
     "revenue": ("매출", "revenue", "purchase_value", "conversion_value"),
+    "view": ("조회수", "video_views", "views", "view"),
 }
 MIN_IMP, MIN_SHARE = 1000, 0.01
 SORT_LABEL = {"cost": "광고비", "ctr": "CTR", "roas": "ROAS", "click": "클릭", "conversion": "전환"}
 RATIO_SORTS = ("ctr", "roas")
 MAX_IMAGES = 30
-ATOMS = ("cost", "impression", "click", "conversion", "revenue")
+ATOMS = ("cost", "impression", "click", "conversion", "revenue", "view")   # 화면 JS의 원자 지표 순서와 같다
 IMG_RE = re.compile(r"^[A-Za-z0-9+/=\s]{200,}$")
 
 
@@ -88,7 +89,7 @@ def creative_rows(env, keys, media_filter):
         e = out.setdefault(ident, {"media": media, "source": r.get("source"), "campaign_name": r.get("campaign_name"),
                                    "ad_group_name": r.get("ad_group_name"), "ad_id": r.get("ad_id"),
                                    "ad_name": r.get("ad_name"), "cost": 0, "impression": 0, "click": 0,
-                                   "conversion": 0, "revenue": 0})
+                                   "conversion": 0, "revenue": 0, "view": 0})
         for k, names in keys.items():
             e[k] += pick(r, names)
     for e in out.values():
@@ -121,9 +122,9 @@ def rank(items, sort, top):
 
 
 def media_summary(items):
-    s = {"media": items[0]["media"], "cost": 0, "impression": 0, "click": 0, "conversion": 0, "revenue": 0, "creatives": len(items)}
+    s = dict({k: 0 for k in ATOMS}, media=items[0]["media"], creatives=len(items))
     for e in items:
-        for k in ("cost", "impression", "click", "conversion", "revenue"):
+        for k in ATOMS:
             s[k] += e[k]
     return ratios(s)
 
@@ -328,7 +329,8 @@ def main():
     if not rows:
         return sr.emit({"error": "이 기간·매체에 소재 성과가 없다", "media_in_data": sorted({str(r.get("media")) for r in env["rows"]})})
     has = {"conversion": bool(keys["conversion"]) and any(e["conversion"] for e in rows),
-           "revenue": bool(keys["revenue"]) and any(e["revenue"] for e in rows)}
+           "revenue": bool(keys["revenue"]) and any(e["revenue"] for e in rows),
+           "view": bool(keys["view"]) and any(e["view"] for e in rows)}
     sort = a.sort
     if sort == "roas" and not has["revenue"]:
         sort = "click"
@@ -419,7 +421,7 @@ def main():
             # 매체별 직전 기간 합계(원자 지표) — 머리말 증감용
             "prev_media": {m: [sum(e[k] for e in prev_rows if e["media"] == m) for k in ATOMS]
                            for m in {e["media"] for e in prev_rows}} if prev_rows is not None else {}}
-    fields = ("name", "campaign_name", "ad_group_name", "cost", "impression", "click", "conversion", "revenue",
+    fields = ("name", "campaign_name", "ad_group_name", "cost", "impression", "click", "conversion", "revenue", "view",
               "ctr", "cpc", "cvr", "roas")
     # 소재별 직전 기간 원자 지표(카드 증감·신규 표시용). 같은 소재 = 매체·캠페인·광고그룹·ad_id·소재명이 같은 것
     pkey = lambda e: (e["media"], e["campaign_name"], e["ad_group_name"], e["ad_id"], e["ad_name"])  # noqa: E731

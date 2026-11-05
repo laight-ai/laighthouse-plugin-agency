@@ -6,7 +6,7 @@ digest는 모델이 「소재 Summary」를 쓸 근거다(guides/creative-summar
 from datetime import date, timedelta
 
 MIN_IMP, MIN_SHARE = 1000, 0.01   # creative_report.py의 최소 표본 기준과 같다
-ATOMS = ("cost", "impression", "click", "conversion", "revenue")
+ATOMS = ("cost", "impression", "click", "conversion", "revenue", "view")
 
 
 def ratios(e):
