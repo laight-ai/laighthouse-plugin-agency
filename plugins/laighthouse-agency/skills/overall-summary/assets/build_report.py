@@ -27,7 +27,8 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
   "budgets": [{"month": "2026-09", "target_progress": "<get_target_progress_v2(media 생략) 원문>"},
               {"month": "2026-10", "target_progress": "<원문>"}]
         # 첫째 표(metric|target|…) = 전체 합계, 둘째 표(media|campaign_name|included|metric|target|…) = 매체·캠페인 행.
-        # cost 행 = 예산(Gross), impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표. 행이 없으면 빈칸.
+        # cost 행 = 예산(Gross), cost_net 행 = 예산(Net), impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표.
+        # 행이 없으면 빈칸. 광고비 실적은 항상 Net — 수수료가 있으면(cost ≠ cost_net) Gross/Net 두 보기를 만든다(shared/assets/fees.py).
         # 항목에 범위 키(media·상품·campaign_name·ad_group_name)를 주면 첫째 표를 그 범위로 읽는다(그 인자로 부른 경우).
   "place": {"json_files": ["<첫 달 응답>", ...]}
         # 선택 — Placement 표. day grain, group_by = [media, (ad_type 또는 상품), 노출 위치 차원(PLACE_DIMS 중 브랜드가 주는 것)],
@@ -45,7 +46,9 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
   시트 = Summary · By Media · By Date · History · Mix · Raw. 엑셀이 실패해도 HTML은 그대로 남고 xlsx_error만 알린다.
 - part를 주면 엑셀도 그 섹션의 시트만 담는다(PARTS). comment는 엑셀을 만들지 않는다.
 - 출력(stdout): {"out", "bytes", "rows", "part"?, "sections": {"comment", "tables", "history"}: "ok"|"placeholder",
-                "xlsx": 경로|null, "xlsx_error"?: 실패 이유, "xlsx_note"?: 만들지 않은 이유(표 데이터 없음)}
+                "xlsx": 경로|null, "xlsx_error"?: 실패 이유, "xlsx_note"?: 만들지 않은 이유(표 데이터 없음),
+                "xlsx_net"?: Net 기준 엑셀 경로(예산에 수수료가 있을 때만 — 이때 xlsx는 Gross 기준),
+                "xlsx_net_error"?·"xlsx_net_note"?: Net 엑셀을 못 만든 이유}
 """
 import html as _html
 import io
@@ -71,6 +74,7 @@ else:
     raise SystemExit("report_kit.py를 찾을 수 없다 (shared/assets)")
 import report_kit as kit  # noqa: E402
 import campaign_history  # noqa: E402
+import fees  # noqa: E402
 
 P = kit.PRODUCT_DIM
 AD_TYPE = "ad_type"
@@ -92,7 +96,7 @@ TABLES = ("product", "target", "place", "weekly", "daily")
 DROP_THRESHOLD = 20   # Daily Comment 급감 기준(%)
 TOP_LINES = 5         # Comment 하위 불릿: 매체마다 이만큼만 적고 나머지는 "외 N개"로 묶는다(실데이터는 광고그룹·상품이 수백 개)
 # 목표 표 행 이름 → 목표 키 (cost = 예산, 나머지 = 목표 영역 e.*)
-TARGET_ROWS = {"cost": "cost", "budget": "cost", "impression": "imp", "impressions": "imp", "imps": "imp",
+TARGET_ROWS = {"cost": "cost", "budget": "cost", "cost_net": "cost_net", "impression": "imp", "impressions": "imp", "imps": "imp",
                "click": "click", "clicks": "click", "views": "view", "view": "view", "video_views": "view",
                "ctr": "ctr", "vtr": "vtr", "cpm": "cpm", "cpc": "cpc", "cpv": "cpv"}
 SCOPE_COLS = {"media": "m", "매체": "m", P: "p", AD_TYPE: "p", "product": "p", "campaign_name": "c", "campaign": "c", "캠페인": "c",
@@ -150,7 +154,7 @@ def _tables(text):
 
 def parse_budget(entry):
     """budgets 항목 1개(get_target_progress_v2 원문) → [{"mo", "scope": {짧은 키: 값}, "v": {목표 키: 값}, "inc"?}].
-    표마다 metric·target 열을 읽는다(cost = Gross 예산, cost_net·revenue·roas·actual·achievement는 쓰지 않는다).
+    표마다 metric·target 열을 읽는다(cost = Gross 예산, cost_net = Net 예산 — revenue·roas·actual·achievement는 쓰지 않는다).
     - 첫째 표 `| metric | target | actual | progress_ratio |` = 호출 범위(media 인자, 생략 = 전체)의 합계.
     - 둘째 표 `| media | campaign_name | included | metric | … |` = 매체 행(campaign_name `-`)과 캠페인 행(dashboard 브랜드).
       범위 열 값이 `-`·all이면 그 차원은 범위에 넣지 않는다. 캠페인 행의 included(Y/N)는 "inc"로 남긴다.
@@ -185,6 +189,7 @@ def parse_budget(entry):
             if ii is not None and cells[ii] in ("Y", "N"):
                 e["inc"] = cells[ii]
     for e in out.values():
+        e["srv"] = sorted(e["v"])   # 서버가 준 목표 — Net 보기에서 파생 목표를 Net 예산으로 다시 계산할 때 쓴다(fees.net_budgets)
         derive_targets(e["v"])
     return list(out.values())
 
@@ -280,6 +285,32 @@ def month_budget(budgets, mo, rows):
         if need and need <= have:
             return sum(b["v"]["cost"] for b in level)
     return None
+
+
+# ── Gross / Net (규칙은 shared/assets/fees.py) ──────────────────────────────────
+
+
+def basis_view(report, rows, basis):
+    """수수료가 있는 보고서(report["fee"]) → 한 기준(gross·net)만 담은 report·rows(엑셀용). 수수료가 없으면 그대로."""
+    if not report.get("fee"):
+        return report, rows
+    rep = dict(report, fee=None, comment=(report.get("comment") or {}).get(basis),
+               header=dict(report["header"], basis="Gross" if basis == "gross" else "Net"))
+    for k in ("table", "place"):
+        X = report.get(k)
+        if X and X.get("cols"):
+            cols = dict(X["cols"])
+            g = cols.pop("cost_g", None)
+            if basis == "gross" and g is not None:
+                cols["cost"] = g
+            rep[k] = dict(X, cols=cols)
+    if rep.get("table"):   # 엑셀은 한 기준의 예산만 본다
+        T = dict(rep["table"])
+        nb = T.pop("budgets_net", None)
+        if basis == "net":
+            T["budgets"] = nb
+        rep["table"] = T
+    return rep, ([dict(r, cost=r["cost_g"]) for r in rows] if basis == "gross" else rows)
 
 
 # ── Daily Comment (목업 buildDaily) ─────────────────────────────────────────
@@ -497,6 +528,8 @@ def encode(rows, dims, start, end):
     cols["d"] = [(r["day"] - start).days for r in rows]
     for _, k in ATOMS:
         cols[k] = [r[k] if not float(r[k]).is_integer() else int(r[k]) for r in rows]
+    if rows and "cost_g" in rows[0]:   # 수수료가 있을 때만 — Gross 광고비(fees.add_gross가 소수 둘째 자리로 맞춘 값)
+        cols["cost_g"] = [r["cost_g"] for r in rows]
     return {"days": days, "dict": dic, "cols": cols, "n": len(rows)}
 
 
@@ -567,14 +600,31 @@ def compute(payload):
             if k in b["scope"]:
                 b["scope"][k] = canon[k].get(str(b["scope"][k]).strip().lower(), b["scope"][k])
     ld = line_dims(dims)
-    report["comment"] = {"daily": build_daily(rows, E, media, ld, DROP_THRESHOLD, currency),
-                         "weekly": build_weekly(rows, E, media, ld, budgets, months, currency, has_view=bool(keys.get("views")))}
+    ratios = fees.fee_ratios(budgets)
+    fee = fees.ratios_have_fee(ratios)
+
+    def comments(rs, bs):
+        return {"daily": build_daily(rs, E, media, ld, DROP_THRESHOLD, currency),
+                "weekly": build_weekly(rs, E, media, ld, bs, months, currency, has_view=bool(keys.get("views")))}
+    nb = fees.net_budgets(budgets, derive_targets) if fee else None
+    if fee:   # 수수료가 있다 — Gross/Net 두 보기(문장은 둘 다 만들고, 표는 Gross 광고비 열 cost_g를 더한다)
+        fees.add_gross(rows, ratios)
+        report["fee"] = fees.BASIS_UI   # 토글 문구(라벨·버튼) — 화면은 받아 그리기만 한다
+        report["comment"] = {"gross": comments([dict(r, cost=r["cost_g"]) for r in rows], budgets),
+                             "net": comments(rows, nb)}
+    else:
+        report["comment"] = comments(rows, budgets)
     has = {"imp": bool(keys.get("impression")), "click": bool(keys.get("click")), "view": bool(keys.get("views"))}
     report["table"] = dict(encode(rows, dims, start, E), dims=[{"key": k, "label": lb} for src, k, lb in DIMS if src in dims],
                            has=has, budgets=budgets)
+    if fee:   # Net 보기의 예산(cost = Net 예산) — 브라우저는 기준에 따라 고르기만 한다
+        report["table"]["budgets_net"] = nb
+    for b in budgets + (nb or []):   # srv(서버가 준 목표 키)·cost_net은 Net 예산 계산에만 쓴다 — HTML에 넣지 않는다
+        b.pop("srv", None)
+        b["v"].pop("cost_net", None)
     # Placement는 전체 보고서와 tables(표를 고르지 않았거나 place를 골랐을 때)에서만 쓴다
     if not part or (part == "tables" and (not tables or "place" in tables)):
-        report["place"] = build_place(payload.get("place"), menv, keys, start, E)
+        report["place"] = build_place(payload.get("place"), menv, keys, start, E, ratios if fee else None, rows)
     if part == "comment":   # 문장은 위에서 만들었다 — 표 데이터는 HTML에 넣지 않는다(파일이 가벼워진다)
         report["table"] = None
     return report, rows
@@ -596,8 +646,9 @@ def build_history(spec, names_spec, start, E):
     return campaign_history.build(items, names, start, E)
 
 
-def build_place(spec, menv, keys, start, E):
-    """Placement 표 데이터: 미디어 × (Ad Type/상품) × 노출 위치 × 일. 노출 위치 차원이 없으면 None(표가 조용히 빠진다)."""
+def build_place(spec, menv, keys, start, E, ratios=None, ref=None):
+    """Placement 표 데이터: 미디어 × (Ad Type/상품) × 노출 위치 × 일. 노출 위치 차원이 없으면 None(표가 조용히 빠진다).
+    ratios(수수료가 있을 때)를 주면 Gross 광고비 열을 더한다 — 캠페인 차원이 없으니 본 표 행(ref)의 (달, 매체) 실효 비율로."""
     penv = kit.section_envelope(spec) if spec else None
     if not penv:
         return None
@@ -611,6 +662,8 @@ def build_place(spec, menv, keys, start, E):
     prow = load_rows(penv, keys, pd, start, E)
     if not prow:
         return None
+    if ratios:
+        fees.add_gross_like(prow, ref or [], ratios)
     labels = {pl: "노출 위치", AD_TYPE: "Ad Type", P: "상품"}
     return dict(encode(prow, pd, start, E), dims=[{"key": SHORT[d], "label": labels[d]} for d in pd])
 
@@ -634,17 +687,25 @@ def build_html(report, out):
 
 
 def build_xlsx(report, rows, html_path):
-    """같은 데이터로 엑셀도 만든다 — HTML 옆 같은 이름(.xlsx). 실패해도 HTML은 그대로 두고 이유만 돌려준다."""
-    out = os.path.splitext(html_path)[0] + ".xlsx"
+    """같은 데이터로 엑셀도 만든다 — HTML 옆 같은 이름(.xlsx). 실패해도 HTML은 그대로 두고 이유만 돌려준다.
+    수수료가 있으면(report["fee"]) 기준마다 한 파일: 같은 이름 .xlsx = Gross, `_net.xlsx` = Net(xlsx_net)."""
+    base = os.path.splitext(html_path)[0]
     part = report.get("part")
     if part and not PARTS[part][1]:
         return {"xlsx": None, "xlsx_note": "Comment만 담은 보고서라 엑셀을 만들지 않았다"}
-    try:
-        import overall_summary_xlsx
-        made = overall_summary_xlsx.write(report, rows, out, PARTS[part][1] if part else None)
-    except Exception as e:  # noqa: BLE001 — 엑셀 실패가 HTML 보고서를 막지 않는다(예: 같은 파일이 엑셀에 열려 있음)
-        return {"xlsx": None, "xlsx_error": f"{type(e).__name__}: {e}"}
-    return {"xlsx": made} if made else {"xlsx": None, "xlsx_note": "표 데이터가 없어 엑셀을 만들지 않았다"}
+    out = {}
+    for basis, key, path in (("gross", "xlsx", base + ".xlsx"), ("net", "xlsx_net", base + "_net.xlsx")):
+        if basis == "net" and not report.get("fee"):
+            break
+        rep, rs = basis_view(report, rows, basis)
+        try:
+            import overall_summary_xlsx
+            made = overall_summary_xlsx.write(rep, rs, path, PARTS[part][1] if part else None)
+        except Exception as e:  # noqa: BLE001 — 엑셀 실패가 HTML 보고서를 막지 않는다(예: 같은 파일이 엑셀에 열려 있음)
+            out.update({key: None, key + "_error": f"{type(e).__name__}: {e}"})
+            continue
+        out.update({key: made} if made else {key: None, key + "_note": "표 데이터가 없어 엑셀을 만들지 않았다"})
+    return out
 
 
 def main():

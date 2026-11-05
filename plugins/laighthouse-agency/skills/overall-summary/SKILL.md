@@ -29,8 +29,11 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
   Monthly Summary·월 필터·Mix 월 칸이 생긴다. 기간은 366일까지(get_ad_performance 상한).
 - **차원**: 브랜드가 제공하는 차원만 쓴다(차원 확인 1회). **없는 차원(예: 상품·노출 위치)은 호출에도 넣지 않고, 보고서에도
   조용히 나오지 않는다** — 사용자에게 묻거나 에러로 멈추지 않는다.
-- **예산·목표**: `get_target_progress_v2`의 cost 행 = 예산(**Gross**), impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표.
+- **예산·목표**: `get_target_progress_v2`의 cost 행 = 예산(**Gross**), cost_net 행 = 예산(**Net**), impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표.
   단위는 전체·매체·캠페인(대시보드 브랜드)까지다. 행이 없는 칸은 빈칸이다(묻지 않는다).
+- **Gross / Net**: 광고비 실적은 항상 **Net**이다. 예산에 수수료가 있으면(같은 범위의 cost ≠ cost_net) Gross·Net 두 보기를 만들어 머리말 토글로 바꾼다(기본 Gross).
+  토글은 Comment·모든 표·Mix(입력값은 기준마다 따로 저장)를 함께 바꾼다. 엑셀은 기준마다 한 파일(같은 이름 = Gross, `_net.xlsx` = Net).
+  수수료가 없으면 토글·Net 파일 없이 예전 그대로다(Gross = Net). 규칙은 `overall-summary-section-2-summary.md`.
 - **Comment는 빌더가 규칙으로 쓴다** — 모델이 요약 문장을 쓰지 않는다(`overall-summary-section-1-comment.md`).
 - **Campaign History도 빌더가 규칙으로 만든다** — 변경 이력 원본(`list_campaign_change_raw`)을 모델이 읽지 않는다(`overall-summary-section-4-history.md`).
 - 도구 규칙: `shared/references/mcp-tools.md`, 차원 확인·크기 대응: `shared/references/pivot-table.md`
@@ -108,7 +111,8 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
    (변경 이력 `missing`에 `cursor`가 있으면 그 페이지부터 이어 부른다)
    (`errors`는 그 응답이 에러였다는 뜻). `build_error`는 빌더가 멈춘 이유다. `date_error`(기준일이 오늘 이후)면 그 문구를 사용자에게 알리고 멈춘다. `discover.metrics_absent`는 브랜드가 주지 않는 지표라 묻지 않는다.
    `out`은 `~/Downloads/laighthouse-reports/{브랜드명}_overall_summary_{기준_일자}.html`(base에 들어 있다 — 바꿀 때만 `"out"`을 함께 넣는다).
-   엑셀은 같은 폴더의 `{브랜드명}_overall_summary_{기준_일자}.xlsx` — 출력의 `xlsx`가 그 경로다. `xlsx_error`(예: 같은 파일이 엑셀에 열려 있음)면
+   엑셀은 같은 폴더의 `{브랜드명}_overall_summary_{기준_일자}.xlsx` — 출력의 `xlsx`가 그 경로다. 수수료가 있는 브랜드면 Net 기준 엑셀
+   `…_net.xlsx`도 만들고 출력의 `xlsx_net`이 그 경로다(`xlsx`는 Gross 기준). `xlsx_error`(예: 같은 파일이 엑셀에 열려 있음)면
    HTML은 정상이다 — 다시 부르지 말고 완료 메시지에 이유를 한 줄로 적는다(파일을 닫고 다시 만들 수 있다고 안내).
    빌더가 "대조 검증 실패"로 멈추면 매체별 일별 응답을 다시 조회하고 prepare.py부터 다시 한다(값을 고쳐 맞추지 않는다).
    prepare.py가 `note`(저장된 응답 없음)를 내면 저장 훅이 없는 호스트다 → 아래 「빌더 입력 (build.json)」대로 직접 만든다.
@@ -140,6 +144,7 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
 ```
 {브랜드명} 종합 리포트({기준_일자}) 생성 완료.
 엑셀: {xlsx 경로} (Summary · By Media · By Date · History · Mix · Raw)
+엑셀(Net): {xlsx_net 경로}   ← 출력에 xlsx_net이 있을 때만(이때 위 엑셀 줄 끝에 ` — Gross 기준`을 붙인다)
 가장 인상적인 부분: {Daily/Weekly Comment에서 고른 한 문장}.
 — by LaightAI
 ```

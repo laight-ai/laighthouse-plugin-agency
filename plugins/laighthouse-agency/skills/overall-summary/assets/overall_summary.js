@@ -5,6 +5,8 @@
  * - Campaign History: 빌더가 변경 이력 원본으로 만든 줄(REPORT.history)을 날짜순 표로 그린다(필터와 무관).
  * - 모든 표: 묶음 이름 옆 ▼/▶ 접기 + 제목 줄 '펼침 [미디어][…][전체]' 단계 접기, 오른쪽 목차(바로가기·맨 위로).
  * - 디멘전 설정·지표 설정(선택·순서)과 캠페인명은 localStorage에 남긴다.
+ * - Gross/Net: 광고비 실적은 항상 Net이다. 예산에 수수료가 있으면(rep.fee) 머리말의 기준 토글로 전체를 바꾼다 —
+ *   Gross = 빌더가 환산한 광고비 열(cols.cost_g) + 예산(budgets), Net = 광고비 원값(cols.cost) + Net 예산(budgets_net). Comment도 기준별로 받는다.
  * 모양은 report_kit.css + 템플릿 <style>만 정한다(인라인 style 없음).
  * 전역: window.OverallSummary = { mount(report) }
  */
@@ -13,6 +15,7 @@
   const LS_DIMS = 'overall-summary-dims';
   const LS_CAMP = 'overall-summary-camp';
   const LS_MIX = 'overall-summary-mix';
+  const LS_BASIS = 'lh-basis';   // 광고비·예산 기준(gross·net) — Weekly·Monthly(report_kit.js)와 같은 키
   const MORE = 20;   // '더 보기' 한 번에 더 그리는 항목 수
   const FIRST = level => (level <= 1 ? 10 : 5);   // 묶음마다 처음 그리는 항목 수(광고비 상위) — 단계가 깊을수록 적게
 
@@ -164,13 +167,42 @@
     document.querySelectorAll('[data-h="period"]').forEach(e => { e.textContent = rep.header.period; });
     document.querySelectorAll('[data-h="media"]').forEach(e => { e.textContent = rep.header.media || '-'; });
 
+    /* 광고비·예산 기준 (수수료가 있을 때만 고른다 — 없으면 Gross = Net이라 토글이 없다) */
+    let basis = null;
+    if (rep.fee) {
+      try { basis = localStorage.getItem(LS_BASIS); } catch (e) { /* 저장 불가 환경 */ }
+      if (!rep.fee.options.some(o => o.key === basis)) basis = rep.fee.options[0].key;
+    }
+    const basisLabel = () => (basis === 'net' ? 'Net' : 'Gross');
+    const basisEl = document.querySelector('[data-h="basis"]');
+    function drawBasis() {
+      if (!basisEl) return;
+      if (!rep.fee) { basisEl.closest('div').remove(); return; }
+      basisEl.innerHTML = '';
+      const g = h('span', 'lh-basis');
+      rep.fee.options.forEach(o => {   // 문구는 빌더가 넘긴다(shared/assets/fees.py BASIS_UI)
+        const k = o.key;
+        const b = h('button', 'lh-basis-b' + (basis === k ? ' is-on' : ''), o.label); b.type = 'button';
+        b.setAttribute('aria-pressed', String(basis === k));
+        b.title = o.title;
+        b.addEventListener('click', () => setBasis(k));
+        g.appendChild(b);
+      });
+      basisEl.appendChild(g);
+    }
+    drawBasis();
+
     /* Comment */
     const dailyEl = root.querySelector('[data-sec="c-daily"]');
     const weeklyEl = root.querySelector('[data-sec="c-weekly"]');
-    if (rep.comment) {
-      drawDaily(dailyEl, rep.comment.daily);
-      drawWeekly(weeklyEl, rep.comment.weekly);
-    } else { placeholder(dailyEl); placeholder(weeklyEl); }
+    function drawComments() {
+      const cm = rep.comment && (rep.fee ? rep.comment[basis] : rep.comment);
+      if (cm) {
+        drawDaily(dailyEl, cm.daily);
+        drawWeekly(weeklyEl, cm.weekly);
+      } else { placeholder(dailyEl); placeholder(weeklyEl); }
+    }
+    drawComments();
 
     drawHistory(root.querySelector('[data-sec="history"]'), rep.history);
 
@@ -185,10 +217,11 @@
     const DAYS = T.days;
     const expand = X => {   // 열 기반 데이터 → 행 + 값 순서(광고비 큰 순)
       const C = X.cols, DIC = X.dict, keys = ['m', ...X.dims.map(d => d.key)];
+      const cost = basis === 'gross' && C.cost_g ? C.cost_g : C.cost;   // Gross 보기 = 빌더가 환산한 광고비
       const rows = new Array(X.n);
       for (let i = 0; i < X.n; i++) {
         const dd = X.days[C.d[i]];
-        const r = { dk: C.d[i], mo: dd.mo, ws: dd.ws, cost: C.cost[i], imp: C.imp[i], click: C.click[i], view: C.view[i] };
+        const r = { dk: C.d[i], mo: dd.mo, ws: dd.ws, cost: cost[i], imp: C.imp[i], click: C.click[i], view: C.view[i] };
         keys.forEach(k => { r[k] = DIC[k][C[k][i]]; });
         rows[i] = r;
       }
@@ -196,9 +229,11 @@
       keys.forEach(k => { rk[k] = {}; DIC[k].forEach((v, i) => { rk[k][v] = i; }); });
       return { rows, rank: rk };
     };
-    const { rows: DATA, rank } = expand(T);
+    const first = expand(T);
+    const rank = first.rank;
+    let DATA = first.rows;   // 기준을 바꾸면 다시 펼친다(setBasis)
     const DIC = T.dict;
-    const PLX = PL ? expand(PL) : null;
+    let PLX = PL ? expand(PL) : null;
     const wOf = {};
     DAYS.forEach(d => { wOf[d.ws] = d.w; });
     const monthKeys = months.map(m => m.key);
@@ -209,7 +244,7 @@
     const DEFS = metricDefs(T.has);
     const DIMS = T.dims;
     const has = k => DIMS.some(d => d.key === k);
-    const DIM_DEF = { total: ['p', 't'], monthly: ['p', 't'], product: ['p'], target: ['p', 't'] };
+    const DIM_DEF = { total: ['c'], monthly: ['c'], product: ['p'], target: ['p', 't'] };   // Summary 기본 = 캠페인(예산·목표 단위)
     Object.keys(DIM_DEF).forEach(id => {
       const on = DIM_DEF[id].filter(has);
       DIM_DEF[id] = on.length ? on : DIMS.slice(0, 1).map(d => d.key);
@@ -228,7 +263,9 @@
     const defaultDims = id => { const on = DIM_DEF[id]; return [...on, ...dimsFor(id).map(d => d.key).filter(k => !on.includes(k))].map(k => ({ k, on: on.includes(k) })); };
 
     /* 예산·목표: 정확한 범위가 있으면 그 값, 없으면 더 잘게 받은 범위가 이 행의 단위를 모두 덮을 때만 합(비율 목표는 합하지 않는다) */
-    const B = T.budgets || [];
+    // Net 보기의 예산은 빌더가 미리 계산해 둔다(T.budgets_net — 규칙은 shared/assets/fees.py net_budgets)
+    const budgetsOf = () => (basis === 'net' && T.budgets_net ? T.budgets_net : T.budgets || []);
+    let B = budgetsOf();
     const keysetOf = b => Object.keys(b.scope).sort().join(',');
     function lookup(mo, fixed, key, rs) {
       const es = B.filter(b => b.mo === mo && b.v[key] != null);
@@ -483,6 +520,7 @@
       const tt = h('div');
       const h2 = h('h2', null, title + ' ');
       h2.appendChild(h('span', 'lh-muted', sub));
+      if (rep.fee) h2.appendChild(h('span', 'tb-basis-tag', basisLabel()));   // 표마다 지금 기준을 적는다(머리말 토글은 스크롤하면 안 보인다)
       tt.appendChild(h2);
       hd.appendChild(tt);
       const ms = h('div', 'tb-menus');
@@ -611,16 +649,18 @@
      * 입력값 = 월 예산·CPM·CPC·VTR(브라우저에 저장). 초기값 = 캠페인 목표(단가는 없으면 매체 목표), 없으면 0.
      * 그 달에 집행도 예산도 없는 달과 조회가 없는 줄의 VTR은 입력 불가(회색).
      * 예상치: 노출 = 예산/CPM×1000, 클릭 = 예산/CPC, 조회 = 노출×VTR, CTR·CPV는 그 합으로. */
-    const mixAll = load(LS_MIX);
-    st.mix = { lines: {}, ...(mixAll[rep.brand] || {}) };
-    function setMix(fn) { st.mix = fn(st.mix); const all = load(LS_MIX); all[rep.brand] = st.mix; save(LS_MIX, all); paintMix(); }
+    // 입력값은 기준마다 따로 남긴다(예산 금액이 기준마다 다르다) — Gross는 예전 키(브랜드) 그대로
+    const mixKey = () => rep.brand + (basis === 'net' ? '|net' : '');
+    const loadMix = () => ({ lines: {}, ...(load(LS_MIX)[mixKey()] || {}) });
+    st.mix = loadMix();
+    function setMix(fn) { st.mix = fn(st.mix); const all = load(LS_MIX); all[mixKey()] = st.mix; save(LS_MIX, all); paintMix(); }
     const MIX_KEYS = MIX_DIMS.map(d => d.key);
     const byCamp = has('c');
     const joinVals = (rs, k) => {   // 캠페인의 상품·광고그룹 이름 — 많으면 광고비 상위 3개 + '외 N'
       const vs = uniq(rs.map(r => r[k])).sort((a, b) => rank[k][a] - rank[k][b]);
       return vs.length > 3 ? vs.slice(0, 3).join('·') + ' 외 ' + (vs.length - 3) : vs.join('·');
     };
-    const MIX_LINES = (() => {
+    const mixLines = () => {
       const lineKeys = byCamp ? ['m', 'c'] : MIX_KEYS;
       const by = new Map();
       DATA.forEach(r => { const id = lineKeys.map(k => r[k]).join('\u0001'); if (!by.has(id)) by.set(id, []); by.get(id).push(r); });
@@ -661,7 +701,8 @@
         });
       });
       return lines;
-    })();
+    };
+    let MIX_LINES = mixLines();
     const mixVal = l => {
       const o = st.mix.lines[l.id] || {}, v = {};
       months.forEach(mo => { v[mo.key] = l.def[mo.key] == null ? null : (o[mo.key] != null ? o[mo.key] : l.def[mo.key]); });
@@ -790,6 +831,22 @@
     paint();
     prune(root, rep);
     buildToc(root);
+
+    /* 기준 바꾸기 — 광고비 행·예산·Mix 입력값·Comment를 그 기준으로 다시 만들고 다시 그린다(필터·접기·설정은 그대로) */
+    function setBasis(k) {
+      if (!rep.fee || k === basis) return;
+      basis = k;
+      try { localStorage.setItem(LS_BASIS, k); } catch (e) { /* 저장 불가 환경 */ }
+      drawBasis();
+      drawComments();
+      if (!T || !T.n) return;   // Comment만 담은 보고서
+      DATA = expand(T).rows;
+      PLX = PL ? expand(PL) : null;
+      B = budgetsOf();
+      MIX_LINES = mixLines();
+      st.mix = loadMix();
+      paint();
+    }
   }
 
   /* 하위 스킬(overall-summary-comment·total·tables·history·mix)은 고른 섹션만 남긴다 — rep.part가 없으면 전부.

@@ -19,6 +19,10 @@ body { padding: 16px 60px 16px 16px; }
 .tb-hmeta > div { display: flex; flex-direction: column; gap: 2px; }
 .tb-hmeta .k { color: var(--muted); }
 .tb-hmeta .v { font-weight: 600; color: var(--ink); white-space: nowrap; }
+/* 광고비·예산 기준 토글은 report_kit.css의 .lh-basis — 여기서는 머리말 안 여백만 맞춘다 */
+.tb-hmeta .lh-basis { margin-left: 0; }
+.tb-basis-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: #eff6ff; color: var(--accent);
+  font-size: 11px; font-weight: 700; vertical-align: middle; }
 
 /* Comment */
 .tb-comment { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; font-size: 13px; line-height: 1.7; color: var(--body);
@@ -192,6 +196,7 @@ td.tb-inp .tb-in-text, td .tb-in-text { color: var(--accent); }
     <div class="tb-hmeta">
       <div><span class="k">집계 기간</span><span class="v" data-h="period"></span></div>
       <div><span class="k">매체</span><span class="v" data-h="media"></span></div>
+      <div><span class="k">광고비·예산 기준</span><span class="v" data-h="basis"></span></div>
     </div>
   </header>
 

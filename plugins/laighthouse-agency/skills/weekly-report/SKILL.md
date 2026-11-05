@@ -21,6 +21,9 @@ MCP 데이터를 받아 **라이트하우스 Weekly 보고서**(HTML 한 파일)
 - **차원**: 브랜드가 제공하는 차원만 쓴다(차원 확인 1회). **없는 차원(예: 상품)은 호출에도 넣지 않고, 보고서에도
   조용히 나오지 않는다** — 사용자에게 묻거나 에러로 멈추지 않는다.
 - **목표**: `get_target_progress_v2`에 행이 있는 지표만 목표 대비 카드가 된다. 목표가 없는 지표는 전월 동기간 대비 카드로 조용히 바뀐다.
+- **Gross / Net**: 광고비 실적은 항상 **Net**이다. 예산에 수수료가 있으면(같은 범위의 cost ≠ cost_net) Gross·Net 두 보기를 만들어 머리말 토글로 바꾼다(기본 Gross).
+  Gross 보기는 광고비·CPM·CPC·CPV를 기준 달 수수료 비율로 환산한다(수수료는 달마다 같다고 본다). `digest`는 Gross 기준 숫자이고
+  `광고비·예산 기준` 항목이 그 사실을 적는다 — 수수료가 있으면 Weekly Summary의 광고비·예산 숫자는 Gross로 쓴다.
 - 도구 규칙: `shared/references/mcp-tools.md`, 차원 확인·선택 표: `shared/references/pivot-table.md`
   (플러그인 루트 기준 — 이 스킬 폴더에서는 `../../shared/references/`).
 
