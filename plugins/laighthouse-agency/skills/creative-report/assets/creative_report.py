@@ -349,6 +349,9 @@ def main():
     prev_rec = find_perf(recs, p_start, p_end)
     prev_env = load_env(prev_rec) if prev_rec else None
     prev_rows = creative_rows(prev_env, resolve_keys(prev_env.get("metrics"), prev_env["rows"]), a.media) if prev_env else None
+    # 비교는 이번 기간에 집행한 매체끼리만 — 직전 기간에만 집행한 매체는 화면·요약 어디에도 나오지 않는다
+    if prev_rows is not None:
+        prev_rows = [e for e in prev_rows if e["media"] in {r["media"] for r in rows}]
     # 일별 추이(day × media) — 보고서 모드만 필수
     trend_rec = sr.pick(recs, "get_ad_performance", start_date=a.start_date, end_date=a.end_date, time_grain="day",
                         group_by=["media"])
@@ -413,7 +416,7 @@ def main():
             "prev": {"start": p_start, "end": p_end, "ok": prev_rows is not None},
             "tree": detail_tree(rows, prev_rows, thumbs), "summary": bullets,
             "trend": trend,
-            # 매체별 직전 기간 합계(원자 지표) — 이번 기간에 없는 매체도 들어가 머리말 증감이 요약과 같아진다
+            # 매체별 직전 기간 합계(원자 지표) — 머리말 증감용
             "prev_media": {m: [sum(e[k] for e in prev_rows if e["media"] == m) for k in ATOMS]
                            for m in {e["media"] for e in prev_rows}} if prev_rows is not None else {}}
     fields = ("name", "campaign_name", "ad_group_name", "cost", "impression", "click", "conversion", "revenue",
@@ -425,11 +428,6 @@ def main():
         data["media"].append({"summary": media_summary(by_media[m]),
                               "rows": [dict({k: e[k] for k in fields}, thumb=thumbs.get(id(e)), prev=pmap.get(pkey(e)))
                                        for e in by_media[m]]})
-    # 직전 기간에만 집행한 매체 — 머리말 증감에 들어가므로 화면(매체 선택·세부 표)에도 보여 준다
-    data["prev_only"] = sorted((m for m in data["prev_media"] if m not in by_media and any(data["prev_media"][m])),
-                               key=lambda m: -data["prev_media"][m][0])
-    data["tree"] += [{"n": m, "c": [0] * len(ATOMS), "p": data["prev_media"][m], "k": [], "prev_only": True}
-                     for m in data["prev_only"]]
     with open(os.path.join(HERE, "report-template.html"), encoding="utf-8") as f:
         html = f.read()
     with open(os.path.join(SHARED, "report_kit.css"), encoding="utf-8") as f:

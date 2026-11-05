@@ -16,10 +16,7 @@
 .lh-kpi-value { font-size: 24px; }
 .cr-ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cr-ctl > .lh-muted { font-size: 12px; margin-right: 2px; }
-.cr-sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
 .cr-new { display: inline-block; font-size: 10.5px; font-weight: 600; color: #1d4ed8; background: #eff6ff; border-radius: 4px; padding: 1px 5px; }
-.cr-off-note { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
-.tx2 { display: inline-flex; flex-direction: column; min-width: 0; line-height: 1.35; }
 .lh-tab .lh-mdot { margin-right: 5px; }
 .lh-tab.is-off { color: var(--muted); border-style: dashed; }
 .lh-tab.is-off .lh-mdot { opacity: .35; }
@@ -55,7 +52,6 @@
 .cr-mx .hl { background: #eff6ff; border-radius: 4px; margin: -3px -5px; padding: 3px 5px; }
 .cr-mx .hl dt { color: var(--ink); font-weight: 600; }
 .cr-mx .hl dd > span:first-child { font-weight: 700; }
-.cr-gone { font-size: 12px; color: var(--label); background: var(--sub-bg); border: 1px dashed var(--line); border-radius: 8px; padding: 10px 14px; }
 
 /* 세부 표 — 웹 보고서 세부 표(단계별 열·'전체')를 킷 표 스타일로 */
 .cr-tree-wrap { max-height: 640px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
@@ -71,7 +67,6 @@
 .cr-tree .sticky { position: sticky; left: 0; z-index: 1; background: #fff; box-shadow: 1px 0 0 var(--line); }
 .cr-tree thead .sticky { z-index: 3; background: var(--head-bg); }
 .cr-tree tr.lv-0 td { font-weight: 600; color: var(--ink); background: var(--sub-bg); }
-.cr-tree tr.ghost td { color: var(--muted); }
 .cr-tree .item { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
 .cr-tree .item .tx { overflow: hidden; text-overflow: ellipsis; }
 .cr-tree .all { color: var(--muted); font-weight: 400; }
@@ -161,8 +156,7 @@
 <script>
 const D = "__DATA__";
 const cur = D.currency;
-const PREV_ONLY = new Set(D.prev_only || []);
-const ALL_MEDIA = D.media.map(g => g.summary.media).concat(D.prev_only || []);
+const ALL_MEDIA = D.media.map(g => g.summary.media);
 const SERIES_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];   // report_kit.py와 같은 순서
 const colorOf = m => SERIES_COLORS[Math.max(0, ALL_MEDIA.indexOf(m)) % SERIES_COLORS.length];
 const st = { sort: D.sort, hidden: new Set() };
@@ -225,14 +219,13 @@ function drawKpis() {
   $('print-state').textContent = `매체: ${visible().join(', ') || '없음'} · 순위 기준: ${label}`;
 }
 
-// ── 매체 선택: 이번 기간에 집행한 매체, 그리고 직전 기간에만 집행해 이번 기간 광고비가 없는 매체를 따로 묶는다 ──
+// ── 매체 선택(이번 기간에 집행한 매체) · 순위 기준 ──
 function drawControls() {
   const tab = n => {
     const on = !st.hidden.has(n);
     return `<button type="button" class="lh-tab${on ? '' : ' is-off'}" aria-pressed="${on}" data-m="${esc(n)}">${mdot(n)}${esc(n)}</button>`;
   };
-  $('media-tabs').innerHTML = `<span class="lh-tabs">${D.media.map(g => tab(g.summary.media)).join('')}</span>`
-    + ((D.prev_only || []).length ? `<span class="cr-sep"></span><span class="lh-muted" style="font-size:12px">이번 기간 집행 없음</span><span class="lh-tabs">${D.prev_only.map(tab).join('')}</span>` : '');
+  $('media-tabs').innerHTML = `<span class="lh-tabs">${D.media.map(g => tab(g.summary.media)).join('')}</span>`;
   $('sort-tabs').innerHTML = D.sorts.map(([k, l]) => `<button type="button" class="lh-tab${st.sort === k ? ' is-on' : ''}" aria-pressed="${st.sort === k}" data-s="${k}">${l}</button>`).join('');
 }
 $('media-tabs').addEventListener('click', e => {
@@ -292,9 +285,6 @@ function drawGroups() {
       ${r.fallback ? `<p class="lh-note">조건을 채운 소재가 없어 모든 소재로 ${esc(label)} 순위를 매겼습니다.</p>` : ''}
     </div>`;
   });
-  const gone = (D.prev_only || []).filter(n => !st.hidden.has(n));
-  if (gone.length) blocks.push(`<div class="cr-media"><div class="cr-gone">이번 기간에 광고비를 쓰지 않은 매체: ${gone.map(n =>
-    `${mdot(n)}<b>${esc(n)}</b>(직전 기간 광고비 ${f.money(D.prev_media[n][0])})`).join(', ')}</div></div>`);
   $('groups').innerHTML = blocks.join('');
 }
 
@@ -352,7 +342,7 @@ $('tr-metric').addEventListener('click', e => { const b = e.target.closest('butt
 $('tr-legend').addEventListener('click', e => { const b = e.target.closest('button[data-l]'); if (!b) return; const k = b.dataset.l; TR.off.has(k) ? TR.off.delete(k) : TR.off.add(k); drawTrend(); });
 
 // ── 세부 광고 성과: 웹 세부 표와 같은 구조(단계별 열, 하위가 있는 줄은 다음 단계 칸에 '전체', 이번 기간 썸네일,
-//    정렬은 오름 → 내림 → 해제). 직전 기간에만 집행한 매체도 줄로 보인다(이번 값 —) ──
+//    정렬은 오름 → 내림 → 해제) ──
 const LV = ['매체', '캠페인', '광고그룹', '광고'];
 (function collapse(ns) {   // 하위가 같은 이름의 소재 하나뿐인 줄은 한 줄로
   ns.forEach(n => { collapse(n.k); if (n.k.length === 1 && !n.k[0].k.length && n.k[0].n === n.n) { n.t = n.k[0].t; n.k = []; } });
@@ -384,12 +374,12 @@ function drawTree() {
       const kids = n.k.length > 0, open = dt.q ? true : dt.open.has(n.id);
       const cells = levels.map((_, lv) => {
         let s = '';
-        if (n.d === lv) s = `<span class="item">${kids ? `<button type="button" class="lh-caret${open ? '' : ' is-closed'}" data-id="${n.id}" aria-expanded="${open}" aria-label="${open ? '접기' : '펼치기'}">▼</button>` : '<span class="lh-caret ph">▼</span>'}${lv === 0 ? mdot(n.n) : ''}${n.prev_only ? `<span class="tx2"><span class="tx" title="${esc(n.n)}">${esc(n.n)}</span><span class="cr-off-note">이번 기간 집행 없음</span></span>` : `<span class="tx" title="${esc(n.n)}">${esc(n.n)}</span>`}</span>`;
+        if (n.d === lv) s = `<span class="item">${kids ? `<button type="button" class="lh-caret${open ? '' : ' is-closed'}" data-id="${n.id}" aria-expanded="${open}" aria-label="${open ? '접기' : '펼치기'}">▼</button>` : '<span class="lh-caret ph">▼</span>'}${lv === 0 ? mdot(n.n) : ''}<span class="tx" title="${esc(n.n)}">${esc(n.n)}</span></span>`;
         else if (n.d + 1 === lv && kids) s = '<span class="all">전체</span>';
         return `<td class="lv${lv ? '' : ' sticky'}">${s}</td>`;
       }).join('');
-      out.push(`<tr class="lv-${n.d}${n.prev_only ? ' ghost' : ''}">${cells}` + (img ? `<td style="text-align:center">${n.t ? `<img class="cr-thumb" src="${n.t}" alt="${esc(n.n)}" tabindex="0">` : ''}</td>` : '')
-        + METRICS.map(m => `<td class="num"><span class="vc"><span>${n.prev_only ? '—' : f[m.fm](m.v(n.c))}</span>${deltaHtml(n.prev_only ? null : n.c, n.p, m)}</span></td>`).join('') + '</tr>');
+      out.push(`<tr class="lv-${n.d}">${cells}` + (img ? `<td style="text-align:center">${n.t ? `<img class="cr-thumb" src="${n.t}" alt="${esc(n.n)}" tabindex="0">` : ''}</td>` : '')
+        + METRICS.map(m => `<td class="num"><span class="vc"><span>${f[m.fm](m.v(n.c))}</span>${deltaHtml(n.c, n.p, m)}</span></td>`).join('') + '</tr>');
       if (kids && open) walk(n.k);
     });
   })(roots);
