@@ -52,9 +52,21 @@ ATOMS = ("cost", "impression", "click", "conversion", "revenue")
 IMG_RE = re.compile(r"^[A-Za-z0-9+/=\s]{200,}$")
 
 
-def resolve_keys(metrics):
+def resolve_keys(metrics, rows=()):
+    """원자 지표마다 응답에 있는 후보 지표 목록(값이 있는 것 먼저). 같은 뜻의 지표를 매체마다 다른 이름으로 내보내는
+    브랜드(예: Meta는 spending, 다른 매체는 광고비)가 있어 행마다 값이 있는 첫 후보를 쓴다(`pick`)."""
     low = {str(m).lower(): m for m in metrics or []}
-    return {k: next((low[c.lower()] for c in cands if c.lower() in low), None) for k, cands in KEYS.items()}
+    filled = {k for r in rows for k, v in r.items() if v is not None}
+    out = {}
+    for k, cands in KEYS.items():
+        found = [low[c.lower()] for c in cands if c.lower() in low]
+        out[k] = [m for m in found if m in filled] or found[:1]
+    return out
+
+
+def pick(row, names):
+    """행에서 값이 있는 첫 후보 지표의 값(없으면 0)."""
+    return next((num(row[m]) for m in names if row.get(m) is not None), 0)
 
 
 def num(v):
@@ -74,9 +86,8 @@ def creative_rows(env, keys, media_filter):
                                    "ad_group_name": r.get("ad_group_name"), "ad_id": r.get("ad_id"),
                                    "ad_name": r.get("ad_name"), "cost": 0, "impression": 0, "click": 0,
                                    "conversion": 0, "revenue": 0})
-        for k, mk in keys.items():
-            if mk:
-                e[k] += num(r.get(mk))
+        for k, names in keys.items():
+            e[k] += pick(r, names)
     for e in out.values():
         name = e["ad_name"] if e["ad_name"] not in (None, "", "-") else None
         e["name"] = name or "%s (소재명 없음)" % (e["ad_group_name"] or e["campaign_name"] or "-")
@@ -303,10 +314,10 @@ def main():
     env = load_env(perf)
     if env is None:
         return sr.emit({"error": "성과 응답이 에러다: " + str(sr.response_text(perf)).strip()[:300]})
-    keys = resolve_keys(env.get("metrics"))
+    keys = resolve_keys(env.get("metrics"), env["rows"])
     if not all(keys[k] for k in ("cost", "impression", "click")):
         return sr.emit({"error": "광고비·노출·클릭 지표를 찾지 못했다", "metrics": env.get("metrics")})
-    cur = next((u for k, u in (env.get("metric_units") or {}).items() if k == keys["cost"] and u), "")
+    cur = next((u for k, u in (env.get("metric_units") or {}).items() if k in keys["cost"] and u), "")
     cur = {"KRW": "₩", "USD": "$"}.get(cur, cur if len(cur) <= 2 else "")
 
     rows = creative_rows(env, keys, a.media)
@@ -350,7 +361,7 @@ def main():
     if missing:
         return sr.emit({"missing": missing})
     prev_env = load_env(prev_rec)
-    prev_rows = creative_rows(prev_env, resolve_keys(prev_env.get("metrics")), a.media) if prev_env else None
+    prev_rows = creative_rows(prev_env, resolve_keys(prev_env.get("metrics"), prev_env["rows"]), a.media) if prev_env else None
 
     # 썸네일(최대 MAX_IMAGES개): TOP 표(정렬 지표마다 상위 N개 — 화면에서 기준을 바꿔도 붙어 있다)를 먼저, 그다음 광고비 순
     files = dict(p.split("=", 1) for p in a.image_file if "=" in p)
