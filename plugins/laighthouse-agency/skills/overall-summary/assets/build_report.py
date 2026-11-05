@@ -189,6 +189,7 @@ def parse_budget(entry):
             if ii is not None and cells[ii] in ("Y", "N"):
                 e["inc"] = cells[ii]
     for e in out.values():
+        e["srv"] = sorted(e["v"])   # 서버가 준 목표 — Net 보기에서 파생 목표를 Net 예산으로 다시 계산할 때 쓴다(fees.net_budgets)
         derive_targets(e["v"])
     return list(out.values())
 
@@ -603,18 +604,19 @@ def compute(payload):
     def comments(rs, bs):
         return {"daily": build_daily(rs, E, media, ld, DROP_THRESHOLD, currency),
                 "weekly": build_weekly(rs, E, media, ld, bs, months, currency, has_view=bool(keys.get("views")))}
+    nb = fees.net_budgets(budgets, derive_targets) if fee else None
     if fee:   # 수수료가 있다 — Gross/Net 두 보기(문장은 둘 다 만들고, 표는 Gross 광고비 열 cost_g를 더한다)
         fees.add_gross(rows, ratios)
         report["fee"] = True
         report["comment"] = {"gross": comments([dict(r, cost=r["cost_g"]) for r in rows], budgets),
-                             "net": comments(rows, fees.net_budgets(budgets))}
+                             "net": comments(rows, nb)}
     else:
         report["comment"] = comments(rows, budgets)
     has = {"imp": bool(keys.get("impression")), "click": bool(keys.get("click")), "view": bool(keys.get("views"))}
     report["table"] = dict(encode(rows, dims, start, E), dims=[{"key": k, "label": lb} for src, k, lb in DIMS if src in dims],
                            has=has, budgets=budgets)
     if fee:   # Net 보기의 예산(cost = Net 예산) — 브라우저는 기준에 따라 고르기만 한다
-        report["table"]["budgets_net"] = fees.net_budgets(budgets)
+        report["table"]["budgets_net"] = nb
     # Placement는 전체 보고서와 tables(표를 고르지 않았거나 place를 골랐을 때)에서만 쓴다
     if not part or (part == "tables" and (not tables or "place" in tables)):
         report["place"] = build_place(payload.get("place"), menv, keys, start, E, ratios if fee else None)

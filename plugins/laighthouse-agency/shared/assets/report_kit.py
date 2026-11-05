@@ -159,6 +159,9 @@ def _label(value):
     return UNSET_LABEL if value is None or value == "" else str(value)
 
 
+label = _label   # 공개 이름 — 다른 공용 모듈(fees.py)이 쓴다
+
+
 def resolve_roles(envelope):
     """디스커버리 봉투(total, group_by ["media","상품"], metrics 생략) → 실행 설정."""
     metrics = list(envelope.get("metrics") or [])

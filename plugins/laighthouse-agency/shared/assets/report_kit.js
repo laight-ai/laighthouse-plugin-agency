@@ -1384,7 +1384,8 @@
 
   /* 템플릿 부트스트랩: data-sec 블록마다 렌더러 호출, 데이터 없으면 placeholder.
    * report.basis(수수료가 있는 브랜드 — 광고비 실적은 Net, 예산은 Gross/Net 둘 다): 머리말에 기준 토글을 두고
-   * 고른 기준의 섹션 묶음(basis.sections[gross|net])으로 다시 그린다. basis.notes[기준][섹션]은 그 섹션 아래 각주. */
+   * 고른 기준의 섹션 묶음으로 다시 그린다 — 기본 기준(basis.default)은 report.sections, 다른 기준은 basis.sections[기준]
+   * (같은 섹션을 HTML에 두 번 넣지 않는다). basis.notes[기준][섹션]은 그 섹션 아래 각주. */
   const LS_BASIS = 'lh-basis';
   K.render = function (report, renderers) {
     K.init(report);
@@ -1392,10 +1393,10 @@
     let basis = null;
     if (B) {
       try { basis = localStorage.getItem(LS_BASIS); } catch (e) { /* 저장 불가 환경 */ }
-      if (!B.sections[basis]) basis = B.default;
+      if (basis !== B.default && !B.sections[basis]) basis = B.default;
     }
     function paint() {
-      const sections = B ? B.sections[basis] : report.sections;
+      const sections = B && basis !== B.default ? B.sections[basis] : report.sections;
       const notes = (B && B.notes && B.notes[basis]) || {};
       document.querySelectorAll('[data-sec]').forEach(el0 => {
         let el = el0;

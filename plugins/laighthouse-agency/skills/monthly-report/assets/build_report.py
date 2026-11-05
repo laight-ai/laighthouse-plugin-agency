@@ -206,7 +206,7 @@ def compute(payload, check_dims=True, basis=None):
 
 def has_fee(payload):
     """기준 달 예산에 수수료가 있으면(cost ≠ cost_net) Gross/Net 두 보기를 만든다 — 광고비 실적은 항상 Net."""
-    return not payload.get("skeleton") and fees.has_fee(fees.parse_fees((payload.get("s1") or {}).get("target_progress")))
+    return not payload.get("skeleton") and fees.report_has_fee((payload.get("s1") or {}).get("target_progress"))
 
 
 def digest(payload):
@@ -262,7 +262,7 @@ def main():
     payload = kit.read_payload()
     if has_fee(payload):   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 Gross)
         sections, rep, report, _ = compute(payload, basis="gross")
-        report["basis"] = {"default": "gross", "sections": {"gross": sections, "net": compute(payload, check_dims=False, basis="net")[0]},
+        report["basis"] = {"default": "gross", "sections": {"net": compute(payload, check_dims=False, basis="net")[0]},
                            "notes": {"net": {"s2": "* Executive Summary는 Gross 기준 숫자로 작성되었습니다."}}}
     else:
         sections, rep, report, _ = compute(payload)

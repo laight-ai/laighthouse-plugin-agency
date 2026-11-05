@@ -15,7 +15,7 @@
 """
 import re
 
-from report_kit import _label, period_of
+from report_kit import label, period_of
 
 _COST_PER_RE = re.compile(r"^cp[a-z]{1,2}$", re.I)   # CPM·CPC·CPV·CPA… — 광고비 ÷ 무엇 → Gross 비율만큼 커진다
 _PER_COST = {"roas"}                                  # 무엇 ÷ 광고비 → Gross 비율만큼 작아진다
@@ -94,16 +94,9 @@ def has_fee(fees):
     return any(abs(r - 1) > 1e-9 for d in (fees or {}).values() for r in d.values())
 
 
-def _row_factor(r, fees):
-    """행의 Gross ÷ Net — 캠페인 비율 → 매체 비율 → 1. 매체가 없는 행(전체 합계)은 None."""
-    if r.get("media") is None:
-        return None
-    m = _nk(_label(r.get("media")))
-    if r.get("campaign_name") is not None:
-        f = fees["campaign"].get((m, _nk(_label(r.get("campaign_name")))))
-        if f:
-            return f
-    return fees["media"].get(m) or 1.0
+def report_has_fee(target_progress):
+    """목표 원문에 수수료가 있으면(cost ≠ cost_net) True — Weekly·Monthly 빌더가 Gross/Net 두 벌을 만들지 정한다."""
+    return has_fee(parse_fees(target_progress))
 
 
 def _scalers(metrics, metric_keys):
@@ -121,7 +114,7 @@ def _scalers(metrics, metric_keys):
 def gross_envelope(env, fees, metric_keys, eff=None, eff_key=None):
     """Net 봉투 → Gross 봉투(광고비·CPM·CPC·CPV 등은 ×비율, ROAS는 ÷비율). 행 순서는 그대로다.
     캠페인이 있는 행은 그 캠페인 비율. 그 밖의 행(매체 행·전체 합계)은 eff(더 잘게 받은 응답에서 구한 실효 비율)에서
-    (기간, 매체) → (전체 기간, 매체) 순으로 찾고, 없으면 매체 비율 → (기간, 전체) → (전체 기간, 전체) → 1.
+    (기간, 매체) → (전체 기간, 매체) 순으로 찾고(매체가 없는 행은 매체 = 전체), 없으면 매체 비율 → 1.
     eff_key(행) = eff를 찾을 기간 키(기본 period_of)."""
     if not env:
         return env
@@ -130,16 +123,10 @@ def gross_envelope(env, fees, metric_keys, eff=None, eff_key=None):
     sc = _scalers(env.get("metrics") or [], metric_keys)
     rows = []
     for r in env.get("rows") or []:
-        m = _nk(_label(r.get("media"))) if r.get("media") is not None else None
-        f = None
-        if m is not None and r.get("campaign_name") is not None:
-            f = fees["campaign"].get((m, _nk(_label(r.get("campaign_name")))))
-        if not f:
-            p = key(r)
-            f = eff.get((p, m)) or eff.get((None, m))
-        if not f:
-            f = _row_factor(r, fees) if m is not None else (eff.get((key(r), None)) or eff.get((None, None)))
-        f = f or 1.0
+        m = _nk(label(r.get("media"))) if r.get("media") is not None else None
+        c = _nk(label(r.get("campaign_name"))) if m is not None and r.get("campaign_name") is not None else None
+        f = ((c is not None and fees["campaign"].get((m, c))) or eff.get((key(r), m)) or eff.get((None, m))
+             or (m is not None and fees["media"].get(m)) or 1.0)
         out = dict(r)
         for x, d in sc.items():
             v = r.get(x)
@@ -161,7 +148,7 @@ def eff_factors(pairs, metric_keys):
             v, w = a.get(cost), b.get(cost)
             if not isinstance(v, (int, float)) or not isinstance(w, (int, float)):
                 continue
-            m = _nk(_label(a.get("media"))) if a.get("media") is not None else None
+            m = _nk(label(a.get("media"))) if a.get("media") is not None else None
             p = key(a)
             for k in {(p, m), (None, m), (p, None), (None, None)}:
                 s = acc.setdefault(k, [0.0, 0.0])
@@ -263,13 +250,16 @@ def _net_cost(b, budgets):
     return b["v"]["cost"] - fee
 
 
-def net_budgets(budgets):
-    """Net 보기의 예산 목록: cost = cost_net(없으면 _net_cost)."""
+def net_budgets(budgets, derive=None):
+    """Net 보기의 예산 목록: cost = cost_net(없으면 _net_cost). derive(v)를 주면 서버가 준 목표(b["srv"])만 남기고
+    Net 예산으로 비어 있는 목표(노출 = 예산/CPM 등)를 다시 계산한다 — Gross 예산으로 계산한 값이 남지 않게."""
     out = []
     for b in budgets:
-        v = dict(b["v"])
+        v = {k: x for k, x in b["v"].items() if k in b["srv"]} if derive and "srv" in b else dict(b["v"])
         n = v.pop("cost_net", None)
-        if v.get("cost"):
+        if b["v"].get("cost"):
             v["cost"] = n or _net_cost(b, budgets)
+        if derive:
+            derive(v)
         out.append(dict(b, v=v))
     return out
