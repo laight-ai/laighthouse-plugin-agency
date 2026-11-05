@@ -24,6 +24,7 @@ import json
 import os
 import re
 import sys
+from datetime import date, timedelta
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 for cand in (os.path.join(HERE, "..", "shared", "assets"),           # zip 번들
@@ -46,7 +47,8 @@ KEYS = {   # 지표 키 후보(대소문자 무시, 정확히 같은 이름) —
 MIN_IMP, MIN_SHARE = 1000, 0.01
 SORT_LABEL = {"cost": "광고비", "ctr": "CTR", "roas": "ROAS", "click": "클릭", "conversion": "전환"}
 RATIO_SORTS = ("ctr", "roas")
-MAX_IMAGES = 24
+MAX_IMAGES = 30
+ATOMS = ("cost", "impression", "click", "conversion", "revenue")
 IMG_RE = re.compile(r"^[A-Za-z0-9+/=\s]{200,}$")
 
 
@@ -218,6 +220,66 @@ def chat_markdown(brand, s, e, groups, sort, cols, cur, notes):
     return "\n".join(lines).rstrip() + "\n\n— by LaightAI"
 
 
+def find_perf(recs, start, end):
+    for r in reversed(recs):
+        ti = r.get("tool_input") or {}
+        if (r["_tool"] == "get_ad_performance" and not ti.get("filters") and ti.get("metrics") is None
+                and (ti.get("time_grain") or "day") == "total" and "ad_name" in (ti.get("group_by") or [])
+                and str(ti.get("start_date"))[:10] == start and str(ti.get("end_date"))[:10] == end):
+            return r
+    return None
+
+
+def load_env(rec):
+    try:
+        env = json.loads(sr.response_text(rec))
+        return env if isinstance(env.get("rows"), list) else None
+    except (ValueError, AttributeError):
+        return None
+
+
+def prev_period(start, end):
+    s, e = date.fromisoformat(start), date.fromisoformat(end)
+    n = (e - s).days + 1
+    return (s - timedelta(days=n)).isoformat(), (s - timedelta(days=1)).isoformat()
+
+
+def path_of(e):
+    return (e["media"], e["campaign_name"] or "-", e["ad_group_name"] or "-", (e["ad_id"], e["ad_name"]))
+
+
+def detail_tree(rows, prev_rows, thumbs):
+    """매체 › 캠페인 › 광고그룹 › 소재 트리. 노드 = {n 이름, c 이번 기간 원자 지표, p 직전 기간(없으면 null), t 썸네일, k 하위}.
+    직전 기간 값은 같은 경로의 직전 기간 소재를 더한 것이다(직전 기간에만 있던 소재도 위 단계 합에 들어간다)."""
+    prev = {}
+    for e in prev_rows if prev_rows is not None else []:
+        path = path_of(e)
+        for d in range(1, 5):
+            acc = prev.setdefault(path[:d], [0] * len(ATOMS))
+            for i, k in enumerate(ATOMS):
+                acc[i] += e[k]
+    root = {"k": {}}
+    for e in sorted(rows, key=lambda x: -x["cost"]):
+        path, node = path_of(e), root
+        for d in range(1, 5):
+            key = path[d - 1]
+            if key not in node["k"]:
+                node["k"][key] = {"n": e["name"] if d == 4 else key, "c": [0] * len(ATOMS),
+                                  "p": prev.get(path[:d], [0] * len(ATOMS)) if prev_rows is not None else None, "k": {}}
+            node = node["k"][key]
+            for i, k in enumerate(ATOMS):
+                node["c"][i] += e[k]
+        if thumbs.get(id(e)):
+            node["t"] = thumbs[id(e)]
+
+    def flat(node):
+        kids = sorted(node["k"].values(), key=lambda x: -x["c"][0])
+        for k in kids:
+            k["k"] = flat(k)
+        return kids
+    return flat(root)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--brand", required=True)
@@ -234,21 +296,12 @@ def main():
     recs = sr.load_records(a.brand)
     if not recs:
         return sr.emit({"note": "저장된 응답 없음 — 저장 훅이 없는 호스트다"})
-    perf = None
-    for r in reversed(recs):
-        ti = r.get("tool_input") or {}
-        if (r["_tool"] == "get_ad_performance" and not ti.get("filters") and ti.get("metrics") is None
-                and (ti.get("time_grain") or "day") == "total" and "ad_name" in (ti.get("group_by") or [])
-                and str(ti.get("start_date"))[:10] == a.start_date and str(ti.get("end_date"))[:10] == a.end_date):
-            perf = r
-            break
+    perf = find_perf(recs, a.start_date, a.end_date)
     if perf is None:
         return sr.emit({"missing": [{"tool": "get_ad_performance", "start_date": a.start_date, "end_date": a.end_date,
                                      "time_grain": "total", "group_by": "media + 소재 차원(ad_name 포함)"}]})
-    try:
-        env = json.loads(sr.response_text(perf))
-        assert isinstance(env.get("rows"), list)
-    except (ValueError, AssertionError, AttributeError):
+    env = load_env(perf)
+    if env is None:
         return sr.emit({"error": "성과 응답이 에러다: " + str(sr.response_text(perf)).strip()[:300]})
     keys = resolve_keys(env.get("metrics"))
     if not all(keys[k] for k in ("cost", "impression", "click")):
@@ -284,34 +337,51 @@ def main():
         return sr.emit({"chat": chat_markdown(a.brand, a.start_date, a.end_date, groups, sort, columns(has), cur, notes),
                         "facts": {"sort": sort, "media": order}})
 
-    # ── 보고서: 정렬 지표마다 상위 N개의 합집합에 썸네일을 붙인다(브라우저에서 정렬을 바꿔도 썸네일이 있다) ──
+    # ── 보고서 ──
+    p_start, p_end = prev_period(a.start_date, a.end_date)
     items = creative_items(recs)
+    prev_rec = find_perf(recs, p_start, p_end)
+    missing = []
     if items is None:
-        return sr.emit({"missing": [{"tool": "get_ad_creative_info", "brand_name": a.brand}]})
+        missing.append({"tool": "get_ad_creative_info", "brand_name": a.brand})
+    if prev_rec is None:
+        missing.append({"tool": "get_ad_performance", "start_date": p_start, "end_date": p_end, "time_grain": "total",
+                        "group_by": "이번 기간 호출과 같은 group_by"})
+    if missing:
+        return sr.emit({"missing": missing})
+    prev_env = load_env(prev_rec)
+    prev_rows = creative_rows(prev_env, resolve_keys(prev_env.get("metrics")), a.media) if prev_env else None
+
+    # 썸네일(최대 MAX_IMAGES개): TOP 표(정렬 지표마다 상위 N개 — 화면에서 기준을 바꿔도 붙어 있다)를 먼저, 그다음 광고비 순
     files = dict(p.split("=", 1) for p in a.image_file if "=" in p)
+    want = [e for m in order for s in sorts for e in rank(by_media[m], s, a.top)[0]]
+    want += sorted(rows, key=lambda e: -e["cost"])
     need, picked = [], {}
-    for m in order:
-        for s in sorts:
-            for e in rank(by_media[m], s, a.top)[0]:
-                it = match_item(e, items)
-                if it is not None:
-                    picked[id(e)] = it["id"]
-                    if it["id"] not in need:
-                        need.append(it["id"])
-    need = need[:MAX_IMAGES]
+    for e in want:
+        if id(e) in picked:
+            continue
+        it = match_item(e, items)
+        if it is None or (it["id"] not in need and len(need) >= MAX_IMAGES):
+            continue
+        picked[id(e)] = it["id"]
+        if it["id"] not in need:
+            need.append(it["id"])
     uris = {i: image_uri(recs, i, files) for i in need}
     todo = [i for i, u in uris.items() if u is None]
     if todo:
         return sr.emit({"image_calls": todo})
+    thumbs = {k: uris.get(v) or None for k, v in picked.items()}
 
     data = {"brand": a.brand, "start": a.start_date, "end": a.end_date, "currency": cur, "top": a.top,
             "sort": sort, "sorts": [[s, SORT_LABEL[s]] for s in sorts], "has": has,
-            "min": {"impression": MIN_IMP, "share": MIN_SHARE}, "media": []}
+            "min": {"impression": MIN_IMP, "share": MIN_SHARE}, "media": [],
+            "prev": {"start": p_start, "end": p_end, "ok": prev_rows is not None},
+            "tree": detail_tree(rows, prev_rows, thumbs)}
     fields = ("name", "campaign_name", "ad_group_name", "cost", "impression", "click", "conversion", "revenue",
               "ctr", "cpc", "cvr", "roas")
     for m in order:
         data["media"].append({"summary": media_summary(by_media[m]),
-                              "rows": [dict({k: e[k] for k in fields}, thumb=uris.get(picked.get(id(e))) or None)
+                              "rows": [dict({k: e[k] for k in fields}, thumb=thumbs.get(id(e)))
                                        for e in by_media[m]]})
     with open(os.path.join(HERE, "report-template.html"), encoding="utf-8") as f:
         html = f.read()

@@ -31,6 +31,15 @@
 .cr-zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 9; cursor: zoom-out; }
 .cr-zoom img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
 .cr-zoom.is-on { display: flex; }
+.dt-tools { display: flex; gap: 6px; }
+.dt-tbl td { vertical-align: middle; }
+.dt-tbl td.dt-name { text-align: left; white-space: normal; min-width: 220px; max-width: 360px; }
+.dt-tbl tr.dt-l0 td { background: #f5f5f4; font-weight: 700; }
+.dt-tbl tr.dt-l1 td { background: #fafaf9; font-weight: 600; }
+.dt-tog { display: inline-block; width: 16px; color: var(--muted); cursor: pointer; user-select: none; }
+.dt-d { display: block; font-size: 11px; font-weight: 500; margin-top: 2px; }
+.dt-up { color: var(--green); } .dt-down { color: #dc2626; } .dt-flat { color: var(--muted); }
+.dt-th { width: 56px; height: 38px; }
 </style>
 </head>
 <body>
@@ -49,6 +58,13 @@
     </div>
   </section>
   <div id="groups" style="display:flex;flex-direction:column;gap:16px"></div>
+  <section class="lh-section" id="detail">
+    <div class="lh-section-head">
+      <div><h2>세부 광고 성과</h2><div class="lh-meta" id="dt-meta"></div></div>
+      <div class="dt-tools"><button class="cr-chip" id="dt-open">모두 펼치기</button><button class="cr-chip" id="dt-close">모두 접기</button></div>
+    </div>
+    <div class="cr-wrap"><table class="cr-tbl dt-tbl" id="dt"></table></div>
+  </section>
   <div class="lh-footer">— by LaightAI</div>
 </div>
 <div class="cr-zoom" id="zoom" onclick="this.classList.remove('is-on')"><img alt=""></div>
@@ -114,7 +130,62 @@ function draw() {
       ${r.fallback ? '<div class="cr-note">최소 표본(노출 1,000·광고비 1%)을 채운 소재가 없어 전체 소재로 순위를 냈습니다.</div>' : ''}
     </section>`;
   }).join('') || '<section class="lh-section">선택한 매체가 없습니다.</section>';
+  drawTree();   // 매체 칩이 세부 표에도 적용된다
 }
+
+// ── 세부 광고 성과: 매체 › 캠페인 › 광고그룹 › 소재 (이번 기간 + 직전 같은 길이 기간 대비 증감) ──
+const A = { cost: 0, impression: 1, click: 2, conversion: 3, revenue: 4 };
+const ratio = (a, b, k = 1) => b ? a / b * k : null;   // 분모 0 → 값 없음(증감도 없음)
+const DM = [
+  ['광고비', v => v[A.cost], 'money', 'pct'], ['노출', v => v[A.impression], 'int', 'pct'], ['클릭', v => v[A.click], 'int', 'pct'],
+  ['CTR', v => ratio(v[A.click], v[A.impression], 100), 'ctr', 'pp'], ['CPC', v => ratio(v[A.cost], v[A.click]), 'money', 'pct'],
+].concat(D.has.conversion ? [['전환', v => v[A.conversion], 'int', 'pct'], ['CVR', v => ratio(v[A.conversion], v[A.click], 100), 'pct', 'pp']] : [])
+ .concat(D.has.revenue ? [['ROAS', v => ratio(v[A.revenue], v[A.cost], 100), 'pct', 'pp']] : []);
+const fix = x => (x == null || !isFinite(x)) ? null : x;
+function delta(cur, prev, kind) {
+  cur = fix(cur); prev = fix(prev);
+  if (!D.prev.ok || prev == null || cur == null) return '';
+  let d, txt;
+  if (kind === 'pp') { d = cur - prev; txt = (d >= 0 ? '+' : '') + d.toFixed(1) + '%p'; }
+  else {
+    if (!prev) return cur ? '<span class="dt-d dt-flat">신규</span>' : '';   // 둘 다 0이면 증감 없음
+    d = (cur - prev) / prev * 100; txt = (d >= 0 ? '+' : '') + d.toFixed(1) + '%';
+  }
+  if (Math.abs(d) < 0.05) return '<span class="dt-d dt-flat">0.0</span>';
+  return `<span class="dt-d ${d > 0 ? 'dt-up' : 'dt-down'}">${d > 0 ? '▲' : '▼'} ${txt}</span>`;
+}
+const hasImg = nodes => nodes.some(n => n.t || hasImg(n.k));
+const open = new Set();
+let uid = 0;
+(function tag(nodes, d) { nodes.forEach(n => { n.id = ++uid; n.d = d; if (d === 0) open.add(n.id); tag(n.k, d + 1); }); })(D.tree, 0);
+function drawTree() {
+  const img = hasImg(D.tree);
+  const head = `<thead><tr>${img ? '<th>소재</th>' : ''}<th style="text-align:left">매체 › 캠페인 › 광고그룹 › 소재</th>${DM.map(m => `<th>${m[0]}</th>`).join('')}</tr></thead>`;
+  const out = [];
+  (function walk(nodes) {
+    nodes.forEach(n => {
+      if (n.d === 0 && st.hidden.has(n.n)) return;
+      const kids = n.k.length > 0, isOpen = open.has(n.id);
+      out.push(`<tr class="dt-l${n.d}">${img ? `<td>${n.t ? `<div class="cr-th dt-th"><img src="${n.t}" alt=""></div>` : ''}</td>` : ''}
+        <td class="dt-name" style="padding-left:${6 + n.d * 18}px">${kids ? `<span class="dt-tog" data-id="${n.id}">${isOpen ? '▾' : '▸'}</span>` : '<span class="dt-tog"></span>'}${esc(n.n)}</td>
+        ${DM.map(m => `<td>${f[m[2]](fix(m[1](n.c)))}${n.p ? delta(m[1](n.c), m[1](n.p), m[3]) : ''}</td>`).join('')}</tr>`);
+      if (kids && isOpen) walk(n.k);
+    });
+  })(D.tree);
+  document.getElementById('dt').innerHTML = head + '<tbody>' + out.join('') + '</tbody>';
+}
+document.getElementById('dt').addEventListener('click', e => {
+  const t = e.target.closest('.dt-tog[data-id]');
+  if (!t) return;
+  const id = +t.dataset.id;
+  open.has(id) ? open.delete(id) : open.add(id);
+  drawTree();
+});
+document.getElementById('dt-open').onclick = () => { (function all(ns) { ns.forEach(n => { if (n.k.length) open.add(n.id); all(n.k); }); })(D.tree); drawTree(); };
+document.getElementById('dt-close').onclick = () => { open.clear(); drawTree(); };
+document.getElementById('dt-meta').textContent = D.prev.ok
+  ? `${D.start} ~ ${D.end} · 증감은 직전 기간(${D.prev.start} ~ ${D.prev.end}) 대비 · 썸네일은 광고비 상위 소재까지`
+  : `${D.start} ~ ${D.end} · 직전 기간 데이터가 없어 증감 없이 표시`;
 
 document.getElementById('title').textContent = D.brand + ' 소재 성과';
 document.getElementById('period').textContent = `기간 ${D.start} ~ ${D.end}` +
