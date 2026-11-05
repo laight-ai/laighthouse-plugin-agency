@@ -51,6 +51,7 @@ for cand in (os.path.join(ASSETS_DIR, "..", "shared", "assets"),
 else:
     raise SystemExit("report_kit.py를 찾을 수 없다 (shared/assets)")
 import report_kit as kit  # noqa: E402
+import fees  # noqa: E402
 
 P = kit.PRODUCT_DIM
 S6_DIMS = ("media", "campaign_name")   # 예산 및 목표 달성 결과 표의 Dimension
@@ -85,12 +86,15 @@ def compute(payload, check_dims=True, basis=None):
                         ("매체 ↔ 표(s4·s6)", kit.check_rollup(e4, ["media"], e6, ["media"], keys))])
     tp = (sec("s1") or {}).get("target_progress")
     olds = {str(x): raw for x, raw in ((sec("s6") or {}).get("targets") or {}).items()}   # 예전 입력(매체마다 부른 원문)
-    if basis == "gross":   # 광고비 실적(Net) → Gross. 전체 합계(s1)는 매체별 응답(s4)의 달마다 실효 비율로
-        fees = kit.parse_fees(tp)
-        e1, e4, e6 = kit.gross_envelope(e1, fees, keys, breakdown=e4), kit.gross_envelope(e4, fees, keys), kit.gross_envelope(e6, fees, keys)
+    if basis == "gross":   # 광고비 실적(Net) → Gross. 위 단계는 아래 단계를 환산한 실효 비율로(표끼리 숫자가 맞게):
+        fz = fees.parse_fees(tp)   # s6(캠페인) → s4(매체, 달마다) → s1(전체, 달마다)
+        g6 = fees.gross_envelope(e6, fz, keys)
+        g4 = fees.gross_envelope(e4, fz, keys, eff=fees.eff_factors([(e6, g6, kit.period_of)], keys))
+        e1 = fees.gross_envelope(e1, fz, keys, eff=fees.eff_factors([(e4, g4, kit.period_of)], keys))
+        e4, e6 = g4, g6
     elif basis == "net":   # 예산 = Net
-        tp = kit.net_target_text(tp)
-        olds = {x: kit.net_target_text(raw) for x, raw in olds.items()}
+        tp = fees.net_target_text(tp)
+        olds = {x: fees.net_target_text(raw) for x, raw in olds.items()}
     i1 = kit.index_rows(e1, [])
     i4 = kit.index_rows(e4, ["media"])
     i6 = kit.index_rows(e6, ["media", P])
@@ -202,7 +206,7 @@ def compute(payload, check_dims=True, basis=None):
 
 def has_fee(payload):
     """기준 달 예산에 수수료가 있으면(cost ≠ cost_net) Gross/Net 두 보기를 만든다 — 광고비 실적은 항상 Net."""
-    return not payload.get("skeleton") and kit.has_fee(kit.parse_fees((payload.get("s1") or {}).get("target_progress")))
+    return not payload.get("skeleton") and fees.has_fee(fees.parse_fees((payload.get("s1") or {}).get("target_progress")))
 
 
 def digest(payload):
@@ -258,7 +262,7 @@ def main():
     payload = kit.read_payload()
     if has_fee(payload):   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 Gross)
         sections, rep, report, _ = compute(payload, basis="gross")
-        report["basis"] = {"default": "gross", "sections": {"gross": sections, "net": compute(payload, basis="net")[0]},
+        report["basis"] = {"default": "gross", "sections": {"gross": sections, "net": compute(payload, check_dims=False, basis="net")[0]},
                            "notes": {"net": {"s2": "* Executive Summary는 Gross 기준 숫자로 작성되었습니다."}}}
     else:
         sections, rep, report, _ = compute(payload)

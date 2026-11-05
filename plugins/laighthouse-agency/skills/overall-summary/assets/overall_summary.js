@@ -6,7 +6,7 @@
  * - 모든 표: 묶음 이름 옆 ▼/▶ 접기 + 제목 줄 '펼침 [미디어][…][전체]' 단계 접기, 오른쪽 목차(바로가기·맨 위로).
  * - 디멘전 설정·지표 설정(선택·순서)과 캠페인명은 localStorage에 남긴다.
  * - Gross/Net: 광고비 실적은 항상 Net이다. 예산에 수수료가 있으면(rep.fee) 머리말의 기준 토글로 전체를 바꾼다 —
- *   Gross = 빌더가 환산한 광고비 열(cols.cost_g) + 예산 cost, Net = 광고비 원값(cols.cost) + 예산 cost_net. Comment도 기준별로 받는다.
+ *   Gross = 빌더가 환산한 광고비 열(cols.cost_g) + 예산(budgets), Net = 광고비 원값(cols.cost) + Net 예산(budgets_net). Comment도 기준별로 받는다.
  * 모양은 report_kit.css + 템플릿 <style>만 정한다(인라인 style 없음).
  * 전역: window.OverallSummary = { mount(report) }
  */
@@ -15,7 +15,7 @@
   const LS_DIMS = 'overall-summary-dims';
   const LS_CAMP = 'overall-summary-camp';
   const LS_MIX = 'overall-summary-mix';
-  const LS_BASIS = 'overall-summary-basis';   // 광고비·예산 기준(gross·net) — 수수료가 있는 브랜드만 고른다
+  const LS_BASIS = 'lh-basis';   // 광고비·예산 기준(gross·net) — Weekly·Monthly(report_kit.js)와 같은 키
   const MORE = 20;   // '더 보기' 한 번에 더 그리는 항목 수
   const FIRST = level => (level <= 1 ? 10 : 5);   // 묶음마다 처음 그리는 항목 수(광고비 상위) — 단계가 깊을수록 적게
 
@@ -179,9 +179,9 @@
       if (!basisEl) return;
       if (!rep.fee) { basisEl.closest('div').remove(); return; }
       basisEl.innerHTML = '';
-      const g = h('span', 'tb-basis');
+      const g = h('span', 'lh-basis');
       [['gross', 'Gross'], ['net', 'Net']].forEach(([k, l]) => {
-        const b = h('button', 'tb-basis-b' + (basis === k ? ' is-on' : ''), l); b.type = 'button';
+        const b = h('button', 'lh-basis-b' + (basis === k ? ' is-on' : ''), l); b.type = 'button';
         b.setAttribute('aria-pressed', String(basis === k));
         b.title = k === 'gross' ? '광고비 = Net × (Gross 예산 ÷ Net 예산), 예산 = Gross' : '광고비 = 매체 집행액(Net), 예산 = Net';
         b.addEventListener('click', () => setBasis(k));
@@ -228,7 +228,9 @@
       keys.forEach(k => { rk[k] = {}; DIC[k].forEach((v, i) => { rk[k][v] = i; }); });
       return { rows, rank: rk };
     };
-    let { rows: DATA, rank } = expand(T);   // 기준을 바꾸면 다시 펼친다(setBasis)
+    const first = expand(T);
+    const rank = first.rank;
+    let DATA = first.rows;   // 기준을 바꾸면 다시 펼친다(setBasis)
     const DIC = T.dict;
     let PLX = PL ? expand(PL) : null;
     const wOf = {};
@@ -260,31 +262,8 @@
     const defaultDims = id => { const on = DIM_DEF[id]; return [...on, ...dimsFor(id).map(d => d.key).filter(k => !on.includes(k))].map(k => ({ k, on: on.includes(k) })); };
 
     /* 예산·목표: 정확한 범위가 있으면 그 값, 없으면 더 잘게 받은 범위가 이 행의 단위를 모두 덮을 때만 합(비율 목표는 합하지 않는다) */
-    // Net 보기: 예산 = cost_net. cost_net이 없는 범위(전체 합계, 캠페인 목표만 있는 매체)는 Gross − 한 단계 아래 범위
-    // (전체 → 매체, 매체 → 캠페인)의 수수료 합 — 아래에 수수료가 없으면 수수료 0%. build_report.py net_budgets와 같은 규칙.
-    const netCost = (b, all) => {
-      const ks = Object.keys(b.scope);
-      const nxt = !ks.length ? 'm' : ks.length === 1 && ks[0] === 'm' ? 'c' : null;
-      let fee = 0;
-      if (nxt) {
-        all.forEach(x => {
-          const xk = Object.keys(x.scope);
-          if (x.mo !== b.mo || xk.length !== ks.length + 1 || !(nxt in x.scope) || !ks.every(k => x.scope[k] === b.scope[k])) return;
-          if (x.v.cost) fee += x.v.cost - (x.v.cost_net || netCost(x, all));
-        });
-      }
-      return b.v.cost - fee;
-    };
-    const budgetsOf = () => {
-      const all = T.budgets || [];
-      if (basis !== 'net') return all;
-      return all.map(b => {
-        const v = { ...b.v };
-        delete v.cost_net;
-        if (v.cost) v.cost = b.v.cost_net || netCost(b, all);
-        return { ...b, v };
-      });
-    };
+    // Net 보기의 예산은 빌더가 미리 계산해 둔다(T.budgets_net — 규칙은 shared/assets/fees.py net_budgets)
+    const budgetsOf = () => (basis === 'net' && T.budgets_net ? T.budgets_net : T.budgets || []);
     let B = budgetsOf();
     const keysetOf = b => Object.keys(b.scope).sort().join(',');
     function lookup(mo, fixed, key, rs) {

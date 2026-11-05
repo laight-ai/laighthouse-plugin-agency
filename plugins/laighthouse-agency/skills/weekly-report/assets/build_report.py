@@ -53,6 +53,7 @@ for cand in (os.path.join(ASSETS_DIR, "..", "shared", "assets"),
 else:
     raise SystemExit("report_kit.py를 찾을 수 없다 (shared/assets)")
 import report_kit as kit  # noqa: E402
+import fees  # noqa: E402
 
 P = kit.PRODUCT_DIM
 VOL_ROLES = ("impression", "click", "views")       # 월 목표 대비 누적 달성률(진행률 세로선)
@@ -132,13 +133,21 @@ def compute(payload, check_dims=True, basis=None):
         kit.require_rollup(checks)
 
     tp = (sec("s1") or {}).get("target_progress")
-    if basis == "gross":   # 광고비 실적(Net) → Gross. 월 누적 합계(s1)는 일별 매체 응답(s3)의 달마다 실효 비율로
-        fees = kit.parse_fees(tp)
-        e1, e3 = kit.gross_envelope(e1, fees, keys, breakdown=e3, month=True), kit.gross_envelope(e3, fees, keys)
-        fine = {k: kit.gross_envelope(v, fees, keys) for k, v in fine.items()}
+    if basis == "gross":   # 광고비 실적(Net) → Gross. 위 단계는 아래 단계를 환산한 실효 비율로(표끼리 숫자가 맞게):
+        fz = fees.parse_fees(tp)   # s4(캠페인, 이번주·전주) → s3(일별 매체, 그 주) → s1(월 누적 전체, 달마다)
+        gfine = {k: fees.gross_envelope(v, fz, keys) for k, v in fine.items()}
+        weeks_of = {}
+        for k, (a, b) in (("cur", cur_w), ("base", base_w)):
+            for i in range((b - a).days + 1):
+                weeks_of[(a + timedelta(days=i)).isoformat()] = k
+        eff3 = fees.eff_factors([(fine[k], gfine[k], lambda r, k=k: k) for k in fine], keys)
+        g3 = fees.gross_envelope(e3, fz, keys, eff=eff3, eff_key=lambda r: weeks_of.get(kit.period_of(r)))
+        month = lambda r: kit.period_of(r)[:7]  # noqa: E731
+        e1 = fees.gross_envelope(e1, fz, keys, eff=fees.eff_factors([(e3, g3, month)], keys), eff_key=month)
+        e3, fine = g3, gfine
         e4 = dict(next(iter(fine.values())), rows=[r for e in fine.values() for r in e["rows"]]) if fine else None
     elif basis == "net":   # 예산 = Net
-        tp = kit.net_target_text(tp)
+        tp = fees.net_target_text(tp)
     i3 = kit.index_rows(e3, ["media"])
     media = kit.ordered_names(i3) or kit.ordered_names(kit.index_rows(e4, ["media"]))
     colors = kit.media_colors(media)
@@ -262,7 +271,7 @@ def compute(payload, check_dims=True, basis=None):
 
 def has_fee(payload):
     """기준 달 예산에 수수료가 있으면(cost ≠ cost_net) Gross/Net 두 보기를 만든다 — 광고비 실적은 항상 Net."""
-    return not payload.get("skeleton") and kit.has_fee(kit.parse_fees((payload.get("s1") or {}).get("target_progress")))
+    return not payload.get("skeleton") and fees.has_fee(fees.parse_fees((payload.get("s1") or {}).get("target_progress")))
 
 
 def digest(payload):
@@ -305,7 +314,7 @@ def main():
     sections, rep, _ = compute(payload, basis="gross" if fee else None)
     report = {"currency": payload.get("currency") or "₩", "sections": sections}
     if fee:   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 Gross)
-        report["basis"] = {"default": "gross", "sections": {"gross": sections, "net": compute(payload, basis="net")[0]},
+        report["basis"] = {"default": "gross", "sections": {"gross": sections, "net": compute(payload, check_dims=False, basis="net")[0]},
                            "notes": {"net": {"s2": "* Weekly Summary는 Gross 기준 숫자로 작성되었습니다."}}}
     path, size = kit.build_html(ASSETS_DIR, rep, report, payload["out"])
     json.dump({"out": path, "bytes": size,

@@ -1399,7 +1399,11 @@
       const notes = (B && B.notes && B.notes[basis]) || {};
       document.querySelectorAll('[data-sec]').forEach(el0 => {
         let el = el0;
-        if (el0.dataset.drawn) { el = el0.cloneNode(false); el0.replaceWith(el); }   // 다시 그릴 때 예전 차트·리스너를 떼어 낸다
+        if (el0.dataset.drawn) {   // 다시 그릴 때: 예전 차트를 정리하고 빈 요소로 바꾼다(요소에 붙은 리스너도 함께 떨어진다 —
+          // document에 붙은 드롭다운 닫기 리스너는 남지만 떨어진 요소만 가리켜 동작에 영향이 없다)
+          if (window.Chart && Chart.getChart) el0.querySelectorAll('canvas').forEach(cv => { const c = Chart.getChart(cv); if (c) c.destroy(); });
+          el = el0.cloneNode(false); el0.replaceWith(el);
+        }
         el.dataset.drawn = '1';
         const key = el.getAttribute('data-sec');
         const data = sections[key];

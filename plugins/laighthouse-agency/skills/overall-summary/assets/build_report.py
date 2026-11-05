@@ -28,7 +28,7 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
               {"month": "2026-10", "target_progress": "<원문>"}]
         # 첫째 표(metric|target|…) = 전체 합계, 둘째 표(media|campaign_name|included|metric|target|…) = 매체·캠페인 행.
         # cost 행 = 예산(Gross), cost_net 행 = 예산(Net), impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표.
-        # 행이 없으면 빈칸. 광고비 실적은 항상 Net — 수수료가 있으면(cost ≠ cost_net) Gross/Net 두 보기를 만든다(fee_ratios).
+        # 행이 없으면 빈칸. 광고비 실적은 항상 Net — 수수료가 있으면(cost ≠ cost_net) Gross/Net 두 보기를 만든다(shared/assets/fees.py).
         # 항목에 범위 키(media·상품·campaign_name·ad_group_name)를 주면 첫째 표를 그 범위로 읽는다(그 인자로 부른 경우).
   "place": {"json_files": ["<첫 달 응답>", ...]}
         # 선택 — Placement 표. day grain, group_by = [media, (ad_type 또는 상품), 노출 위치 차원(PLACE_DIMS 중 브랜드가 주는 것)],
@@ -47,7 +47,8 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
 - part를 주면 엑셀도 그 섹션의 시트만 담는다(PARTS). comment는 엑셀을 만들지 않는다.
 - 출력(stdout): {"out", "bytes", "rows", "part"?, "sections": {"comment", "tables", "history"}: "ok"|"placeholder",
                 "xlsx": 경로|null, "xlsx_error"?: 실패 이유, "xlsx_note"?: 만들지 않은 이유(표 데이터 없음),
-                "xlsx_net"?: Net 기준 엑셀 경로(예산에 수수료가 있을 때만 — 이때 xlsx는 Gross 기준)}
+                "xlsx_net"?: Net 기준 엑셀 경로(예산에 수수료가 있을 때만 — 이때 xlsx는 Gross 기준),
+                "xlsx_net_error"?·"xlsx_net_note"?: Net 엑셀을 못 만든 이유}
 """
 import html as _html
 import io
@@ -73,6 +74,7 @@ else:
     raise SystemExit("report_kit.py를 찾을 수 없다 (shared/assets)")
 import report_kit as kit  # noqa: E402
 import campaign_history  # noqa: E402
+import fees  # noqa: E402
 
 P = kit.PRODUCT_DIM
 AD_TYPE = "ad_type"
@@ -284,67 +286,7 @@ def month_budget(budgets, mo, rows):
     return None
 
 
-# ── Gross / Net ──────────────────────────────────────────────────────────────
-# 광고비 실적은 항상 Net이다. 예산에 수수료가 있으면(같은 범위의 cost ≠ cost_net) Gross/Net 두 보기를 만든다.
-# Gross 광고비 = Net 광고비 × (그 범위의 Gross 예산 ÷ Net 예산). 수수료를 알 수 없는 범위는 수수료 0%(Gross = Net)로 본다.
-
-
-def fee_ratios(budgets):
-    """예산 항목 → {(달, 매체, 캠페인 또는 None): Gross ÷ Net}. 매체·캠페인 범위에 cost·cost_net이 둘 다 있을 때만 만든다.
-    매체 행에 비율이 없으면 그 매체 캠페인들의 합(Gross 합 ÷ Net 합)으로 매체 비율을 채운다(캠페인 목표가 없는 줄에 쓴다)."""
-    out, camp = {}, {}
-    for b in budgets:
-        g, n, sc = b["v"].get("cost"), b["v"].get("cost_net"), b["scope"]
-        if not g or not n or "m" not in sc or set(sc) - {"m", "c"}:
-            continue
-        out[(b["mo"], sc["m"], sc.get("c"))] = g / n
-        if "c" in sc:
-            s = camp.setdefault((b["mo"], sc["m"]), [0.0, 0.0])
-            s[0] += g
-            s[1] += n
-    for (mo, m), (g, n) in camp.items():
-        out.setdefault((mo, m, None), g / n)
-    return out
-
-
-def has_fee(ratios):
-    return any(abs(r - 1) > 1e-9 for r in ratios.values())
-
-
-def add_gross(rows, ratios):
-    """행마다 Gross 광고비(cost_g)를 붙인다 — 캠페인 비율 → 매체 비율 → 1(수수료 0%) 순."""
-    for r in rows:
-        mo = f"{r['day']:%Y-%m}"
-        f = ratios.get((mo, r["m"], r.get("c"))) if r.get("c") is not None else None
-        r["cost_g"] = r["cost"] * (f or ratios.get((mo, r["m"], None)) or 1.0)
-
-
-def _net_cost(b, budgets):
-    """cost_net이 없는 범위(첫째 표의 전체 합계, 캠페인 목표만 있는 매체 등)의 Net 예산 = Gross − 한 단계 아래 범위의 수수료 합
-    (전체 → 매체, 매체 → 캠페인). 아래 범위에 수수료가 없으면 수수료 0%(Gross 그대로)."""
-    sc = b["scope"]
-    nxt = "m" if not sc else "c" if set(sc) == {"m"} else None
-    fee = 0.0
-    if nxt:
-        for x in budgets:
-            xs = x["scope"]
-            if x["mo"] == b["mo"] and set(xs) == set(sc) | {nxt} and all(xs[k] == sc[k] for k in sc):
-                g = x["v"].get("cost")
-                if g:
-                    fee += g - (x["v"].get("cost_net") or _net_cost(x, budgets))
-    return b["v"]["cost"] - fee
-
-
-def net_budgets(budgets):
-    """Net 보기의 예산: cost = cost_net(없으면 _net_cost)."""
-    out = []
-    for b in budgets:
-        v = dict(b["v"])
-        n = v.pop("cost_net", None)
-        if v.get("cost"):
-            v["cost"] = n or _net_cost(b, budgets)
-        out.append(dict(b, v=v))
-    return out
+# ── Gross / Net (규칙은 shared/assets/fees.py) ──────────────────────────────────
 
 
 def basis_view(report, rows, basis):
@@ -361,8 +303,10 @@ def basis_view(report, rows, basis):
             if basis == "gross" and g is not None:
                 cols["cost"] = g
             rep[k] = dict(X, cols=cols)
-    if basis == "net" and rep.get("table"):
-        rep["table"] = dict(rep["table"], budgets=net_budgets(rep["table"].get("budgets") or []))
+    if rep.get("table"):   # 엑셀은 한 기준의 예산만 본다
+        T = rep["table"]
+        rep["table"] = {k: v for k, v in dict(T, budgets=T.get("budgets_net") if basis == "net" else T.get("budgets")).items()
+                        if k != "budgets_net"}
     return rep, ([dict(r, cost=r["cost_g"]) for r in rows] if basis == "gross" else rows)
 
 
@@ -581,8 +525,8 @@ def encode(rows, dims, start, end):
     cols["d"] = [(r["day"] - start).days for r in rows]
     for _, k in ATOMS:
         cols[k] = [r[k] if not float(r[k]).is_integer() else int(r[k]) for r in rows]
-    if rows and "cost_g" in rows[0]:   # 수수료가 있을 때만 — Gross 광고비(원 단위로 반올림)
-        cols["cost_g"] = [round(r["cost_g"]) for r in rows]
+    if rows and "cost_g" in rows[0]:   # 수수료가 있을 때만 — Gross 광고비(fees.add_gross가 소수 둘째 자리로 맞춘 값)
+        cols["cost_g"] = [r["cost_g"] for r in rows]
     return {"days": days, "dict": dic, "cols": cols, "n": len(rows)}
 
 
@@ -653,22 +597,24 @@ def compute(payload):
             if k in b["scope"]:
                 b["scope"][k] = canon[k].get(str(b["scope"][k]).strip().lower(), b["scope"][k])
     ld = line_dims(dims)
-    ratios = fee_ratios(budgets)
-    fee = has_fee(ratios)
+    ratios = fees.fee_ratios(budgets)
+    fee = fees.ratios_have_fee(ratios)
 
     def comments(rs, bs):
         return {"daily": build_daily(rs, E, media, ld, DROP_THRESHOLD, currency),
                 "weekly": build_weekly(rs, E, media, ld, bs, months, currency, has_view=bool(keys.get("views")))}
     if fee:   # 수수료가 있다 — Gross/Net 두 보기(문장은 둘 다 만들고, 표는 Gross 광고비 열 cost_g를 더한다)
-        add_gross(rows, ratios)
+        fees.add_gross(rows, ratios)
         report["fee"] = True
         report["comment"] = {"gross": comments([dict(r, cost=r["cost_g"]) for r in rows], budgets),
-                             "net": comments(rows, net_budgets(budgets))}
+                             "net": comments(rows, fees.net_budgets(budgets))}
     else:
         report["comment"] = comments(rows, budgets)
     has = {"imp": bool(keys.get("impression")), "click": bool(keys.get("click")), "view": bool(keys.get("views"))}
     report["table"] = dict(encode(rows, dims, start, E), dims=[{"key": k, "label": lb} for src, k, lb in DIMS if src in dims],
                            has=has, budgets=budgets)
+    if fee:   # Net 보기의 예산(cost = Net 예산) — 브라우저는 기준에 따라 고르기만 한다
+        report["table"]["budgets_net"] = fees.net_budgets(budgets)
     # Placement는 전체 보고서와 tables(표를 고르지 않았거나 place를 골랐을 때)에서만 쓴다
     if not part or (part == "tables" and (not tables or "place" in tables)):
         report["place"] = build_place(payload.get("place"), menv, keys, start, E, ratios if fee else None)
@@ -710,7 +656,7 @@ def build_place(spec, menv, keys, start, E, ratios=None):
     if not prow:
         return None
     if ratios:
-        add_gross(prow, ratios)
+        fees.add_gross(prow, ratios)
     labels = {pl: "노출 위치", AD_TYPE: "Ad Type", P: "상품"}
     return dict(encode(prow, pd, start, E), dims=[{"key": SHORT[d], "label": labels[d]} for d in pd])
 
