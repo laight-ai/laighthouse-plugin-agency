@@ -412,7 +412,10 @@ def main():
             "min": {"impression": MIN_IMP, "share": MIN_SHARE}, "media": [],
             "prev": {"start": p_start, "end": p_end, "ok": prev_rows is not None},
             "tree": detail_tree(rows, prev_rows, thumbs), "summary": bullets,
-            "trend": trend}
+            "trend": trend,
+            # 매체별 직전 기간 합계(원자 지표) — 이번 기간에 없는 매체도 들어가 머리말 증감이 요약과 같아진다
+            "prev_media": {m: [sum(e[k] for e in prev_rows if e["media"] == m) for k in ATOMS]
+                           for m in {e["media"] for e in prev_rows}} if prev_rows is not None else {}}
     fields = ("name", "campaign_name", "ad_group_name", "cost", "impression", "click", "conversion", "revenue",
               "ctr", "cpc", "cvr", "roas")
     for m in order:
