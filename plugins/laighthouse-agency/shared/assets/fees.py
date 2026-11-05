@@ -1,4 +1,4 @@
-"""광고비·예산 Gross / Net — 빌더가 공유하는 규칙(report_kit.py에서 분리).
+"""광고비·예산 Gross / Net — 빌더가 공유하는 규칙.
 
 광고비 실적(get_ad_performance)은 항상 Net이다. 예산(get_target_progress_v2 원문 둘째 표)에 수수료가 있으면
 (같은 범위의 cost ≠ cost_net) Gross 보기를 더 만든다.
@@ -92,6 +92,14 @@ def parse_fees(text):
 
 def has_fee(fees):
     return any(abs(r - 1) > 1e-9 for d in (fees or {}).values() for r in d.values())
+
+
+BASIS_NOTE = {True: "Gross(광고비 = 매체 집행액 Net × 수수료 비율, 예산 = Gross)", False: "Net(수수료 미등록 — Gross = Net)"}
+
+
+def net_only(net, gross):
+    """Net 섹션 묶음에서 Gross와 같은 섹션을 뺀다 — 화면은 빠진 섹션을 기본(Gross) 묶음에서 가져온다."""
+    return {k: v for k, v in net.items() if v != gross.get(k)}
 
 
 def report_has_fee(target_progress):

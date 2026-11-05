@@ -159,7 +159,7 @@ def _label(value):
     return UNSET_LABEL if value is None or value == "" else str(value)
 
 
-label = _label   # 공개 이름 — 다른 공용 모듈(fees.py)이 쓴다
+label = _label   # 모듈 밖에서 쓰는 공개 이름
 
 
 def resolve_roles(envelope):

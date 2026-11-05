@@ -305,9 +305,11 @@ def basis_view(report, rows, basis):
                 cols["cost"] = g
             rep[k] = dict(X, cols=cols)
     if rep.get("table"):   # 엑셀은 한 기준의 예산만 본다
-        T = rep["table"]
-        rep["table"] = {k: v for k, v in dict(T, budgets=T.get("budgets_net") if basis == "net" else T.get("budgets")).items()
-                        if k != "budgets_net"}
+        T = dict(rep["table"])
+        nb = T.pop("budgets_net", None)
+        if basis == "net":
+            T["budgets"] = nb
+        rep["table"] = T
     return rep, ([dict(r, cost=r["cost_g"]) for r in rows] if basis == "gross" else rows)
 
 
@@ -617,6 +619,8 @@ def compute(payload):
                            has=has, budgets=budgets)
     if fee:   # Net 보기의 예산(cost = Net 예산) — 브라우저는 기준에 따라 고르기만 한다
         report["table"]["budgets_net"] = nb
+    for b in budgets + (nb or []):   # srv(서버가 준 목표 키)는 Net 예산 계산에만 쓴다 — HTML에 넣지 않는다
+        b.pop("srv", None)
     # Placement는 전체 보고서와 tables(표를 고르지 않았거나 place를 골랐을 때)에서만 쓴다
     if not part or (part == "tables" and (not tables or "place" in tables)):
         report["place"] = build_place(payload.get("place"), menv, keys, start, E, ratios if fee else None)

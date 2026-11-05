@@ -183,7 +183,7 @@
       [['gross', 'Gross'], ['net', 'Net']].forEach(([k, l]) => {
         const b = h('button', 'lh-basis-b' + (basis === k ? ' is-on' : ''), l); b.type = 'button';
         b.setAttribute('aria-pressed', String(basis === k));
-        b.title = k === 'gross' ? '광고비 = Net × (Gross 예산 ÷ Net 예산), 예산 = Gross' : '광고비 = 매체 집행액(Net), 예산 = Net';
+        b.title = k === 'gross' ? '광고비 = 매체 집행액(Net) × 수수료 비율(Gross 예산 ÷ Net 예산), 예산 = Gross' : '광고비 = 매체 집행액(Net), 예산 = Net';
         b.addEventListener('click', () => setBasis(k));
         g.appendChild(b);
       });

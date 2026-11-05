@@ -1384,8 +1384,8 @@
 
   /* 템플릿 부트스트랩: data-sec 블록마다 렌더러 호출, 데이터 없으면 placeholder.
    * report.basis(수수료가 있는 브랜드 — 광고비 실적은 Net, 예산은 Gross/Net 둘 다): 머리말에 기준 토글을 두고
-   * 고른 기준의 섹션 묶음으로 다시 그린다 — 기본 기준(basis.default)은 report.sections, 다른 기준은 basis.sections[기준]
-   * (같은 섹션을 HTML에 두 번 넣지 않는다). basis.notes[기준][섹션]은 그 섹션 아래 각주. */
+   * 고른 기준의 섹션 묶음으로 다시 그린다 — 기본 기준(basis.default)은 report.sections, 다른 기준은 basis.sections[기준]에
+   * 기본과 달라진 섹션만 있고 나머지는 기본 묶음을 쓴다(같은 섹션을 HTML에 두 번 넣지 않는다). basis.notes[기준][섹션]은 그 섹션 아래 각주. */
   const LS_BASIS = 'lh-basis';
   K.render = function (report, renderers) {
     K.init(report);
@@ -1396,7 +1396,7 @@
       if (basis !== B.default && !B.sections[basis]) basis = B.default;
     }
     function paint() {
-      const sections = B && basis !== B.default ? B.sections[basis] : report.sections;
+      const alt = B && basis !== B.default ? B.sections[basis] : null;   // 다른 기준은 기본과 달라진 섹션만 담는다
       const notes = (B && B.notes && B.notes[basis]) || {};
       document.querySelectorAll('[data-sec]').forEach(el0 => {
         let el = el0;
@@ -1407,7 +1407,7 @@
         }
         el.dataset.drawn = '1';
         const key = el.getAttribute('data-sec');
-        const data = sections[key];
+        const data = alt && key in alt ? alt[key] : report.sections[key];
         if (data == null || !renderers[key]) { K.placeholder(el); return; }
         try { renderers[key](el, data); } catch (e) { console.error(key, e); K.placeholder(el); return; }
         if (notes[key]) el.appendChild(h('p', 'lh-note', notes[key]));
@@ -1427,7 +1427,7 @@
       [['gross', 'Gross'], ['net', 'Net']].forEach(([k, l]) => {
         const b = h('button', 'lh-basis-b' + (basis === k ? ' is-on' : ''), l); b.type = 'button';
         b.setAttribute('aria-pressed', String(basis === k));
-        b.title = k === 'gross' ? '광고비 = 매체 집행액(Net) × 수수료 비율, 예산 = Gross' : '광고비 = 매체 집행액(Net), 예산 = Net';
+        b.title = k === 'gross' ? '광고비 = 매체 집행액(Net) × 수수료 비율(Gross 예산 ÷ Net 예산), 예산 = Gross' : '광고비 = 매체 집행액(Net), 예산 = Net';
         b.addEventListener('click', () => {
           if (basis === k) return;
           basis = k;

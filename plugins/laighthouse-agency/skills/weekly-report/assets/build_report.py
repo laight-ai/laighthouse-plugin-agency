@@ -284,7 +284,7 @@ def digest(payload):
     unit_of = lambda k: units.get(k) or (cur_c if k in {keys.get(r) for r in kit.MONEY_ROLES} else None)  # noqa: E731
 
     out = {"이번주": rep["__CUR_SHORT__"], "전주": rep["__BASE_SHORT__"],
-           "광고비·예산 기준": "Gross(광고비 = 매체 집행액 Net × 수수료 비율, 예산 = Gross)" if fee else "Net(수수료 미등록 — Gross = Net)"}
+           "광고비·예산 기준": fees.BASIS_NOTE[fee]}
     if c["tot"]:
         sp, bud = c["tot"].get(keys.get("cost")), c["targets"].get(keys.get("cost"))
         out["월누적"] = {"광고비": kit.fmt_metric(sp, cur_c, cur_c), "월예산": kit.fmt_metric(bud, cur_c, cur_c) if bud else None,
@@ -314,7 +314,7 @@ def main():
     sections, rep, _ = compute(payload, basis="gross" if fee else None)
     report = {"currency": payload.get("currency") or "₩", "sections": sections}
     if fee:   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 Gross)
-        report["basis"] = {"default": "gross", "sections": {"net": compute(payload, check_dims=False, basis="net")[0]},
+        report["basis"] = {"default": "gross", "sections": {"net": fees.net_only(compute(payload, check_dims=False, basis="net")[0], sections)},
                            "notes": {"net": {"s2": "* Weekly Summary는 Gross 기준 숫자로 작성되었습니다."}}}
     path, size = kit.build_html(ASSETS_DIR, rep, report, payload["out"])
     json.dump({"out": path, "bytes": size,

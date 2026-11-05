@@ -222,7 +222,7 @@ def digest(payload):
         return {"이름": name, "당월": fmt(a), "전월": fmt(b), "전월 대비": change(a, b)}
 
     out = {"당월": M0, "전월": M1,
-           "광고비·예산 기준": "Gross(광고비 = 매체 집행액 Net × 수수료 비율, 예산 = Gross)" if fee else "Net(수수료 미등록 — Gross = Net)"}
+           "광고비·예산 기준": fees.BASIS_NOTE[fee]}
     t0 = c["tot"](M0)
     if t0:
         out["전체"] = row("전체", t0, c["tot"](M1))
@@ -262,7 +262,7 @@ def main():
     payload = kit.read_payload()
     if has_fee(payload):   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 Gross)
         sections, rep, report, _ = compute(payload, basis="gross")
-        report["basis"] = {"default": "gross", "sections": {"net": compute(payload, check_dims=False, basis="net")[0]},
+        report["basis"] = {"default": "gross", "sections": {"net": fees.net_only(compute(payload, check_dims=False, basis="net")[0], sections)},
                            "notes": {"net": {"s2": "* Executive Summary는 Gross 기준 숫자로 작성되었습니다."}}}
     else:
         sections, rep, report, _ = compute(payload)
