@@ -609,7 +609,7 @@ def compute(payload):
     nb = fees.net_budgets(budgets, derive_targets) if fee else None
     if fee:   # 수수료가 있다 — Gross/Net 두 보기(문장은 둘 다 만들고, 표는 Gross 광고비 열 cost_g를 더한다)
         fees.add_gross(rows, ratios)
-        report["fee"] = fees.BASIS_UI   # 토글 문구(라벨·버튼) — 화면은 받아 그리기만 한다
+        report["fee"] = fees.basis_ui(fees.ratios_fee_note(ratios))   # 토글 문구·수수료율 — 화면은 받아 그리기만 한다
         report["comment"] = {"gross": comments([dict(r, cost=r["cost_g"]) for r in rows], budgets),
                              "net": comments(rows, nb)}
     else:

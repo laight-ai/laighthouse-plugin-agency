@@ -189,6 +189,7 @@
         g.appendChild(b);
       });
       basisEl.appendChild(g);
+      if (rep.fee.note) basisEl.appendChild(h('span', 'lh-basis-fee', rep.fee.note));   // 수수료율(빌더 문구)
     }
     drawBasis();
 
@@ -520,7 +521,7 @@
       const tt = h('div');
       const h2 = h('h2', null, title + ' ');
       h2.appendChild(h('span', 'lh-muted', sub));
-      if (rep.fee) h2.appendChild(h('span', 'tb-basis-tag', basisLabel()));   // 표마다 지금 기준을 적는다(머리말 토글은 스크롤하면 안 보인다)
+      if (rep.fee) h2.appendChild(h('span', 'tb-basis-tag', basisLabel() + ' 기준'));   // 표마다 지금 기준을 적는다(머리말 토글은 스크롤하면 안 보인다)
       tt.appendChild(h2);
       hd.appendChild(tt);
       const ms = h('div', 'tb-menus');
