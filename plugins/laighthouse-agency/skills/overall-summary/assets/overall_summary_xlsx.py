@@ -618,7 +618,7 @@ def sheet_summary(book, ctx):
     title_block(sh, ctx)
     cols = ctx.sum_cols
     nb = sum(1 for c in cols if c[4] == "b")
-    dims = [ctx.dim("m")] + [ctx.dim(k) for k in ctx.default_dims(["p", "t"])]
+    dims = [ctx.dim("m")] + [ctx.dim(k) for k in ctx.default_dims(["c"])]   # 화면 Summary 기본과 같다(캠페인)
     D = len(dims)
     T = ctx.targets
 

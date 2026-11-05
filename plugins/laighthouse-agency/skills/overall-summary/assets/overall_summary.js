@@ -244,7 +244,7 @@
     const DEFS = metricDefs(T.has);
     const DIMS = T.dims;
     const has = k => DIMS.some(d => d.key === k);
-    const DIM_DEF = { total: ['p', 't'], monthly: ['p', 't'], product: ['p'], target: ['p', 't'] };
+    const DIM_DEF = { total: ['c'], monthly: ['c'], product: ['p'], target: ['p', 't'] };   // Summary 기본 = 캠페인(예산·목표 단위)
     Object.keys(DIM_DEF).forEach(id => {
       const on = DIM_DEF[id].filter(has);
       DIM_DEF[id] = on.length ? on : DIMS.slice(0, 1).map(d => d.key);
