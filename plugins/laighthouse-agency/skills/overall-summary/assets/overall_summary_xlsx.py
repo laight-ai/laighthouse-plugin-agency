@@ -607,7 +607,8 @@ def title_block(sh, ctx, c=2):
     h = ctx.report["header"]
     sh.set(2, c, f"{ctx.brand} | 종합 리포트", {"b": True, "sz": 14}, fit=False)
     sh.set(3, c, "Digital Campaign Report", {"b": True, "sz": 18}, fit=False)
-    sh.set(4, c, f"집계 기간 {h['period']} · 미디어 {h['media'] or '-'}", {"fc": "595959"}, fit=False)
+    basis = f" · 광고비·예산 {h['basis']} 기준" if h.get("basis") else ""   # 수수료가 있는 브랜드만(Gross·Net 파일이 따로 있다)
+    sh.set(4, c, f"집계 기간 {h['period']} · 미디어 {h['media'] or '-'}{basis}", {"fc": "595959"}, fit=False)
     sh.heights.update({2: 23, 3: 30})
     sh.widths[1] = 3
 
@@ -617,7 +618,7 @@ def sheet_summary(book, ctx):
     title_block(sh, ctx)
     cols = ctx.sum_cols
     nb = sum(1 for c in cols if c[4] == "b")
-    dims = [ctx.dim("m")] + [ctx.dim(k) for k in ctx.default_dims(["p", "t"])]
+    dims = [ctx.dim("m")] + [ctx.dim(k) for k in ctx.default_dims(["c"])]   # 화면 Summary 기본과 같다(캠페인)
     D = len(dims)
     T = ctx.targets
 

@@ -1382,15 +1382,65 @@
     render();
   };
 
-  /* 템플릿 부트스트랩: data-sec 블록마다 렌더러 호출, 데이터 없으면 placeholder */
+  /* 템플릿 부트스트랩: data-sec 블록마다 렌더러 호출, 데이터 없으면 placeholder.
+   * report.basis(보기 묶음 토글 — {label, options: [{key, label, title}], default, sections, notes}): 머리말에 토글을 두고
+   * 고른 보기의 섹션 묶음으로 다시 그린다 — 기본 보기(basis.default)는 report.sections, 다른 보기는 basis.sections[보기]에
+   * 기본과 달라진 섹션만 있고 나머지는 기본 묶음을 쓴다. basis.notes[보기][섹션]은 그 섹션 아래 각주. 문구는 빌더가 넘긴다. */
+  const LS_BASIS = 'lh-basis';
   K.render = function (report, renderers) {
     K.init(report);
-    document.querySelectorAll('[data-sec]').forEach(el => {
-      const key = el.getAttribute('data-sec');
-      const data = report.sections[key];
-      if (data == null || !renderers[key]) { K.placeholder(el); return; }
-      try { renderers[key](el, data); } catch (e) { console.error(key, e); K.placeholder(el); }
-    });
+    const B = report.basis;
+    let basis = null;
+    if (B) {
+      try { basis = localStorage.getItem(LS_BASIS); } catch (e) { /* 저장 불가 환경 */ }
+      if (basis !== B.default && !B.sections[basis]) basis = B.default;
+    }
+    function paint() {
+      const alt = B && basis !== B.default ? B.sections[basis] : null;   // 다른 기준은 기본과 달라진 섹션만 담는다
+      const notes = (B && B.notes && B.notes[basis]) || {};
+      document.querySelectorAll('[data-sec]').forEach(el0 => {
+        let el = el0;
+        if (el0.dataset.drawn) {   // 다시 그릴 때: 예전 차트를 정리하고 빈 요소로 바꾼다(요소에 붙은 리스너도 함께 떨어진다 —
+          // document에 붙은 드롭다운 닫기 리스너는 남지만 떨어진 요소만 가리켜 동작에 영향이 없다)
+          if (window.Chart && Chart.getChart) el0.querySelectorAll('canvas').forEach(cv => { const c = Chart.getChart(cv); if (c) c.destroy(); });
+          el = el0.cloneNode(false); el0.replaceWith(el);
+        }
+        el.dataset.drawn = '1';
+        const key = el.getAttribute('data-sec');
+        const data = alt && key in alt ? alt[key] : report.sections[key];
+        if (data == null || !renderers[key]) { K.placeholder(el); return; }
+        try { renderers[key](el, data); } catch (e) { console.error(key, e); K.placeholder(el); return; }
+        if (notes[key]) el.appendChild(h('p', 'lh-note', notes[key]));
+      });
+    }
+    function toggle() {
+      const head = document.querySelector('.lh-header');
+      if (!head) return;
+      let box = head.querySelector('.lh-basis');
+      if (!box) {
+        box = h('div', 'lh-basis');
+        const print = head.querySelector('.lh-print');
+        if (print) head.insertBefore(box, print); else head.appendChild(box);
+      }
+      box.innerHTML = '';
+      if (B.label) box.appendChild(h('span', 'lh-basis-k', B.label));
+      (B.options || []).forEach(o => {
+        const k = o.key;
+        const b = h('button', 'lh-basis-b' + (basis === k ? ' is-on' : ''), o.label); b.type = 'button';
+        b.setAttribute('aria-pressed', String(basis === k));
+        if (o.title) b.title = o.title;
+        b.addEventListener('click', () => {
+          if (basis === k) return;
+          basis = k;
+          try { localStorage.setItem(LS_BASIS, k); } catch (e) { /* 저장 불가 환경 */ }
+          toggle();
+          paint();
+        });
+        box.appendChild(b);
+      });
+    }
+    if (B) toggle();
+    paint();
   };
 
   window.LHKit = K;

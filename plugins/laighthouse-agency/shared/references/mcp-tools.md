@@ -36,8 +36,13 @@
 ```
 
 - `media` 생략 = 전체. 이 플러그인의 스킬은 모두 **`media` 생략 1회**만 부른다 — 매체 목표는 둘째 표의 매체 행에서 읽는다.
-- 응답 첫째 표(`| metric | target | actual | progress_ratio |`)는 전체 합계(cost = Gross),
-  둘째 표(`| media | campaign_name | included | metric | target | actual | achievement |`)는 매체·캠페인 행이다.
+- 응답 첫째 표(`| metric | target | actual | progress_ratio |`)는 전체 합계(cost = Gross, 수수료가 없으면 Net),
+  둘째 표(`| media | campaign_name | included | metric | target | actual | achievement |`)는 매체·캠페인 행이다
+  (cost = Gross 예산, cost_net = Net 예산).
+- **Gross / Net**: 광고비 실적(`get_ad_performance`)은 항상 Net이다. 같은 범위의 cost ≠ cost_net이면 수수료가 있는 것이고,
+  빌더가 Gross·Net 두 보기를 만든다 — Gross 광고비 = Net × (cost ÷ cost_net), 범위는 캠페인 → 매체 → 수수료 0% 순
+  (매체 비율·Net 예산을 캠페인 합으로 낼 때 included N 캠페인은 뺀다). 규칙은 `shared/assets/fees.py`.
+  수수료는 달마다 같다고 본다(기준 달 비율을 지난 달에도 쓴다). 모델이 환산하지 않는다(원문 그대로 넘긴다).
 - 표 대신 한 줄 평문(`No all budget/target available for {month}.` 등)은 오류가 아니라 **목표 없음**이다.
 - 응답 원문을 그대로 빌더에 넘긴다 — `actual` 열은 쓰지 않는다(실적은 `get_ad_performance` 값).
 - `cost_metric`을 구버전 서버가 거절하면 그 인자를 빼고 1회 재호출한다. 그 밖의 에러는 목표 없음(빈 문자열)으로 두고 계속한다.
