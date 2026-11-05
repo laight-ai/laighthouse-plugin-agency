@@ -180,10 +180,11 @@
       if (!rep.fee) { basisEl.closest('div').remove(); return; }
       basisEl.innerHTML = '';
       const g = h('span', 'lh-basis');
-      [['gross', 'Gross'], ['net', 'Net']].forEach(([k, l]) => {
-        const b = h('button', 'lh-basis-b' + (basis === k ? ' is-on' : ''), l); b.type = 'button';
+      rep.fee.options.forEach(o => {   // 문구는 빌더가 넘긴다(shared/assets/fees.py BASIS_UI)
+        const k = o.key;
+        const b = h('button', 'lh-basis-b' + (basis === k ? ' is-on' : ''), o.label); b.type = 'button';
         b.setAttribute('aria-pressed', String(basis === k));
-        b.title = k === 'gross' ? '광고비 = 매체 집행액(Net) × 수수료 비율(Gross 예산 ÷ Net 예산), 예산 = Gross' : '광고비 = 매체 집행액(Net), 예산 = Net';
+        b.title = o.title;
         b.addEventListener('click', () => setBasis(k));
         g.appendChild(b);
       });

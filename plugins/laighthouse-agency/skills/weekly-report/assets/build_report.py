@@ -314,8 +314,8 @@ def main():
     sections, rep, _ = compute(payload, basis="gross" if fee else None)
     report = {"currency": payload.get("currency") or "₩", "sections": sections}
     if fee:   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 Gross)
-        report["basis"] = {"default": "gross", "sections": {"net": fees.net_only(compute(payload, check_dims=False, basis="net")[0], sections)},
-                           "notes": {"net": {"s2": "* Weekly Summary는 Gross 기준 숫자로 작성되었습니다."}}}
+        report["basis"] = fees.basis_bundle(sections, compute(payload, check_dims=False, basis="net")[0],
+                                             "* Weekly Summary는 Gross 기준 숫자로 작성되었습니다.")
     path, size = kit.build_html(ASSETS_DIR, rep, report, payload["out"])
     json.dump({"out": path, "bytes": size,
                "sections": {k: ("ok" if sections[k] is not None else "placeholder") for k in sorted(sections)}},

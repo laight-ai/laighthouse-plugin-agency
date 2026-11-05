@@ -1383,9 +1383,9 @@
   };
 
   /* 템플릿 부트스트랩: data-sec 블록마다 렌더러 호출, 데이터 없으면 placeholder.
-   * report.basis(수수료가 있는 브랜드 — 광고비 실적은 Net, 예산은 Gross/Net 둘 다): 머리말에 기준 토글을 두고
-   * 고른 기준의 섹션 묶음으로 다시 그린다 — 기본 기준(basis.default)은 report.sections, 다른 기준은 basis.sections[기준]에
-   * 기본과 달라진 섹션만 있고 나머지는 기본 묶음을 쓴다(같은 섹션을 HTML에 두 번 넣지 않는다). basis.notes[기준][섹션]은 그 섹션 아래 각주. */
+   * report.basis(보기 묶음 토글 — {label, options: [{key, label, title}], default, sections, notes}): 머리말에 토글을 두고
+   * 고른 보기의 섹션 묶음으로 다시 그린다 — 기본 보기(basis.default)는 report.sections, 다른 보기는 basis.sections[보기]에
+   * 기본과 달라진 섹션만 있고 나머지는 기본 묶음을 쓴다. basis.notes[보기][섹션]은 그 섹션 아래 각주. 문구는 빌더가 넘긴다. */
   const LS_BASIS = 'lh-basis';
   K.render = function (report, renderers) {
     K.init(report);
@@ -1423,11 +1423,12 @@
         if (print) head.insertBefore(box, print); else head.appendChild(box);
       }
       box.innerHTML = '';
-      box.appendChild(h('span', 'lh-basis-k', '광고비·예산 기준'));
-      [['gross', 'Gross'], ['net', 'Net']].forEach(([k, l]) => {
-        const b = h('button', 'lh-basis-b' + (basis === k ? ' is-on' : ''), l); b.type = 'button';
+      if (B.label) box.appendChild(h('span', 'lh-basis-k', B.label));
+      (B.options || []).forEach(o => {
+        const k = o.key;
+        const b = h('button', 'lh-basis-b' + (basis === k ? ' is-on' : ''), o.label); b.type = 'button';
         b.setAttribute('aria-pressed', String(basis === k));
-        b.title = k === 'gross' ? '광고비 = 매체 집행액(Net) × 수수료 비율(Gross 예산 ÷ Net 예산), 예산 = Gross' : '광고비 = 매체 집행액(Net), 예산 = Net';
+        if (o.title) b.title = o.title;
         b.addEventListener('click', () => {
           if (basis === k) return;
           basis = k;

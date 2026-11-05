@@ -262,8 +262,8 @@ def main():
     payload = kit.read_payload()
     if has_fee(payload):   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 Gross)
         sections, rep, report, _ = compute(payload, basis="gross")
-        report["basis"] = {"default": "gross", "sections": {"net": fees.net_only(compute(payload, check_dims=False, basis="net")[0], sections)},
-                           "notes": {"net": {"s2": "* Executive Summary는 Gross 기준 숫자로 작성되었습니다."}}}
+        report["basis"] = fees.basis_bundle(sections, compute(payload, check_dims=False, basis="net")[0],
+                                             "* Executive Summary는 Gross 기준 숫자로 작성되었습니다.")
     else:
         sections, rep, report, _ = compute(payload)
     path, size = kit.build_html(ASSETS_DIR, rep, report, payload["out"])

@@ -94,12 +94,21 @@ def has_fee(fees):
     return any(abs(r - 1) > 1e-9 for d in (fees or {}).values() for r in d.values())
 
 
+# 화면 토글(report.basis — 렌더링 킷은 이 문구를 받아 그리기만 한다)
+BASIS_UI = {"label": "광고비·예산 기준", "options": [
+    {"key": "gross", "label": "Gross", "title": "광고비 = 매체 집행액(Net) × 수수료 비율(Gross 예산 ÷ Net 예산), 예산 = Gross"},
+    {"key": "net", "label": "Net", "title": "광고비 = 매체 집행액(Net), 예산 = Net"}]}
 BASIS_NOTE = {True: "Gross(광고비 = 매체 집행액 Net × 수수료 비율, 예산 = Gross)", False: "Net(수수료 미등록 — Gross = Net)"}
 
 
 def net_only(net, gross):
     """Net 섹션 묶음에서 Gross와 같은 섹션을 뺀다 — 화면은 빠진 섹션을 기본(Gross) 묶음에서 가져온다."""
     return {k: v for k, v in net.items() if v != gross.get(k)}
+
+
+def basis_bundle(gross, net, summary_note):
+    """Weekly·Monthly report["basis"] — 기본(Gross) 섹션은 report.sections, Net은 달라진 섹션만, s2(모델 요약) 아래 각주."""
+    return dict(BASIS_UI, default="gross", sections={"net": net_only(net, gross)}, notes={"net": {"s2": summary_note}})
 
 
 def report_has_fee(target_progress):
@@ -109,7 +118,7 @@ def report_has_fee(target_progress):
 
 def _scalers(metrics, metric_keys):
     """지표마다 Gross 환산 방향: +1(×비율) · -1(÷비율). 환산하지 않는 지표는 빠진다."""
-    cost_like = {metric_keys.get(k) for k in ("cost", "cpm", "cpv") if metric_keys.get(k)}
+    cost_like = {metric_keys.get(k) for k in ("cost", "cpm", "cpc", "cpv") if metric_keys.get(k)}
     out = {}
     for x in metrics:
         if x in cost_like or _COST_PER_RE.match(x):
@@ -185,7 +194,9 @@ def net_target_text(text):
         return g[k] - sum(gv - net(x) for x, gv in g.items() if x[0] == k[0] and x[1] != "-" and x not in excl)
 
     first_net = _first_row(text, "cost_net")
+    # 매체 수수료 — 매체 행이 있으면 그 행, 없으면(캠페인 목표만 있는 매체) 포함 캠페인 수수료의 합
     media_fee = sum(gv - net(k) for k, gv in g.items() if k[1] == "-")
+    media_fee += sum(gv - net(k) for k, gv in g.items() if k[1] != "-" and k not in excl and (k[0], "-") not in g)
     out = []
     for ln in text.splitlines():
         cells = [c.strip() for c in ln.strip().strip("|").split("|")] if ln.strip().startswith("|") else None
@@ -208,25 +219,22 @@ def net_target_text(text):
 
 def fee_ratios(budgets):
     """예산 목록 → {(달 또는 None, 매체, 캠페인 또는 None): Gross ÷ Net}. 매체·캠페인 범위에 cost·cost_net이 둘 다 있을 때만.
-    매체 비율이 없으면 그 매체에 포함된 캠페인(inc N 제외)의 합으로 채운다. 달이 None인 키 = 가장 최근 달의 비율
-    (수수료는 달마다 같다고 보고, 그 달 비율이 없을 때 쓴다)."""
-    out, camp, direct = {}, {}, set()
-    for b in sorted(budgets, key=lambda b: b["mo"]):
+    매체 비율이 없으면 그 달 그 매체에 포함된 캠페인(inc N 제외)의 합으로 채운다. 달이 None인 키 = 그 범위 비율이 있는
+    가장 최근 달의 값(수수료는 달마다 같다고 보고, 그 달 비율이 없을 때 쓴다)."""
+    out, camp = {}, {}
+    for b in budgets:
         g, n, sc = b["v"].get("cost"), b["v"].get("cost_net"), b["scope"]
         if not g or not n or "m" not in sc or set(sc) - {"m", "c"}:
             continue
-        k = (sc["m"], sc.get("c"))
-        out[(b["mo"],) + k] = out[(None,) + k] = g / n   # 달 순서로 돌아 None 키는 가장 최근 달 값이 남는다
-        if "c" not in sc:
-            direct.add(sc["m"])
-        elif b.get("inc") != "N":
+        out[(b["mo"], sc["m"], sc.get("c"))] = g / n
+        if "c" in sc and b.get("inc") != "N":
             s = camp.setdefault((b["mo"], sc["m"]), [0.0, 0.0])
             s[0] += g
             s[1] += n
-    for (mo, m), (g, n) in sorted(camp.items()):
+    for (mo, m), (g, n) in camp.items():
         out.setdefault((mo, m, None), g / n)
-        if m not in direct:
-            out[(None, m, None)] = g / n
+    for (mo, m, c) in sorted((k for k in list(out) if k[0] is not None), key=lambda k: k[0]):
+        out[(None, m, c)] = out[(mo, m, c)]   # 달 순서로 덮어써 가장 최근 달 값이 남는다
     return out
 
 
@@ -243,6 +251,22 @@ def add_gross(rows, ratios):
         r["cost_g"] = _money(r["cost"] * f)
 
 
+def add_gross_like(rows, ref, ratios):
+    """덜 잘게 받은 행(Placement 등 캠페인 차원이 없는 행)의 Gross 광고비 — 본 표 행(ref, add_gross를 거친 행)의
+    (달, 매체)별 실효 비율(Σ cost_g ÷ Σ cost)을 써서 두 표의 Gross 합을 맞춘다. 본 표에 그 (달, 매체)가 없으면 add_gross 규칙."""
+    acc = {}
+    for r in ref:
+        s = acc.setdefault((f"{r['day']:%Y-%m}", r["m"]), [0.0, 0.0])
+        s[0] += r["cost_g"]
+        s[1] += r["cost"]
+    eff = {k: g / n for k, (g, n) in acc.items() if n}
+    add_gross(rows, ratios)
+    for r in rows:
+        f = eff.get((f"{r['day']:%Y-%m}", r["m"]))
+        if f:
+            r["cost_g"] = _money(r["cost"] * f)
+
+
 def _net_cost(b, budgets):
     """cost_net이 없는 범위(첫째 표의 전체 합계, 캠페인 목표만 있는 매체 등)의 Net 예산 = Gross − 한 단계 아래 범위의 수수료 합
     (전체 → 매체, 매체 → 캠페인 — 미포함 캠페인 제외). 아래 범위에 수수료가 없으면 수수료 0%(Gross 그대로)."""
@@ -255,6 +279,13 @@ def _net_cost(b, budgets):
             if (x["mo"] == b["mo"] and set(xs) == set(sc) | {nxt} and all(xs[k] == sc[k] for k in sc)
                     and x.get("inc") != "N" and x["v"].get("cost")):
                 fee += x["v"]["cost"] - (x["v"].get("cost_net") or _net_cost(x, budgets))
+        if nxt == "m":   # 매체 범위가 없는 매체(캠페인 목표만 있는 매체)는 그 포함 캠페인들의 수수료
+            have = {x["scope"]["m"] for x in budgets if x["mo"] == b["mo"] and set(x["scope"]) == {"m"}}
+            for x in budgets:
+                xs = x["scope"]
+                if (x["mo"] == b["mo"] and set(xs) == {"m", "c"} and xs["m"] not in have and x.get("inc") != "N"
+                        and x["v"].get("cost") and x["v"].get("cost_net")):
+                    fee += x["v"]["cost"] - x["v"]["cost_net"]
     return b["v"]["cost"] - fee
 
 

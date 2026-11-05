@@ -609,7 +609,7 @@ def compute(payload):
     nb = fees.net_budgets(budgets, derive_targets) if fee else None
     if fee:   # 수수료가 있다 — Gross/Net 두 보기(문장은 둘 다 만들고, 표는 Gross 광고비 열 cost_g를 더한다)
         fees.add_gross(rows, ratios)
-        report["fee"] = True
+        report["fee"] = fees.BASIS_UI   # 토글 문구(라벨·버튼) — 화면은 받아 그리기만 한다
         report["comment"] = {"gross": comments([dict(r, cost=r["cost_g"]) for r in rows], budgets),
                              "net": comments(rows, nb)}
     else:
@@ -619,11 +619,12 @@ def compute(payload):
                            has=has, budgets=budgets)
     if fee:   # Net 보기의 예산(cost = Net 예산) — 브라우저는 기준에 따라 고르기만 한다
         report["table"]["budgets_net"] = nb
-    for b in budgets + (nb or []):   # srv(서버가 준 목표 키)는 Net 예산 계산에만 쓴다 — HTML에 넣지 않는다
+    for b in budgets + (nb or []):   # srv(서버가 준 목표 키)·cost_net은 Net 예산 계산에만 쓴다 — HTML에 넣지 않는다
         b.pop("srv", None)
+        b["v"].pop("cost_net", None)
     # Placement는 전체 보고서와 tables(표를 고르지 않았거나 place를 골랐을 때)에서만 쓴다
     if not part or (part == "tables" and (not tables or "place" in tables)):
-        report["place"] = build_place(payload.get("place"), menv, keys, start, E, ratios if fee else None)
+        report["place"] = build_place(payload.get("place"), menv, keys, start, E, ratios if fee else None, rows)
     if part == "comment":   # 문장은 위에서 만들었다 — 표 데이터는 HTML에 넣지 않는다(파일이 가벼워진다)
         report["table"] = None
     return report, rows
@@ -645,9 +646,9 @@ def build_history(spec, names_spec, start, E):
     return campaign_history.build(items, names, start, E)
 
 
-def build_place(spec, menv, keys, start, E, ratios=None):
+def build_place(spec, menv, keys, start, E, ratios=None, ref=None):
     """Placement 표 데이터: 미디어 × (Ad Type/상품) × 노출 위치 × 일. 노출 위치 차원이 없으면 None(표가 조용히 빠진다).
-    ratios(수수료가 있을 때)를 주면 Gross 광고비 열을 더한다 — 캠페인 차원이 없으니 매체 비율로 환산한다."""
+    ratios(수수료가 있을 때)를 주면 Gross 광고비 열을 더한다 — 캠페인 차원이 없으니 본 표 행(ref)의 (달, 매체) 실효 비율로."""
     penv = kit.section_envelope(spec) if spec else None
     if not penv:
         return None
@@ -662,7 +663,7 @@ def build_place(spec, menv, keys, start, E, ratios=None):
     if not prow:
         return None
     if ratios:
-        fees.add_gross(prow, ratios)
+        fees.add_gross_like(prow, ref or [], ratios)
     labels = {pl: "노출 위치", AD_TYPE: "Ad Type", P: "상품"}
     return dict(encode(prow, pd, start, E), dims=[{"key": SHORT[d], "label": labels[d]} for d in pd])
 
