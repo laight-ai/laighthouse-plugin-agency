@@ -20,6 +20,7 @@
 | 스킬 | overall-summary-comment · -total · -tables · -history · -mix | 종합 리포트에서 섹션 하나만 뽑기(Comment / Total·Monthly Summary / Product·Target·Placement·Weekly·Daily 표 / Campaign History / Mix) |
 | 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
 | 스킬 | naver-search · naver-news · naver-blog · weather-impact | 외부 요인 보고서(HTML, 날짜 범위) — 네이버 검색량·뉴스·블로그, 서울 날씨(+광고 클릭) |
+| 스킬 | skill-catalog | 라이트하우스 스킬 목록(이름·명령어·설명·요청 예시)을 채팅에 표로 보여 준다 — "스킬 목록", "어떤 스킬 있어" |
 
 ## 사용법
 

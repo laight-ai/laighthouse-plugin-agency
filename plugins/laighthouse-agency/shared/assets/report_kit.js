@@ -1383,7 +1383,7 @@
   };
 
   /* 템플릿 부트스트랩: data-sec 블록마다 렌더러 호출, 데이터 없으면 placeholder.
-   * report.basis(보기 묶음 토글 — {label, options: [{key, label, title}], default, sections, notes}): 머리말에 토글을 두고
+   * report.basis(보기 묶음 토글 — {label, options: [{key, label, title}], note?, default, sections, notes}): 머리말에 토글을 두고
    * 고른 보기의 섹션 묶음으로 다시 그린다 — 기본 보기(basis.default)는 report.sections, 다른 보기는 basis.sections[보기]에
    * 기본과 달라진 섹션만 있고 나머지는 기본 묶음을 쓴다. basis.notes[보기][섹션]은 그 섹션 아래 각주. 문구는 빌더가 넘긴다. */
   const LS_BASIS = 'lh-basis';
@@ -1416,13 +1416,16 @@
     function toggle() {
       const head = document.querySelector('.lh-header');
       if (!head) return;
-      let box = head.querySelector('.lh-basis');
-      if (!box) {
-        box = h('div', 'lh-basis');
+      let wrap = head.querySelector('.lh-basis-wrap');
+      if (!wrap) {
+        wrap = h('div', 'lh-basis-wrap');
         const print = head.querySelector('.lh-print');
-        if (print) head.insertBefore(box, print); else head.appendChild(box);
+        if (print) head.insertBefore(wrap, print); else head.appendChild(wrap);
       }
-      box.innerHTML = '';
+      wrap.innerHTML = '';
+      const box = h('div', 'lh-basis');
+      wrap.appendChild(box);
+      if (B.note) wrap.appendChild(h('div', 'lh-basis-fee', B.note));   // 보기 옆 설명(빌더 문구 — 예: 수수료율)
       if (B.label) box.appendChild(h('span', 'lh-basis-k', B.label));
       (B.options || []).forEach(o => {
         const k = o.key;

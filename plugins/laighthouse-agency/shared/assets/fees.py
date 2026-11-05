@@ -12,7 +12,7 @@
 부품:
 - 원문용(weekly·monthly): parse_fees · has_fee · report_has_fee · gross_envelope · eff_factors · net_target_text
 - 파싱된 예산 목록용(종합 리포트): fee_ratios · ratios_have_fee · add_gross · add_gross_like · net_budgets
-- 화면: BASIS_UI(토글 문구) · BASIS_NOTE(digest 기준 설명) · basis_bundle · net_only
+- 화면: BASIS_UI(토글 문구) · basis_ui · fee_note·ratios_fee_note(수수료율 문구) · BASIS_NOTE(digest 기준 설명) · basis_bundle · net_only
 """
 import re
 
@@ -107,9 +107,41 @@ def net_only(net, gross):
     return {k: v for k, v in net.items() if v != gross.get(k)}
 
 
-def basis_bundle(gross, net, summary_note):
-    """Weekly·Monthly report["basis"] — 기본(Gross) 섹션은 report.sections, Net은 달라진 섹션만, s2(모델 요약) 아래 각주."""
-    return dict(BASIS_UI, default="gross", sections={"net": net_only(net, gross)}, notes={"net": {"s2": summary_note}})
+def _fee_pct(r):
+    """Gross ÷ Net → 수수료율(%) 문자열 — 그리드 입력과 같은 정의(Net = Gross × (1 − 수수료))."""
+    v = round((1 - 1 / r) * 100, 1)
+    return f"{v:g}%"
+
+
+def _fee_text(by_media):
+    """{매체: [비율…]} → '수수료 Meta 15% · Google 10%'. 매체 안에서 캠페인마다 다르면 '10~15%'."""
+    parts = []
+    for m, rs in by_media.items():
+        ps = sorted({round((1 - 1 / r) * 100, 1) for r in rs})
+        parts.append(f"{m} " + (_fee_pct(1 / (1 - ps[0] / 100)) if len(ps) == 1 else f"{ps[0]:g}~{ps[-1]:g}%"))
+    return "수수료 " + " · ".join(parts) if parts else ""
+
+
+def fee_note(target_progress):
+    """목표 원문 → 토글 옆 수수료율 문구(Weekly·Monthly — 기준 달). 매체 표기는 원문 그대로."""
+    g, n, _ = _budget_maps(target_progress)
+    names = {_nk(m): m for m, *_ in _rows(target_progress)}
+    by = {}
+    for k, gv in g.items():
+        if n.get(k):
+            by.setdefault(names.get(k[0], k[0]), []).append(gv / n[k])
+    return _fee_text(by)
+
+
+def basis_ui(note=""):
+    """토글 문구 + 수수료율 문구(note) — 화면은 받아 그리기만 한다."""
+    return dict(BASIS_UI, note=note) if note else dict(BASIS_UI)
+
+
+def basis_bundle(gross, net, summary_note, note=""):
+    """Weekly·Monthly report["basis"] — 기본(Gross) 섹션은 report.sections, Net은 달라진 섹션만, s2(모델 요약) 아래 각주,
+    note = 토글 옆 수수료율 문구(fee_note)."""
+    return dict(basis_ui(note), default="gross", sections={"net": net_only(net, gross)}, notes={"net": {"s2": summary_note}})
 
 
 def report_has_fee(target_progress):
@@ -237,6 +269,15 @@ def fee_ratios(budgets):
     for (mo, m, c) in sorted((k for k in list(out) if k[0] is not None), key=lambda k: k[0]):
         out[(None, m, c)] = out[(mo, m, c)]   # 달 순서로 덮어써 가장 최근 달 값이 남는다
     return out
+
+
+def ratios_fee_note(ratios):
+    """fee_ratios 결과 → 토글 옆 수수료율 문구(종합 리포트 — 범위마다 가장 최근 달 비율)."""
+    by = {}
+    for (mo, m, c), r in ratios.items():
+        if mo is None:
+            by.setdefault(m, []).append(r)
+    return _fee_text(by)
 
 
 def ratios_have_fee(ratios):
