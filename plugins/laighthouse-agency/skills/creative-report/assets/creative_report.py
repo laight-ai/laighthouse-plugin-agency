@@ -418,10 +418,18 @@ def main():
                            for m in {e["media"] for e in prev_rows}} if prev_rows is not None else {}}
     fields = ("name", "campaign_name", "ad_group_name", "cost", "impression", "click", "conversion", "revenue",
               "ctr", "cpc", "cvr", "roas")
+    # 소재별 직전 기간 원자 지표(카드 증감·신규 표시용). 같은 소재 = 매체·캠페인·광고그룹·ad_id·소재명이 같은 것
+    pkey = lambda e: (e["media"], e["campaign_name"], e["ad_group_name"], e["ad_id"], e["ad_name"])  # noqa: E731
+    pmap = {pkey(e): [e[k] for k in ATOMS] for e in prev_rows or []}
     for m in order:
         data["media"].append({"summary": media_summary(by_media[m]),
-                              "rows": [dict({k: e[k] for k in fields}, thumb=thumbs.get(id(e)))
+                              "rows": [dict({k: e[k] for k in fields}, thumb=thumbs.get(id(e)), prev=pmap.get(pkey(e)))
                                        for e in by_media[m]]})
+    # 직전 기간에만 집행한 매체 — 머리말 증감에 들어가므로 화면(매체 선택·세부 표)에도 보여 준다
+    data["prev_only"] = sorted((m for m in data["prev_media"] if m not in by_media and any(data["prev_media"][m])),
+                               key=lambda m: -data["prev_media"][m][0])
+    data["tree"] += [{"n": m, "c": [0] * len(ATOMS), "p": data["prev_media"][m], "k": [], "prev_only": True}
+                     for m in data["prev_only"]]
     with open(os.path.join(HERE, "report-template.html"), encoding="utf-8") as f:
         html = f.read()
     with open(os.path.join(SHARED, "report_kit.css"), encoding="utf-8") as f:
