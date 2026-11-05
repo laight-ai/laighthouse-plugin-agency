@@ -31,15 +31,34 @@
 .cr-zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 9; cursor: zoom-out; }
 .cr-zoom img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
 .cr-zoom.is-on { display: flex; }
-.dt-tools { display: flex; gap: 6px; }
-.dt-tbl td { vertical-align: middle; }
-.dt-tbl td.dt-name { text-align: left; white-space: normal; min-width: 220px; max-width: 360px; }
-.dt-tbl tr.dt-l0 td { background: #f5f5f4; font-weight: 700; }
-.dt-tbl tr.dt-l1 td { background: #fafaf9; font-weight: 600; }
-.dt-tog { display: inline-block; width: 16px; color: var(--muted); cursor: pointer; user-select: none; }
-.dt-d { display: block; font-size: 11px; font-weight: 500; margin-top: 2px; }
-.dt-up { color: var(--green); } .dt-down { color: #dc2626; } .dt-flat { color: var(--muted); }
-.dt-th { width: 56px; height: 38px; }
+.lh-page { max-width: 1240px; }   /* 세부 표의 지표 열이 넉넉히 보이게 */
+/* 세부 광고 성과 — 웹 보고서 세부 표(MetricTree 기간 뷰)와 같은 모양 */
+.dt-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dt-tools input { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 13px; width: 180px; }
+.dt-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.dt-seg button { border: none; background: #fff; padding: 5px 12px; font: inherit; font-size: 12px; cursor: pointer; color: var(--label); }
+.dt-seg button + button { border-left: 1px solid var(--line); }
+.dt-seg button.is-on { background: var(--accent); color: #fff; }
+.dt-k { font-size: 12px; color: var(--muted); }
+.dt-scroll { overflow: auto; max-height: 720px; border: 1px solid var(--line); border-radius: 8px; margin-top: 12px; }
+.dt-tbl { border-collapse: separate; border-spacing: 0; font-size: 13px; width: max-content; min-width: 100%; }
+.dt-tbl th, .dt-tbl td { padding: 8px 10px; border-bottom: 1px solid var(--line); border-right: 1px solid #f0efee; white-space: nowrap; background: #fff; }
+.dt-tbl thead th { position: sticky; top: 0; z-index: 2; background: #f8fafc; font-weight: 600; color: var(--label); text-align: left; }
+.dt-tbl th.num, .dt-tbl td.num { text-align: right; min-width: 110px; }
+.dt-tbl th.num { cursor: pointer; user-select: none; }
+.dt-tbl th.num .ar { color: var(--muted); font-size: 11px; margin-left: 4px; }
+.dt-tbl .lv { min-width: 150px; max-width: 220px; }
+.dt-tbl .sticky { position: sticky; left: 0; z-index: 1; box-shadow: 2px 0 0 #e7e5e4; }
+.dt-tbl thead .sticky { z-index: 3; }
+.dt-tbl tr.lv-1 td { background: #f8fafc; }
+.dt-item { display: inline-flex; align-items: center; gap: 4px; max-width: 220px; }
+.dt-item .tx { overflow: hidden; text-overflow: ellipsis; }
+.dt-car { width: 16px; color: #64748b; cursor: pointer; font-size: 11px; flex: none; }
+.dt-all { color: var(--muted); }
+.dt-v { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 18px; }
+.dt-d { font-size: 11px; color: var(--muted); }
+.dt-d.is-up { color: #dc2626; } .dt-d.is-down { color: #2563eb; }
+.dt-img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; cursor: zoom-in; border: 1px solid var(--line); display: block; margin: 0 auto; }
 </style>
 </head>
 <body>
@@ -61,9 +80,12 @@
   <section class="lh-section" id="detail">
     <div class="lh-section-head">
       <div><h2>세부 광고 성과</h2><div class="lh-meta" id="dt-meta"></div></div>
-      <div class="dt-tools"><button class="cr-chip" id="dt-open">모두 펼치기</button><button class="cr-chip" id="dt-close">모두 접기</button></div>
+      <div class="dt-tools">
+        <input id="dt-q" placeholder="검색" aria-label="세부 광고 성과 검색">
+        <span class="dt-k">펼칠 단계</span><span class="dt-seg" id="dt-depth"></span>
+      </div>
     </div>
-    <div class="cr-wrap"><table class="cr-tbl dt-tbl" id="dt"></table></div>
+    <div class="dt-scroll"><table class="dt-tbl" id="dt"></table></div>
   </section>
   <div class="lh-footer">— by LaightAI</div>
 </div>
@@ -133,58 +155,101 @@ function draw() {
   drawTree();   // 매체 칩이 세부 표에도 적용된다
 }
 
-// ── 세부 광고 성과: 매체 › 캠페인 › 광고그룹 › 소재 (이번 기간 + 직전 같은 길이 기간 대비 증감) ──
+// ── 세부 광고 성과: 웹 보고서 세부 표(MetricTree 기간 뷰)와 같은 규칙 ──
+//  단계마다 열(매체·캠페인·광고그룹·광고), 하위가 있는 줄은 다음 단계 칸에 '전체', 이미지 열은 이번 기간 소재 썸네일만.
+//  증감: 비율 지표는 %p(차), 나머지는 변화율 — 직전 값이 0이거나 없으면 '—'. 오름 = 빨강 ▲, 내림 = 파랑 ▼.
 const A = { cost: 0, impression: 1, click: 2, conversion: 3, revenue: 4 };
-const ratio = (a, b, k = 1) => b ? a / b * k : null;   // 분모 0 → 값 없음(증감도 없음)
+const ratio = (a, b, k = 1) => b ? a / b * k : null;   // 분모 0 → 값 없음
 const DM = [
-  ['광고비', v => v[A.cost], 'money', 'pct'], ['노출', v => v[A.impression], 'int', 'pct'], ['클릭', v => v[A.click], 'int', 'pct'],
-  ['CTR', v => ratio(v[A.click], v[A.impression], 100), 'ctr', 'pp'], ['CPC', v => ratio(v[A.cost], v[A.click]), 'money', 'pct'],
-].concat(D.has.conversion ? [['전환', v => v[A.conversion], 'int', 'pct'], ['CVR', v => ratio(v[A.conversion], v[A.click], 100), 'pct', 'pp']] : [])
- .concat(D.has.revenue ? [['ROAS', v => ratio(v[A.revenue], v[A.cost], 100), 'pct', 'pp']] : []);
-const fix = x => (x == null || !isFinite(x)) ? null : x;
-function delta(cur, prev, kind) {
-  cur = fix(cur); prev = fix(prev);
-  if (!D.prev.ok || prev == null || cur == null) return '';
-  let d, txt;
-  if (kind === 'pp') { d = cur - prev; txt = (d >= 0 ? '+' : '') + d.toFixed(1) + '%p'; }
-  else {
-    if (!prev) return cur ? '<span class="dt-d dt-flat">신규</span>' : '';   // 둘 다 0이면 증감 없음
-    d = (cur - prev) / prev * 100; txt = (d >= 0 ? '+' : '') + d.toFixed(1) + '%';
-  }
-  if (Math.abs(d) < 0.05) return '<span class="dt-d dt-flat">0.0</span>';
-  return `<span class="dt-d ${d > 0 ? 'dt-up' : 'dt-down'}">${d > 0 ? '▲' : '▼'} ${txt}</span>`;
+  ['광고비', v => v[A.cost], 'money', 0], ['노출', v => v[A.impression], 'int', 0], ['클릭', v => v[A.click], 'int', 0],
+  ['CTR', v => ratio(v[A.click], v[A.impression], 100), 'ctr', 1], ['CPC', v => ratio(v[A.cost], v[A.click]), 'money', 0],
+].concat(D.has.conversion ? [['전환', v => v[A.conversion], 'int', 0], ['CVR', v => ratio(v[A.conversion], v[A.click], 100), 'pct', 1]] : [])
+ .concat(D.has.revenue ? [['ROAS', v => ratio(v[A.revenue], v[A.cost], 100), 'pct', 1]] : []);
+const LV = ['매체', '캠페인', '광고그룹', '광고'];
+const DASH = '<span class="dt-d">—</span>';
+function change(n, m) {
+  if (!D.prev.ok || !n.p) return DASH;
+  const a = m[1](n.p), b = m[1](n.c);
+  if (a == null || b == null) return DASH;
+  let c;
+  if (m[3]) c = b - a;
+  else { if (a === 0) return DASH; c = (b - a) / Math.abs(a) * 100; }
+  const r = Math.round(c * 10) / 10;
+  const cls = r > 0 ? 'is-up' : r < 0 ? 'is-down' : '';
+  return `<span class="dt-d ${cls}">${r > 0 ? '▲ ' : r < 0 ? '▼ ' : ''}${Math.abs(r).toFixed(1)}${m[3] ? '%p' : '%'}</span>`;
 }
-const hasImg = nodes => nodes.some(n => n.t || hasImg(n.k));
-const open = new Set();
+// 하위가 같은 이름의 소재 하나뿐인 줄은 한 줄로 합친다(웹과 같음)
+(function collapse(ns) {
+  ns.forEach(n => {
+    collapse(n.k);
+    if (n.k.length === 1 && !n.k[0].k.length && n.k[0].n === n.n) { n.t = n.k[0].t; n.k = []; }
+  });
+})(D.tree);
 let uid = 0;
-(function tag(nodes, d) { nodes.forEach(n => { n.id = ++uid; n.d = d; if (d === 0) open.add(n.id); tag(n.k, d + 1); }); })(D.tree, 0);
+(function tag(ns, d) { ns.forEach(n => { n.id = ++uid; n.d = d; tag(n.k, d + 1); }); })(D.tree, 0);
+const dt = { open: new Set(), depth: 0, sort: null, q: '' };
+const hasImg = ns => ns.some(n => n.t || hasImg(n.k));
+const maxLv = ns => ns.reduce((a, n) => Math.max(a, n.d, maxLv(n.k)), 0);
+function sorted(ns) {
+  if (!dt.sort) return ns;
+  const m = DM[dt.sort.i], s = dt.sort.dir === 'asc' ? 1 : -1;
+  const val = n => { const v = m[1](n.c); return v == null ? -Infinity : v; };
+  return ns.slice().sort((a, b) => (val(a) - val(b)) * s);
+}
+const matches = n => n.n.toLowerCase().includes(dt.q) || n.k.some(matches);
 function drawTree() {
-  const img = hasImg(D.tree);
-  const head = `<thead><tr>${img ? '<th>소재</th>' : ''}<th style="text-align:left">매체 › 캠페인 › 광고그룹 › 소재</th>${DM.map(m => `<th>${m[0]}</th>`).join('')}</tr></thead>`;
+  const roots = D.tree.filter(n => !st.hidden.has(n.n));
+  const img = hasImg(roots), levels = LV.slice(0, maxLv(roots) + 1);
+  const head = `<thead><tr>${levels.map((l, i) => `<th class="lv${i === 0 ? ' sticky' : ''}">${l}</th>`).join('')}`
+    + (img ? '<th style="width:64px;text-align:center">이미지</th>' : '')
+    + DM.map((m, i) => `<th class="num" data-i="${i}">${m[0]}<span class="ar">${dt.sort && dt.sort.i === i ? (dt.sort.dir === 'asc' ? '▲' : '▼') : '⇕'}</span></th>`).join('')
+    + '</tr></thead>';
   const out = [];
-  (function walk(nodes) {
-    nodes.forEach(n => {
-      if (n.d === 0 && st.hidden.has(n.n)) return;
-      const kids = n.k.length > 0, isOpen = open.has(n.id);
-      out.push(`<tr class="dt-l${n.d}">${img ? `<td>${n.t ? `<div class="cr-th dt-th"><img src="${n.t}" alt=""></div>` : ''}</td>` : ''}
-        <td class="dt-name" style="padding-left:${6 + n.d * 18}px">${kids ? `<span class="dt-tog" data-id="${n.id}">${isOpen ? '▾' : '▸'}</span>` : '<span class="dt-tog"></span>'}${esc(n.n)}</td>
-        ${DM.map(m => `<td>${f[m[2]](fix(m[1](n.c)))}${n.p ? delta(m[1](n.c), m[1](n.p), m[3]) : ''}</td>`).join('')}</tr>`);
+  (function walk(ns) {
+    sorted(ns).forEach(n => {
+      if (dt.q && !matches(n)) return;
+      const kids = n.k.length > 0, isOpen = dt.q ? true : dt.open.has(n.id);
+      const cells = levels.map((_, lv) => {
+        let inner = '';
+        if (n.d === lv) inner = `<span class="dt-item">${kids ? `<span class="dt-car" data-id="${n.id}">${isOpen ? '▼' : '▶'}</span>` : '<span class="dt-car"></span>'}<span class="tx" title="${esc(n.n)}">${esc(n.n)}</span></span>`;
+        else if (n.d + 1 === lv && kids) inner = '<span class="dt-all">전체</span>';
+        return `<td class="lv${lv === 0 ? ' sticky' : ''}">${inner}</td>`;
+      }).join('');
+      out.push(`<tr class="lv-${n.d}">${cells}` + (img ? `<td>${n.t ? `<img class="dt-img" src="${n.t}" alt="${esc(n.n)}">` : ''}</td>` : '')
+        + DM.map(m => `<td class="num"><span class="dt-v"><span>${f[m[2]](m[1](n.c))}</span>${change(n, m)}</span></td>`).join('') + '</tr>');
       if (kids && isOpen) walk(n.k);
     });
-  })(D.tree);
-  document.getElementById('dt').innerHTML = head + '<tbody>' + out.join('') + '</tbody>';
+  })(roots);
+  document.getElementById('dt').innerHTML = head + '<tbody>'
+    + (out.join('') || `<tr><td colspan="${levels.length + DM.length + 1}">검색 결과가 없습니다.</td></tr>`) + '</tbody>';
+  document.getElementById('dt-depth').innerHTML = LV.slice(1, levels.length).map((l, i) =>
+    `<button data-d="${i + 1}" class="${dt.depth === i + 1 ? 'is-on' : ''}">${l}</button>`).join('');
 }
 document.getElementById('dt').addEventListener('click', e => {
-  const t = e.target.closest('.dt-tog[data-id]');
-  if (!t) return;
-  const id = +t.dataset.id;
-  open.has(id) ? open.delete(id) : open.add(id);
+  const c = e.target.closest('.dt-car[data-id]');
+  if (c) { const id = +c.dataset.id; dt.open.has(id) ? dt.open.delete(id) : dt.open.add(id); return drawTree(); }
+  const th = e.target.closest('th.num');
+  if (th) {   // 내림 → 오름 → 해제
+    const i = +th.dataset.i;
+    dt.sort = !dt.sort || dt.sort.i !== i ? { i, dir: 'desc' } : dt.sort.dir === 'desc' ? { i, dir: 'asc' } : null;
+    return drawTree();
+  }
+  if (e.target.matches('.dt-img')) {
+    const z = document.getElementById('zoom'); z.querySelector('img').src = e.target.src; z.classList.add('is-on');
+  }
+});
+document.getElementById('dt-depth').addEventListener('click', e => {
+  const b = e.target.closest('button[data-d]');
+  if (!b) return;
+  const d = +b.dataset.d;
+  dt.depth = dt.depth === d ? 0 : d;   // 펼칠 단계: 그 단계까지 펼친다, 다시 누르면 접기
+  dt.open.clear();
+  (function op(ns) { ns.forEach(n => { if (n.d < dt.depth && n.k.length) { dt.open.add(n.id); op(n.k); } }); })(D.tree);
   drawTree();
 });
-document.getElementById('dt-open').onclick = () => { (function all(ns) { ns.forEach(n => { if (n.k.length) open.add(n.id); all(n.k); }); })(D.tree); drawTree(); };
-document.getElementById('dt-close').onclick = () => { open.clear(); drawTree(); };
+document.getElementById('dt-q').addEventListener('input', e => { dt.q = e.target.value.trim().toLowerCase(); drawTree(); });
 document.getElementById('dt-meta').textContent = D.prev.ok
-  ? `${D.start} ~ ${D.end} · 증감은 직전 기간(${D.prev.start} ~ ${D.prev.end}) 대비 · 썸네일은 광고비 상위 소재까지`
+  ? `${D.start} ~ ${D.end} · 증감은 직전 기간(${D.prev.start} ~ ${D.prev.end}) 대비 · 이미지는 광고비 상위 소재까지`
   : `${D.start} ~ ${D.end} · 직전 기간 데이터가 없어 증감 없이 표시`;
 
 document.getElementById('title').textContent = D.brand + ' 소재 성과';

@@ -264,7 +264,7 @@ def detail_tree(rows, prev_rows, thumbs):
         for d in range(1, 5):
             key = path[d - 1]
             if key not in node["k"]:
-                node["k"][key] = {"n": e["name"] if d == 4 else key, "c": [0] * len(ATOMS),
+                node["k"][key] = {"n": (e["ad_name"] if e["ad_name"] not in (None, "", "-") else "(미지정)") if d == 4 else key, "c": [0] * len(ATOMS),
                                   "p": prev.get(path[:d], [0] * len(ATOMS)) if prev_rows is not None else None, "k": {}}
             node = node["k"][key]
             for i, k in enumerate(ATOMS):
