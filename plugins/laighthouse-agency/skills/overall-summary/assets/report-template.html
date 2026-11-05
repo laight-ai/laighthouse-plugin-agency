@@ -19,6 +19,14 @@ body { padding: 16px 60px 16px 16px; }
 .tb-hmeta > div { display: flex; flex-direction: column; gap: 2px; }
 .tb-hmeta .k { color: var(--muted); }
 .tb-hmeta .v { font-weight: 600; color: var(--ink); white-space: nowrap; }
+/* 광고비·예산 기준 토글(Gross/Net) — 수수료가 있는 브랜드만 보인다 */
+.tb-basis { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.tb-basis-b { border: none; background: none; border-radius: 6px; padding: 2px 10px; font: inherit; font-size: 12px; font-weight: 600;
+  color: var(--label); cursor: pointer; }
+.tb-basis-b:hover { background: var(--sub-bg); color: var(--ink); }
+.tb-basis-b.is-on { background: var(--ink); color: #fff; }
+.tb-basis-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: #eff6ff; color: var(--accent);
+  font-size: 11px; font-weight: 700; vertical-align: middle; }
 
 /* Comment */
 .tb-comment { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; font-size: 13px; line-height: 1.7; color: var(--body);
@@ -192,6 +200,7 @@ td.tb-inp .tb-in-text, td .tb-in-text { color: var(--accent); }
     <div class="tb-hmeta">
       <div><span class="k">집계 기간</span><span class="v" data-h="period"></span></div>
       <div><span class="k">매체</span><span class="v" data-h="media"></span></div>
+      <div><span class="k">광고비·예산 기준</span><span class="v" data-h="basis"></span></div>
     </div>
   </header>
 

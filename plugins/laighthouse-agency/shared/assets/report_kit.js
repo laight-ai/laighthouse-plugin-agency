@@ -1382,15 +1382,59 @@
     render();
   };
 
-  /* 템플릿 부트스트랩: data-sec 블록마다 렌더러 호출, 데이터 없으면 placeholder */
+  /* 템플릿 부트스트랩: data-sec 블록마다 렌더러 호출, 데이터 없으면 placeholder.
+   * report.basis(수수료가 있는 브랜드 — 광고비 실적은 Net, 예산은 Gross/Net 둘 다): 머리말에 기준 토글을 두고
+   * 고른 기준의 섹션 묶음(basis.sections[gross|net])으로 다시 그린다. basis.notes[기준][섹션]은 그 섹션 아래 각주. */
+  const LS_BASIS = 'lh-basis';
   K.render = function (report, renderers) {
     K.init(report);
-    document.querySelectorAll('[data-sec]').forEach(el => {
-      const key = el.getAttribute('data-sec');
-      const data = report.sections[key];
-      if (data == null || !renderers[key]) { K.placeholder(el); return; }
-      try { renderers[key](el, data); } catch (e) { console.error(key, e); K.placeholder(el); }
-    });
+    const B = report.basis;
+    let basis = null;
+    if (B) {
+      try { basis = localStorage.getItem(LS_BASIS); } catch (e) { /* 저장 불가 환경 */ }
+      if (!B.sections[basis]) basis = B.default;
+    }
+    function paint() {
+      const sections = B ? B.sections[basis] : report.sections;
+      const notes = (B && B.notes && B.notes[basis]) || {};
+      document.querySelectorAll('[data-sec]').forEach(el0 => {
+        let el = el0;
+        if (el0.dataset.drawn) { el = el0.cloneNode(false); el0.replaceWith(el); }   // 다시 그릴 때 예전 차트·리스너를 떼어 낸다
+        el.dataset.drawn = '1';
+        const key = el.getAttribute('data-sec');
+        const data = sections[key];
+        if (data == null || !renderers[key]) { K.placeholder(el); return; }
+        try { renderers[key](el, data); } catch (e) { console.error(key, e); K.placeholder(el); return; }
+        if (notes[key]) el.appendChild(h('p', 'lh-note', notes[key]));
+      });
+    }
+    function toggle() {
+      const head = document.querySelector('.lh-header');
+      if (!head) return;
+      let box = head.querySelector('.lh-basis');
+      if (!box) {
+        box = h('div', 'lh-basis');
+        const print = head.querySelector('.lh-print');
+        if (print) head.insertBefore(box, print); else head.appendChild(box);
+      }
+      box.innerHTML = '';
+      box.appendChild(h('span', 'lh-basis-k', '광고비·예산 기준'));
+      [['gross', 'Gross'], ['net', 'Net']].forEach(([k, l]) => {
+        const b = h('button', 'lh-basis-b' + (basis === k ? ' is-on' : ''), l); b.type = 'button';
+        b.setAttribute('aria-pressed', String(basis === k));
+        b.title = k === 'gross' ? '광고비 = 매체 집행액(Net) × 수수료 비율, 예산 = Gross' : '광고비 = 매체 집행액(Net), 예산 = Net';
+        b.addEventListener('click', () => {
+          if (basis === k) return;
+          basis = k;
+          try { localStorage.setItem(LS_BASIS, k); } catch (e) { /* 저장 불가 환경 */ }
+          toggle();
+          paint();
+        });
+        box.appendChild(b);
+      });
+    }
+    if (B) toggle();
+    paint();
   };
 
   window.LHKit = K;

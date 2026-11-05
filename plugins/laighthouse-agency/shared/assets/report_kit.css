@@ -17,6 +17,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR
 .lh-header h1 { font-size: 20px; font-weight: 700; color: var(--ink); }
 .lh-meta { font-size: 13px; color: var(--label); margin-top: 4px; }
 .lh-meta + .lh-meta { margin-top: 0; }
+/* 광고비·예산 기준 토글(Gross/Net) — 예산에 수수료가 있는 브랜드만 머리말에 붙는다 */
+.lh-basis { display: inline-flex; align-items: center; gap: 2px; padding: 2px; margin-left: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.lh-basis-k { font-size: 11px; color: var(--muted); padding: 0 6px; white-space: nowrap; }
+.lh-basis-b { border: none; background: none; border-radius: 6px; padding: 4px 10px; font: inherit; font-size: 12px; font-weight: 600; color: var(--label); cursor: pointer; }
+.lh-basis-b:hover { background: var(--sub-bg); color: var(--ink); }
+.lh-basis-b.is-on { background: var(--ink); color: #fff; }
 .lh-print { padding: 8px 14px; background: var(--accent); border: none; border-radius: 8px; font: inherit; font-size: 13px;
   color: #fff; cursor: pointer; }
 .lh-print:hover { filter: brightness(.95); }

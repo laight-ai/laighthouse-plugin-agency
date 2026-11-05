@@ -29,6 +29,8 @@ MCP 응답 원문(봉투·목표 표)을 섹션별로 그대로 받아, 공용 �
 }
 - 목표 표에 행이 있는 지표만 목표 대비 카드가 된다(현재 서버는 cost뿐). 목표가 없는 지표는 전월 동기간 대비 카드다.
 - 응답에 없는 차원(예: 상품)은 표의 Dimension 메뉴에 나오지 않는다 — 조용히 빠진다.
+- 광고비 실적은 항상 Net이다. 기준 달 예산에 수수료가 있으면(목표 원문의 cost ≠ cost_net) Gross/Net 두 벌을 만들어
+  머리말 토글로 바꾼다(기본 Gross — 광고비·CPM·CPC·CPV는 기준 달 수수료 비율로 환산, 수수료는 달마다 같다고 본다).
 - 출력(stdout): {"out", "bytes", "sections": {"s1".."s4": "ok"|"placeholder"}}
 """
 import io
@@ -78,7 +80,8 @@ def periods(target):
     return E, cur, base, weeks
 
 
-def compute(payload, check_dims=True):
+def compute(payload, check_dims=True, basis=None):
+    """basis: None(수수료 없음 — 원값) · "gross"(광고비를 Gross로 환산) · "net"(예산을 Net으로). has_fee(payload)로 고른다."""
     target = date.fromisoformat(payload["target_date"])
     E, cur_w, base_w, weeks = periods(target)
     dim = monthrange(E.year, E.month)[1]
@@ -128,6 +131,14 @@ def compute(payload, check_dims=True):
                            kit.check_rollup(parent, ["media"], kit.with_period(fine[k], "date", k), ["media"], keys)))
         kit.require_rollup(checks)
 
+    tp = (sec("s1") or {}).get("target_progress")
+    if basis == "gross":   # 광고비 실적(Net) → Gross. 월 누적 합계(s1)는 일별 매체 응답(s3)의 달마다 실효 비율로
+        fees = kit.parse_fees(tp)
+        e1, e3 = kit.gross_envelope(e1, fees, keys, breakdown=e3, month=True), kit.gross_envelope(e3, fees, keys)
+        fine = {k: kit.gross_envelope(v, fees, keys) for k, v in fine.items()}
+        e4 = dict(next(iter(fine.values())), rows=[r for e in fine.values() for r in e["rows"]]) if fine else None
+    elif basis == "net":   # 예산 = Net
+        tp = kit.net_target_text(tp)
     i3 = kit.index_rows(e3, ["media"])
     media = kit.ordered_names(i3) or kit.ordered_names(kit.index_rows(e4, ["media"]))
     colors = kit.media_colors(media)
@@ -139,7 +150,7 @@ def compute(payload, check_dims=True):
     targets = {}
     if e1 and tot(M0):
         cur, prev = tot(M0), tot(M1)
-        targets = kit.parse_targets((sec("s1") or {}).get("target_progress"), keys)
+        targets = kit.parse_targets(tp, keys)
         cards = []
         sp = cur.get(cost)
         if targets.get(cost) and isinstance(sp, (int, float)):
@@ -249,15 +260,22 @@ def compute(payload, check_dims=True):
     return sections, rep, ctx
 
 
+def has_fee(payload):
+    """기준 달 예산에 수수료가 있으면(cost ≠ cost_net) Gross/Net 두 보기를 만든다 — 광고비 실적은 항상 Net."""
+    return not payload.get("skeleton") and kit.has_fee(kit.parse_fees((payload.get("s1") or {}).get("target_progress")))
+
+
 def digest(payload):
     """Weekly Summary 작성 근거 — 이번주·전주 값과 변화(전체, 매체, 매체-캠페인·광고그룹).
     세부 단위는 광고비 상위 + 전주 대비 광고비 변동 상위(kit.digest_levels). 화면 표와 같은 규칙의 숫자다."""
-    sections, rep, c = compute(payload, check_dims=False)
+    fee = has_fee(payload)
+    sections, rep, c = compute(payload, check_dims=False, basis="gross" if fee else None)   # 수수료가 있으면 Gross(기본 보기)
     keys, metrics, units, cur_c = c["keys"], c["metrics"], c["units"], c["currency"]
     mm, fmt, change = kit.digest_fmt(keys, units, cur_c)
     unit_of = lambda k: units.get(k) or (cur_c if k in {keys.get(r) for r in kit.MONEY_ROLES} else None)  # noqa: E731
 
-    out = {"이번주": rep["__CUR_SHORT__"], "전주": rep["__BASE_SHORT__"]}
+    out = {"이번주": rep["__CUR_SHORT__"], "전주": rep["__BASE_SHORT__"],
+           "광고비·예산 기준": "Gross(광고비 = 매체 집행액 Net × 수수료 비율, 예산 = Gross)" if fee else "Net(수수료 미등록 — Gross = Net)"}
     if c["tot"]:
         sp, bud = c["tot"].get(keys.get("cost")), c["targets"].get(keys.get("cost"))
         out["월누적"] = {"광고비": kit.fmt_metric(sp, cur_c, cur_c), "월예산": kit.fmt_metric(bud, cur_c, cur_c) if bud else None,
@@ -283,8 +301,12 @@ def digest(payload):
 
 def main():
     payload = kit.read_payload()
-    sections, rep, _ = compute(payload)
+    fee = has_fee(payload)
+    sections, rep, _ = compute(payload, basis="gross" if fee else None)
     report = {"currency": payload.get("currency") or "₩", "sections": sections}
+    if fee:   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 Gross)
+        report["basis"] = {"default": "gross", "sections": {"gross": sections, "net": compute(payload, basis="net")[0]},
+                           "notes": {"net": {"s2": "* Weekly Summary는 Gross 기준 숫자로 작성되었습니다."}}}
     path, size = kit.build_html(ASSETS_DIR, rep, report, payload["out"])
     json.dump({"out": path, "bytes": size,
                "sections": {k: ("ok" if sections[k] is not None else "placeholder") for k in sorted(sections)}},

@@ -18,8 +18,8 @@
   - 첫째 표 `| metric | target | actual | progress_ratio |` = 호출 범위 합계(cost = Gross 예산 합) → 전체 범위.
   - 둘째 표 `| media | campaign_name | included | metric | target | actual | achievement |` = 매체 행(campaign_name `-`) 뒤에
     그 매체의 캠페인 행(저장된 경우에만, included Y/N — 미포함 캠페인도 온다). 단위는 캠페인이 끝이다.
-- `cost` 행 = 예산(Gross), `impression`·`click`·`views`·`ctr`·`vtr`·`cpm`·`cpc`·`cpv` 행 = e.* 목표.
-  `cost_net`·`revenue`·`roas` 행과 `actual`·`achievement` 열은 쓰지 않는다(실적은 get_ad_performance 값).
+- `cost` 행 = 예산(Gross), `cost_net` 행 = 예산(Net), `impression`·`click`·`views`·`ctr`·`vtr`·`cpm`·`cpc`·`cpv` 행 = e.* 목표.
+  `revenue`·`roas` 행과 `actual`·`achievement` 열은 쓰지 않는다(실적은 get_ad_performance 값).
   (호출에 `media`를 넣어 받은 원문이면 그 범위로 읽고, 범위 열을 가진 다른 표 형식도 같은 방식으로 읽는다.)
 - 매체·캠페인 이름은 BE와 같은 기준(앞뒤 공백·대소문자 무시)으로 데이터 표기에 맞춘다. 맞는 표기가 없는 행(그 달 실적이 없는
   매체·캠페인, 저장 코드 `NAVER GFA` 등)은 어느 행에도 붙지 않는다.
@@ -33,3 +33,14 @@
   - 여러 단위·여러 달을 합친 행: 합친 예산·노출·클릭·조회 목표로 비율 목표를 다시 계산한다.
 - 소진율 = 비용/예산. 진행율 = 경과일/월 일수(여러 달이면 합) — 예산이 있는 **맨 아래 행**에만 표시(목업과 같다).
 - 달성률 = 실적/목표(노출·클릭·조회).
+
+## Gross / Net (광고비·예산 기준)
+
+- 광고비 실적은 항상 Net이다. 예산에 수수료가 있으면(매체·캠페인 범위의 `cost` ≠ `cost_net`) 머리말에 `광고비·예산 기준 [Gross][Net]`
+  토글이 생기고 표마다 지금 기준 배지가 붙는다(기본 Gross, 고른 기준은 브라우저에 남는다). 수수료가 없으면 토글이 없다.
+- Gross 보기: 광고비 = Net × (Gross ÷ Net 예산) — 행의 캠페인 비율, 없으면 매체 비율(매체 행, 없으면 그 매체 캠페인들의 합), 없으면 1
+  (수수료 0%). 예산 = `cost`. CPM·CPC·CPV·소진율은 환산한 광고비로 다시 계산된다. Placement는 캠페인 차원이 없어 매체 비율을 쓴다.
+- Net 보기: 광고비 = 원값, 예산 = `cost_net`. `cost_net`이 없는 범위(첫째 표의 전체 합계, 캠페인 목표만 있는 매체)는
+  Gross − 한 단계 아래 범위(전체 → 매체, 매체 → 캠페인)의 수수료 합이다.
+- 단가 목표(e.CPM·e.CPC·e.CPV)와 Mix 단가 초기값은 그리드에 넣은 값 그대로다(기준에 따라 바꾸지 않는다).
+- Comment 문장(Daily·Weekly)도 기준마다 따로 만든다. 엑셀은 기준마다 한 파일이다.

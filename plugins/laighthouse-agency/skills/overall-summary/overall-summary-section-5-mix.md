@@ -15,7 +15,8 @@
 - 열 = 예산 · {집계 기간이 걸친 달마다 1열} · Exp.Imps · Exp.Clicks · Exp.VIEW · Exp.CTR · Exp.VTR · Exp.CPM · Exp.CPC · Exp.CPV (지표 설정으로 선택·순서).
 - **입력값(파란 글씨)**: 월 예산, VTR, CPM, CPC — 맨 아래 줄(캠페인)에서만 고친다. 바꾼 값은 브라우저에 브랜드별로 저장되고
   `입력값 초기화`로 되돌린다.
-  - 초기값: 그 달 캠페인 목표의 cost(Gross) → 월 예산, cpm·cpc·vtr → 단가(캠페인 목표가 없으면 매체 목표). 없으면 0.
+  - 초기값: 그 달 캠페인 목표의 예산(Gross 보기 = cost, Net 보기 = cost_net) → 월 예산, cpm·cpc·vtr → 단가(캠페인 목표가 없으면 매체 목표). 없으면 0.
+    입력값은 기준(Gross·Net)마다 따로 저장된다.
   - 그 달에 실적도 예산도 없는 칸, 조회가 없는 줄(예: 네이버 DA)의 VTR·조회·CPV는 입력 불가(회색).
 - 계산: 예산 = 월 예산 합, Exp.Imps = 예산/CPM×1000, Exp.Clicks = 예산/CPC, Exp.VIEW = Exp.Imps×VTR,
   묶음 행의 CTR·VTR·CPM·CPC·CPV는 그 합으로 다시 계산한다.
