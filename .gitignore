@@ -1,2 +1,9 @@
 __pycache__/
 *.pyc
+
+# 로컬 도구 폴더(IDE·oh-my-claudecode·BMAD)
+.idea/
+.omc/
+bmad*/
+_bmad*/
+.bmad*/
