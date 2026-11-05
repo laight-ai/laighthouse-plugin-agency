@@ -19,6 +19,7 @@
 | 스킬 | overall-summary | 종합 리포트(HTML) + 같은 이름의 엑셀(.xlsx) 렌더링 |
 | 스킬 | overall-summary-comment · -total · -tables · -history · -mix | 종합 리포트에서 섹션 하나만 뽑기(Comment / Total·Monthly Summary / Product·Target·Placement·Weekly·Daily 표 / Campaign History / Mix) |
 | 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
+| 스킬 | naver-search · naver-news · naver-blog · weather-impact | 외부 요인 보고서(HTML, 날짜 범위) — 네이버 검색량·뉴스·블로그, 서울 날씨(+광고 클릭) |
 
 ## 사용법
 
@@ -33,6 +34,21 @@
 > "breezm 데일리 보고서" → `daily-report` (기준일 기본: 어제)
 > "breezm 주간 보고서" → `weekly-report` (기준일 = 데이터 마지막 날, 기본: 어제)
 > "breezm 9월 월간 보고서" → `monthly-report` (대상 월 기본: 지난달)
+
+### 외부 요인 보고서 (1.8.0~)
+
+> "현대카드 최근 2주 네이버 검색량" → `naver-search`
+> "지난 2주 뉴스 얼마나 나왔고 주요 기사 뭐였어?" → `naver-news`
+> "블로그에서 얼마나 얘기 나와?" → `naver-blog`
+> "최근 2주 날씨가 광고 성과에 영향 줬는지" → `weather-impact`
+
+입력은 브랜드와 날짜 범위(기본 어제까지 14일)다. 스킬은 MCP 도구 `get_external_context`(report-backend가 laighthouse-elt의
+외부 맥락 데이터를 중계)를 1회 부르고(날씨는 `get_ad_performance`와 함께 2회), 저장 훅이 남긴 응답을 `assets/prepare.py`가
+읽어 집계한다. 집계·HTML은 공통 킷 `shared/assets/external_context/`가 한다. 이 폴더와 스킬 4개는 laighthouse-plugin
+(`laighthouse-analytics-prod`)과 같은 파일이다 — 고칠 때는 양쪽을 함께 고친다.
+외부 데이터 수집 대상이 아닌 브랜드는 도구가 "is not collected for external context"로 거절한다.
+수치 회귀 비교: `python3 tests/regress_external_context.py --responses <응답 폴더> --baseline <기준 폴더>`(기준은 같은 명령에 `--write`로 먼저 만든다),
+자체 검사: `python3 tests/test_weather_trend.py`·`tests/test_responses.py`·`tests/test_range_rules.py`·`tests/test_citations.py`.
 
 ### Daily · Weekly · Monthly 보고서 구성
 
