@@ -85,7 +85,7 @@ HTML과 같은 폴더에 같은 이름의 `.xlsx`가 함께 생긴다(`~/Downloa
 
 ## 요약 가이드 (비개발자 편집)
 
-Daily·Weekly·Monthly 요약 문단을 **무엇을 어떻게 쓸지**는 스킬마다 `guides/`의 파일이 정한다. 이 파일들은 노션 페이지의 사본이다 —
+Daily·Weekly·Monthly·소재 요약 문단을 **무엇을 어떻게 쓸지**는 스킬마다 `guides/`의 파일이 정한다. 이 파일들은 노션 페이지의 사본이다 —
 비개발자는 노션에서 고치고, 개발자가 Claude에게 **"노션 가이드 반영해줘"**라고 요청해 레포로 가져온다.
 
 - 노션: [프롬프트 및 레포트 라이브러리 › TBWA 리포트 스킬](https://app.notion.com/p/40760c83bb7e81548812f6ecf1fca3af) › "TBWA: 요약 가이드 라이브러리" DB
@@ -95,6 +95,7 @@ Daily·Weekly·Monthly 요약 문단을 **무엇을 어떻게 쓸지**는 스킬
 | Daily Summary | `skills/daily-report/guides/daily-summary.md` | [링크](https://app.notion.com/p/40760c83bb7e814a973ad9803168fcd6) |
 | Weekly Summary | `skills/weekly-report/guides/weekly-summary.md` | [링크](https://app.notion.com/p/40760c83bb7e8144a8b3cda1029e3893) |
 | Executive Summary (Monthly) | `skills/monthly-report/guides/executive-summary.md` | [링크](https://app.notion.com/p/40760c83bb7e81888aa3f5ca1ded7618) |
+| 소재 Summary | `skills/creative-report/guides/creative-summary.md` | [링크](https://app.notion.com/p/40f60c83bb7e81068638ce773a924328) |
 
 **반영 절차** (Claude가 한다)
 
