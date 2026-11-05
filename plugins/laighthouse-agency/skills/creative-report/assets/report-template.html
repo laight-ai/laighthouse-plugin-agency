@@ -4,277 +4,167 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__TITLE__</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap">
 <script>/*__CHART_JS__*/</script>
 <style>
-/* =====================================================================
-   소재 성과 — Harbor 디자인 시스템(laighthouse-web/src/styles/tokens.css)을 따른다.
-   토큰은 웹 tokens.css에서 이 보고서가 쓰는 것만 옮겼다(값을 바꾸지 않는다).
-   컴포넌트(.btn-secondary · .seg · .chip · .badge · .input-search · .progress · .empty · .hint ·
-   데이터 표 · .sec-caret · .sec-vc-delta)는 웹 components.css · report/sections.css와 같은 치수다.
-   ===================================================================== */
-:root {
-  --ink-0: #ffffff; --ink-25: #fafbfc; --ink-50: #f5f6f8; --ink-100: #eef0f3; --ink-150: #e6e8ec; --ink-200: #dcdfe4;
-  --ink-300: #c7ccd3; --ink-400: #9aa3ad; --ink-500: #6b7683; --ink-600: #4f5a66; --ink-700: #38414b; --ink-800: #262c34;
-  --blue-50: #f2f6ff; --blue-100: #e3ebfd; --blue-200: #c6d7fa; --blue-500: #4a7fe0; --blue-600: #2e5bd8; --blue-700: #2449b3;
-  --red-50: #fdf1ef; --red-200: #f7bfb4; --red-600: #c93b3b; --red-700: #a52f2f;
-  --green-50: #eef9f4; --green-200: #b2e7d1; --green-700: #245c4a;
-  --amber-50: #fff7ea; --amber-200: #fbdba8; --amber-700: #85530f;
-  --bg-canvas: var(--ink-50); --bg-surface: var(--ink-0); --bg-sunken: var(--ink-100); --bg-selected: var(--blue-50);
-  --fg-primary: var(--ink-800); --fg-secondary: var(--ink-600); --fg-tertiary: var(--ink-500); --fg-placeholder: var(--ink-400);
-  --border-subtle: var(--ink-150); --border-default: var(--ink-200); --border-strong: var(--ink-300); --border-focus: var(--blue-500);
-  --state-info-fg: var(--blue-700); --state-info-bg: var(--blue-50); --state-info-bd: var(--blue-200);
-  --state-success-fg: var(--green-700); --state-success-bg: var(--green-50); --state-success-bd: var(--green-200);
-  --state-warning-fg: var(--amber-700); --state-warning-bg: var(--amber-50); --state-warning-bd: var(--amber-200);
-  --state-danger-fg: var(--red-700); --state-danger-bg: var(--red-50); --state-danger-bd: var(--red-200);
-  --state-muted-fg: var(--ink-600); --state-muted-bg: var(--ink-100); --state-muted-bd: var(--ink-200);
-  --font-body: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Space Grotesk', var(--font-body);
-  --fs-xs: 12px; --lh-xs: 18px; --fs-sm: 13px; --lh-sm: 20px; --fs-base: 14px; --lh-base: 22px; --fs-md: 16px; --lh-md: 24px;
-  --fs-lg: 18px; --lh-lg: 26px; --fs-xl: 20px; --lh-xl: 28px; --fs-2xl: 24px; --lh-2xl: 32px;
-  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px;
-  --r-xs: 4px; --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-pill: 999px;
-  --sh-xs: 0 1px 2px rgba(23, 27, 33, 0.06); --sh-sm: 0 1px 3px rgba(23, 27, 33, 0.08), 0 1px 2px rgba(23, 27, 33, 0.04);
-  --content-max: 1184px; --content-pad: 32px;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg-surface); color: var(--fg-primary); font: var(--fs-base)/var(--lh-base) var(--font-body);
-  font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
-button, input { font: inherit; color: inherit; }
-button { cursor: pointer; background: none; border: 0; }
-:focus-visible { outline: none; }
-button:focus-visible, input:focus-visible, img:focus-visible { box-shadow: 0 0 0 3px var(--blue-100); border-color: var(--border-focus); }
-.page { max-width: var(--content-max); margin: 0 auto; padding: var(--sp-10) var(--content-pad) var(--sp-12); }
-h1 { font: 700 var(--fs-2xl)/var(--lh-2xl) var(--font-display); color: var(--fg-primary); }
-h2 { font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 700; color: var(--fg-primary); }
-h3 { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; color: var(--fg-primary); }
-.hint { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--fg-tertiary); }
+/*__KIT_CSS__*/
+/* ---------------------------------------------------------------------
+   소재 성과 — 다른 agency 보고서(Daily·Weekly·Monthly)와 같은 공용 킷(report_kit.css) 위에 그린다:
+   섹션 카드 · 머리말 · KPI 격자 · 알약 탭 · 요약 불릿 · 범례 · 표. 아래는 킷에 없는 소재 전용 부품만.
+   --------------------------------------------------------------------- */
+.lh-page { max-width: 1040px; }
+.lh-kpis.cr-k5 { grid-template-columns: repeat(5, 1fr); }
+.lh-kpi-value { font-size: 24px; }
+.cr-ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cr-ctl > .lh-muted { font-size: 12px; margin-right: 2px; }
+.cr-sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+.cr-new { display: inline-block; font-size: 10.5px; font-weight: 600; color: #1d4ed8; background: #eff6ff; border-radius: 4px; padding: 1px 5px; }
+.cr-off-note { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
+.tx2 { display: inline-flex; flex-direction: column; min-width: 0; line-height: 1.35; }
+.lh-tab .lh-mdot { margin-right: 5px; }
+.lh-tab.is-off { color: var(--muted); border-style: dashed; }
+.lh-tab.is-off .lh-mdot { opacity: .35; }
+
+/* 매체 묶음 */
+.cr-media { border-top: 1px solid var(--line-soft); padding-top: 16px; }
+.cr-media:first-child { border-top: 0; padding-top: 0; }
+.cr-media + .cr-media { margin-top: 16px; }
+.cr-media-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 12px; }
+.cr-media-head .nm { font-size: 14px; font-weight: 700; color: var(--ink); }
+.cr-media-head .st { font-size: 12px; color: var(--label); }
+.cr-media-head .st b { color: var(--ink); font-weight: 600; margin-left: 3px; }
+.cr-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+
+/* 소재 카드 */
+.cr-card { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+.cr-shot { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: var(--sub-bg); border-bottom: 1px solid var(--line); }
+.cr-shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; cursor: zoom-in; }
+.cr-badges { display: flex; gap: 4px; align-items: center; }
+.cr-shot .cr-badges { position: absolute; top: 8px; left: 8px; }
+.cr-rank { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
+  background: var(--ink); color: #fff; font-size: 12px; font-weight: 700; }
+.cr-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.cr-name { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cr-path { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cr-share { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+.cr-share .lh-bar { margin: 0; }
+.cr-share span { font-size: 11px; color: var(--label); white-space: nowrap; }
+.cr-share b { color: var(--ink); }
+.cr-mx { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 6px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.cr-mx dt { font-size: 11px; color: var(--label); }
+.cr-mx dd { display: flex; flex-direction: column; font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cr-mx .hl { background: #eff6ff; border-radius: 4px; margin: -3px -5px; padding: 3px 5px; }
+.cr-mx .hl dt { color: var(--ink); font-weight: 600; }
+.cr-mx .hl dd > span:first-child { font-weight: 700; }
+.cr-gone { font-size: 12px; color: var(--label); background: var(--sub-bg); border: 1px dashed var(--line); border-radius: 8px; padding: 10px 14px; }
+
+/* 세부 표 — 웹 보고서 세부 표(단계별 열·'전체')를 킷 표 스타일로 */
+.cr-tree-wrap { max-height: 640px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+.cr-tree { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; }
+.cr-tree th { position: sticky; top: 0; z-index: 2; }
+.cr-tree th.lv, .cr-tree td.lv { text-align: left; min-width: 110px; max-width: 170px; }
+.cr-tree th.lv.sticky, .cr-tree td.lv.sticky { min-width: 150px; max-width: 200px; }
+.cr-tree th.num, .cr-tree td.num { text-align: right; min-width: 92px; }
+.cr-tree th.sortable { cursor: pointer; user-select: none; }
+.cr-tree th.sortable:hover { background: var(--line); }
+.cr-tree th .sort { color: var(--muted); margin-left: 3px; font-size: 10px; }
+.cr-tree th.sorted .sort { color: var(--ink); }
+.cr-tree .sticky { position: sticky; left: 0; z-index: 1; background: #fff; box-shadow: 1px 0 0 var(--line); }
+.cr-tree thead .sticky { z-index: 3; background: var(--head-bg); }
+.cr-tree tr.lv-0 td { font-weight: 600; color: var(--ink); background: var(--sub-bg); }
+.cr-tree tr.ghost td { color: var(--muted); }
+.cr-tree .item { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
+.cr-tree .item .tx { overflow: hidden; text-overflow: ellipsis; }
+.cr-tree .all { color: var(--muted); font-weight: 400; }
+.cr-tree .vc { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.35; }
+.cr-thumb { width: 36px; height: 28px; object-fit: cover; border-radius: 4px; cursor: zoom-in; vertical-align: middle; border: 1px solid var(--line); }
+.lh-caret.ph { visibility: hidden; }
+
+.cr-zoom { position: fixed; inset: 0; background: rgba(15, 23, 42, .8); display: none; align-items: center; justify-content: center; z-index: 50; cursor: zoom-out; padding: 32px; }
+.cr-zoom.on { display: flex; }
+.cr-zoom img { max-width: 100%; max-height: 100%; border-radius: 8px; background: #fff; }
 .print-only { display: none; }
 
-/* ---- Harbor 컴포넌트 ---- */
-.btn-secondary { display: inline-flex; align-items: center; height: 34px; padding: 0 12px; border-radius: var(--r-sm); font-size: var(--fs-sm);
-  font-weight: 600; white-space: nowrap; background: var(--bg-surface); color: var(--fg-primary); border: 1px solid var(--border-default); box-shadow: var(--sh-xs); }
-.btn-secondary:hover { background: var(--ink-50); border-color: var(--border-strong); }
-.seg { display: inline-flex; background: var(--ink-100); border-radius: var(--r-sm); padding: 2px; gap: 2px; flex-wrap: wrap; }
-.seg > button { height: 28px; padding: 0 12px; border-radius: 4px; font-size: var(--fs-sm); font-weight: 500; color: var(--fg-secondary); }
-.seg > button:hover { color: var(--fg-primary); }
-.seg > button[aria-pressed='true'] { background: var(--bg-surface); color: var(--fg-primary); box-shadow: var(--sh-xs); font-weight: 600; }
-.chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: var(--r-pill); background: var(--bg-surface);
-  border: 1px solid var(--border-default); font-size: var(--fs-xs); font-weight: 500; color: var(--fg-primary); white-space: nowrap; }
-.chip:hover { border-color: var(--border-strong); }
-.chip[aria-pressed='false'] { color: var(--fg-tertiary); border-style: dashed; }
-.chip .sw { width: 14px; height: 3px; border-radius: 2px; }
-.chip[aria-pressed='false'] .sw { opacity: .35; }
-.badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: var(--r-xs); font-size: 11.5px; font-weight: 600;
-  line-height: 1; white-space: nowrap; border: 1px solid var(--state-muted-bd); color: var(--state-muted-fg); background: var(--state-muted-bg); }
-.badge-info { color: var(--state-info-fg); background: var(--state-info-bg); border-color: var(--state-info-bd); }
-.badge-success { color: var(--state-success-fg); background: var(--state-success-bg); border-color: var(--state-success-bd); }
-.badge-warning { color: var(--state-warning-fg); background: var(--state-warning-bg); border-color: var(--state-warning-bd); }
-.badge-danger { color: var(--state-danger-fg); background: var(--state-danger-bg); border-color: var(--state-danger-bd); }
-.badge-solid { color: var(--fg-inverse, #fff); background: var(--ink-800); border-color: var(--ink-800); }
-.input-search { height: 28px; width: 180px; padding: 0 10px 0 30px; border: 1px solid var(--border-default); border-radius: var(--r-sm); font-size: var(--fs-xs);
-  background: var(--bg-surface) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%239aa3ad' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>") no-repeat 9px center; }
-.input-search::placeholder { color: var(--fg-placeholder); }
-.progress { height: 6px; background: var(--ink-150); border-radius: 3px; overflow: hidden; }
-.progress > span { display: block; height: 100%; background: var(--blue-500); border-radius: 3px; }
-.empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: var(--sp-12) var(--sp-6); gap: 6px; color: var(--fg-secondary); }
-.empty .e-title { font-size: var(--fs-base); font-weight: 600; color: var(--fg-primary); }
-.empty .e-desc { font-size: var(--fs-sm); max-width: 380px; }
-.empty .e-actions { margin-top: 10px; }
-.sec-help { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 4px; border-radius: 50%;
-  border: 1.5px solid var(--border-strong); font-size: 10px; font-weight: 700; color: var(--fg-secondary); cursor: help; flex: none; }
-.up { color: var(--red-600); } .down { color: var(--blue-600); }
-
-/* ---- 머리말 ---- */
-.head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-6); }
-.period { margin-top: var(--sp-1); font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--fg-secondary); }
-.kpis { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-8); margin-top: var(--sp-6); }
-.kpi dt { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--fg-tertiary); }
-.kpi dd { font: 600 22px/30px var(--font-display); color: var(--fg-primary); }
-.kpi .delta { font: 600 var(--fs-xs)/var(--lh-xs) var(--font-body); margin-left: 6px; color: var(--fg-tertiary); }
-
-/* ---- 매체 선택(화면 위에 붙는다) ---- */
-.bar { position: sticky; top: 0; z-index: 10; background: rgba(255,255,255,.96); backdrop-filter: blur(6px);
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); padding: var(--sp-3) 0; margin-top: var(--sp-6);
-  border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
-.bar .lbl { font-size: var(--fs-xs); color: var(--fg-tertiary); margin-right: var(--sp-1); }
-.bar .sep { width: 1px; height: 18px; background: var(--border-default); margin: 0 var(--sp-1); }
-
-/* ---- 섹션 ---- */
-section { margin-top: var(--sp-12); }
-.sec-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-5); }
-.sec-head .hint { margin-top: 2px; }
-.tools { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
-.tools .lbl { font-size: var(--fs-xs); color: var(--fg-tertiary); display: inline-flex; align-items: center; }
-
-/* ---- 매체별 소재 TOP ---- */
-.media + .media { margin-top: var(--sp-10); }
-.media-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--sp-1) var(--sp-5); margin-bottom: var(--sp-4); }
-.media-head .st { font-size: var(--fs-sm); color: var(--fg-tertiary); }
-.media-head .st b { color: var(--fg-primary); font-weight: 600; margin-left: var(--sp-1); }
-.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-5); }
-.card { border: 1px solid var(--border-subtle); border-radius: var(--r-lg); overflow: hidden; background: var(--bg-surface); display: flex; flex-direction: column; box-shadow: var(--sh-xs); }
-.shot { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: var(--ink-50); border-bottom: 1px solid var(--border-subtle); }
-.shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; cursor: zoom-in; }
-.shot .rank, .card-top .rank { min-width: 22px; justify-content: center; }
-.shot .badges { position: absolute; top: var(--sp-3); left: var(--sp-3); display: flex; gap: var(--sp-1); }
-.card-top { display: flex; gap: var(--sp-1); padding: var(--sp-4) var(--sp-4) 0; }
-.card-body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); flex: 1; }
-.cname { font-weight: 600; line-height: var(--lh-base); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.cpath { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--fg-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.share { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--sp-2) var(--sp-3); }
-.share .lab { font-size: var(--fs-xs); color: var(--fg-tertiary); white-space: nowrap; }
-.share .lab b { color: var(--fg-primary); font-weight: 600; }
-.mx { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3) var(--sp-2); margin-top: auto; padding-top: var(--sp-3); border-top: 1px solid var(--border-subtle); }
-.mx dt { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--fg-tertiary); }
-.mx dd { display: flex; flex-direction: column; font-size: var(--fs-base); line-height: 20px; white-space: nowrap; }
-.mx .hl { background: var(--bg-selected); border-radius: var(--r-xs); margin: -4px -6px; padding: 4px 6px; }
-.mx .hl dt { color: var(--fg-primary); font-weight: 600; }
-.mx .hl dd > span:first-child { font-weight: 700; }
-.vd { font-size: 11px; font-weight: 600; line-height: 16px; color: var(--fg-tertiary); }
-.vd.up { color: var(--red-600); } .vd.down { color: var(--blue-600); }
-.gone { border: 1px dashed var(--border-default); border-radius: var(--r-lg); padding: var(--sp-4) var(--sp-5); font-size: var(--fs-sm); color: var(--fg-secondary); }
-
-/* ---- 요약 ---- */
-.sum { list-style: none; max-width: 860px; }
-.sum li { padding: var(--sp-4) 0; border-top: 1px solid var(--border-subtle); }
-.sum li:first-child { border-top: 0; padding-top: 0; }
-.sum .t { display: flex; align-items: center; gap: var(--sp-2); font-weight: 600; }
-.sum p { margin-top: var(--sp-1); color: var(--fg-secondary); }
-.sum strong { color: var(--fg-primary); font-weight: 600; }
-
-/* ---- 추이 ---- */
-.legend { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: var(--sp-3); }
-.legend .chip b { font-weight: 700; }
-.chart { position: relative; height: 300px; }
-
-/* ---- 세부 표: 웹 .table-wrap · .data-table · report/sections.css(.sec-tree)와 같은 치수 ---- */
-.table-wrap { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--r-lg); box-shadow: var(--sh-sm); overflow: auto; max-height: 640px; }
-.data-table { border-collapse: separate; border-spacing: 0; font-size: var(--fs-sm); line-height: 22px; width: max-content; min-width: 100%; }
-.data-table th { text-align: left; font-weight: 600; font-size: var(--fs-xs); color: var(--ink-600); padding: 10px 14px; background: var(--ink-25);
-  border-bottom: 1px solid var(--ink-200); white-space: nowrap; position: sticky; top: 0; z-index: 2; }
-.data-table th.sortable { cursor: pointer; }
-.data-table th.sortable:hover, .data-table th.sorted { color: var(--ink-800); }
-.data-table th .sort { display: inline-block; margin-left: 4px; color: var(--ink-400); }
-.data-table th.sorted .sort { color: var(--ink-800); }
-.data-table td { padding: 9px 14px; border-bottom: 1px solid var(--ink-150); vertical-align: middle; white-space: nowrap; background: var(--bg-surface); }
-.data-table tbody tr { height: 50px; }
-.data-table tbody tr:hover td { background: var(--ink-25); }
-.data-table .num { text-align: right; min-width: 110px; }
-.data-table .lv { min-width: 150px; max-width: 220px; }
-.data-table .lv.sticky { min-width: 200px; max-width: 260px; }
-.data-table .sticky { position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 0 var(--border-subtle); }
-.data-table thead .sticky { z-index: 3; }
-.data-table tr.lv-0 td { font-weight: 600; }
-.data-table tr.ghost td { color: var(--fg-tertiary); }
-.sec-tree-item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
-.sec-tree-item .tx { overflow: hidden; text-overflow: ellipsis; }
-.sec-caret, .sec-caret-ph { width: 18px; height: 18px; flex: none; }
-.sec-caret { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border-default); border-radius: var(--r-xs); background: var(--bg-surface); }
-.sec-caret:hover { border-color: var(--border-strong); }
-.sec-caret > span { width: 0; height: 0; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 5px solid var(--fg-secondary); transition: transform .16s ease; }
-.sec-caret > span.is-open { transform: rotate(90deg); }
-.all { color: var(--fg-tertiary); font-weight: 400; }
-.sec-vc { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 18px; }
-.sec-thumb { width: 36px; height: 28px; object-fit: cover; border-radius: var(--r-xs); vertical-align: middle; cursor: zoom-in; }
-.table-hint { margin-top: var(--sp-2); }
-
-.foot { margin-top: var(--sp-12); }
-.zoom { position: fixed; inset: 0; background: rgba(23,27,33,.82); display: none; align-items: center; justify-content: center; z-index: 60; cursor: zoom-out; padding: var(--sp-8); }
-.zoom.on { display: flex; }
-.zoom img { max-width: 100%; max-height: 100%; border-radius: var(--r-md); background: #fff; }
-
-@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 640px) {
-  .page { padding: var(--sp-6) var(--sp-4) var(--sp-10); }
-  .head { flex-direction: column; }
-  .grid { grid-template-columns: 1fr; }
-}
-@media (prefers-reduced-motion: reduce) { .sec-caret > span { transition: none; } }
-@page { size: A4 landscape; margin: 12mm; }
+@media (max-width: 860px) { .cr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lh-kpis.cr-k5 { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 560px) { .cr-grid { grid-template-columns: 1fr; } .lh-kpis.cr-k5 { grid-template-columns: repeat(2, 1fr); } }
+@page { size: A4 landscape; margin: 10mm; }
 @media print {
-  .bar, .no-print, .tools { display: none !important; }
+  body { padding: 0; background: #fff; }
+  .lh-print, .no-print { display: none !important; }
   .print-only { display: block; }
-  .page { max-width: none; padding: 0; }
-  section { margin-top: var(--sp-8); }
-  .card, .sum li, .media-head { break-inside: avoid; }
-  #trend-sec, #summary-sec { break-inside: avoid; }
-  .table-wrap { max-height: none; overflow: visible; box-shadow: none; }
-  /* A4 가로 한 장 폭에 모든 열이 들어가게: 열 폭 고정, 이름은 줄바꿈 */
-  .data-table { table-layout: fixed; width: 100%; min-width: 0; font-size: 9.5px; line-height: 13px; }
-  .data-table th, .data-table td { padding: 4px 5px; position: static; white-space: normal; word-break: break-all; }
-  .data-table .lv, .data-table .lv.sticky { min-width: 0; max-width: none; }
-  .data-table .num { min-width: 0; }
-  .data-table tbody tr { height: auto; }
-  .sec-tree-item { display: inline; }
-  .sec-tree-item .tx { white-space: normal; }
-  .sec-caret, .sec-caret-ph { display: none; }
-  .sec-vc { line-height: 12px; }
-  .sec-thumb { width: 28px; height: 22px; }
-  .data-table .vd { font-size: 8.5px; line-height: 11px; }
+  .lh-page { max-width: none; }
+  .lh-section, .cr-card, .lh-bullet { break-inside: avoid; }
+  .cr-tree-wrap { max-height: none; overflow: visible; border: 0; }
+  .cr-tree { table-layout: fixed; width: 100%; min-width: 0; font-size: 9.5px; }
+  .cr-tree th, .cr-tree td { position: static; padding: 4px 5px; white-space: normal; word-break: break-all; }
+  .cr-tree th.lv, .cr-tree td.lv, .cr-tree th.num, .cr-tree td.num { min-width: 0; max-width: none; }
+  .cr-tree .item { display: inline; } .cr-tree .lh-caret { display: none; }
+  .cr-tree .lh-delta { font-size: 8.5px; }
+  .cr-thumb { width: 28px; height: 22px; }
 }
 </style>
 </head>
 <body>
-<div class="page">
-  <header>
-    <div class="head">
-      <div>
-        <h1 id="title"></h1>
-        <p class="period" id="period"></p>
-        <p class="period print-only" id="print-state"></p>
-      </div>
-      <button class="btn-secondary no-print" type="button" onclick="window.print()">PDF로 저장</button>
+<div class="lh-page">
+  <header class="lh-header">
+    <div>
+      <h1 id="title"></h1>
+      <div class="lh-meta" id="period"></div>
+      <div class="lh-meta print-only" id="print-state"></div>
     </div>
-    <dl class="kpis" id="kpis"></dl>
+    <button class="lh-print" type="button" onclick="window.print()">PDF 저장</button>
   </header>
 
-  <div class="bar" id="bar"></div>
+  <section class="lh-section">
+    <div class="lh-section-head"><div><h2>기간 성과 요약</h2><p class="lh-desc" id="kpi-desc"></p></div></div>
+    <div class="lh-kpis cr-k5" id="kpis"></div>
+  </section>
 
-  <section id="groups-sec" style="margin-top:var(--sp-8)">
-    <div class="sec-head">
-      <div><h2>매체별 소재 TOP <span id="top-n"></span></h2></div>
-      <div class="tools"><span class="lbl">카드 순위 기준<span class="sec-help" id="sort-help" title="">i</span></span><div class="seg" id="sort-seg"></div></div>
+  <section class="lh-section">
+    <div class="lh-section-head">
+      <div><h2>매체별 상위 소재</h2><p class="lh-desc" id="top-desc"></p></div>
+    </div>
+    <div class="lh-toolbar no-print">
+      <div class="cr-ctl"><span class="lh-muted">매체</span><span class="cr-ctl" id="media-tabs"></span></div>
+      <div class="cr-ctl"><span class="lh-muted">순위 기준</span><span class="lh-tabs" id="sort-tabs"></span></div>
     </div>
     <div id="groups"></div>
   </section>
 
-  <section id="summary-sec">
-    <div class="sec-head"><div><h2>요약</h2><p class="hint" id="summary-meta"></p></div></div>
-    <ul class="sum" id="summary"></ul>
+  <section class="lh-section" id="summary-sec">
+    <div class="lh-section-head"><div><h2>소재 Summary</h2><p class="lh-desc" id="summary-meta"></p></div></div>
+    <div id="summary"></div>
   </section>
 
-  <section id="trend-sec">
-    <div class="sec-head">
-      <div><h2>일별 추이</h2><p class="hint">매체 범례를 눌러 선을 켜고 끕니다. 위의 매체 선택도 따릅니다.</p></div>
-      <div class="tools"><div class="seg" id="tr-view"></div><div class="seg" id="tr-metric"></div></div>
+  <section class="lh-section" id="trend-sec">
+    <div class="lh-section-head"><div><h2>매체별 일별 추이</h2><p class="lh-desc">아래 매체 이름을 누르면 그래프에서 숨기거나 다시 보여 줍니다.</p></div></div>
+    <div class="lh-toolbar">
+      <span class="lh-tabs" id="tr-metric"></span>
+      <span class="lh-tabs" id="tr-view"></span>
     </div>
-    <div class="legend" id="tr-legend"></div>
-    <div class="chart"><canvas id="tr-cv" aria-label="일별 추이 차트"></canvas></div>
+    <div class="lh-legend" id="tr-legend"></div>
+    <div class="lh-chart"><canvas id="tr-cv" aria-label="일별 추이 그래프"></canvas></div>
   </section>
 
-  <section id="detail">
-    <div class="sec-head">
-      <div><h2>세부 광고 성과</h2></div>
-      <div class="tools">
-        <input id="dt-q" class="input-search" type="search" placeholder="검색" aria-label="세부 광고 성과 검색">
-        <span class="lbl">펼칠 단계</span><div class="seg" id="dt-depth"></div>
-      </div>
+  <section class="lh-section">
+    <div class="lh-section-head"><div><h2>세부 광고 성과</h2><p class="lh-desc" id="dt-meta"></p></div></div>
+    <div class="lh-toolbar no-print">
+      <input id="dt-q" class="lh-search" type="search" placeholder="캠페인·광고 이름 검색" aria-label="세부 광고 성과 검색">
+      <div class="cr-ctl"><span class="lh-muted">펼칠 단계</span><span class="lh-tabs" id="dt-depth"></span></div>
     </div>
-    <div class="table-wrap"><table class="data-table sec-tree" id="dt"></table></div>
-    <p class="hint table-hint" id="dt-meta"></p>
+    <div class="cr-tree-wrap"><table class="lh-table cr-tree" id="dt"></table></div>
   </section>
 
-  <p class="hint foot">by LaightAI</p>
+  <div class="lh-footer">— by LaightAI</div>
 </div>
-<div class="zoom" id="zoom" role="dialog" aria-label="소재 크게 보기"><img alt=""></div>
+<div class="cr-zoom" id="zoom" role="dialog" aria-label="소재 크게 보기"><img alt=""></div>
 
 <script>
 const D = "__DATA__";
 const cur = D.currency;
 const PREV_ONLY = new Set(D.prev_only || []);
 const ALL_MEDIA = D.media.map(g => g.summary.media).concat(D.prev_only || []);
+const SERIES_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];   // report_kit.py와 같은 순서
+const colorOf = m => SERIES_COLORS[Math.max(0, ALL_MEDIA.indexOf(m)) % SERIES_COLORS.length];
 const st = { sort: D.sort, hidden: new Set() };
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -283,16 +173,17 @@ const f = {
   int: v => (v = fin(v)) == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
   money: v => (v = fin(v)) == null ? '—' : cur + Math.round(v).toLocaleString('ko-KR'),
   short: v => (v = fin(v)) == null ? '—' : Math.abs(v) >= 1e6 ? cur + (v / 1e6).toFixed(1) + 'M' : Math.abs(v) >= 1e4 ? cur + Math.round(v / 1e3) + 'K' : cur + Math.round(v).toLocaleString('ko-KR'),
-  pct: v => (v = fin(v)) == null ? '—' : v.toFixed(2) + '%',   // 웹 formatMetricValue(PERCENT)와 같은 소수 2자리
+  pct: v => (v = fin(v)) == null ? '—' : v.toFixed(2) + '%',
 };
 const ratio = (a, b, k = 1) => b ? a / b * k : null;
 const dots = d => d.replace(/-/g, '.');
 const ZERO = [0, 0, 0, 0, 0];
 const add = (a, b) => a.map((x, i) => x + (b ? b[i] : 0));
+const mdot = m => `<span class="lh-mdot" style="--c:${colorOf(m)}"></span>`;
 
-// 원자 지표 [광고비, 노출, 클릭, 전환, 매출] → 지표. 광고비는 실적 기준(Net)
+// 원자 지표 [광고비, 노출, 클릭, 전환, 매출] → 지표
 const METRICS = [
-  { k: 'cost', l: '광고비(Net)', s: '광고비', v: a => a[0], fm: 'money' },
+  { k: 'cost', l: '광고비', v: a => a[0], fm: 'money' },
   { k: 'impression', l: '노출', v: a => a[1], fm: 'int' },
   { k: 'click', l: '클릭', v: a => a[2], fm: 'int' },
   { k: 'ctr', l: 'CTR', v: a => ratio(a[2], a[1], 100), fm: 'pct', pp: 1 },
@@ -301,53 +192,57 @@ const METRICS = [
                              { k: 'cvr', l: 'CVR', v: a => ratio(a[3], a[2], 100), fm: 'pct', pp: 1 }] : [])
  .concat(D.has.revenue ? [{ k: 'roas', l: 'ROAS', v: a => ratio(a[4], a[0], 100), fm: 'pct', pp: 1 }] : []);
 const M = k => METRICS.find(m => m.k === k);
-const short = m => m.s || m.l;
 
-// 직전 기간 대비(웹 MetricTree와 같은 규칙): 비율 지표는 %p 차, 나머지는 변화율, 직전 값이 0·없으면 '—', 변화 없음은 흐리게
-function deltaHtml(a, b, m, cls = 'vd') {
-  if (!D.prev.ok || !a || !b) return `<span class="${cls}">—</span>`;
+// 직전 기간 대비: 비율 지표는 %p 차, 나머지는 변화율, 직전 값이 0·없으면 '—'. 증가 빨강 ▲ · 감소 파랑 ▼(다른 보고서와 같음)
+function change(a, b, m) {
+  if (!D.prev.ok || !a || !b) return null;
   const x = fin(m.v(b)), y = fin(m.v(a));
-  if (x == null || y == null || (!m.pp && !x)) return `<span class="${cls}">—</span>`;
+  if (x == null || y == null || (!m.pp && !x)) return null;
   const n = m.pp ? y - x : (y - x) / Math.abs(x) * 100, r = Math.round(n * 10) / 10;
-  const dir = r > 0 ? 'up' : r < 0 ? 'down' : '';
-  return `<span class="${cls} ${dir}">${dir === 'up' ? '▲ ' : dir === 'down' ? '▼ ' : ''}${Math.abs(r).toFixed(1)}${m.pp ? '%p' : '%'}</span>`;
+  return { r, cls: r > 0 ? 'up' : r < 0 ? 'down' : 'flat', t: `${r > 0 ? '▲ +' : r < 0 ? '▼ ' : ''}${r.toFixed(1)}${m.pp ? '%p' : '%'}` };
 }
+const deltaHtml = (a, b, m) => { const c = change(a, b, m); return c ? `<span class="lh-delta ${c.cls}">${c.t}</span>` : '<span class="lh-delta lh-muted">—</span>'; };
 const atoms = x => [x.cost, x.impression, x.click, x.conversion, x.revenue];
 const visible = () => ALL_MEDIA.filter(m => !st.hidden.has(m));
 
 // ── 머리말 ──
-$('title').textContent = D.brand + ' 소재 성과';
-$('period').textContent = `${dots(D.start)} – ${dots(D.end)}` + (D.prev.ok ? ` · 직전 기간 ${dots(D.prev.start)} – ${dots(D.prev.end)} 대비` : '');
+$('title').textContent = D.brand + ' 소재 성과 보고서';
+$('period').textContent = `기간: ${dots(D.start)} ~ ${dots(D.end)}` + (D.prev.ok ? ` · 비교: 직전 기간 ${dots(D.prev.start)} ~ ${dots(D.prev.end)}` : '');
+
+// ── 기간 성과 요약(KPI 격자) ──
 function drawKpis() {
   const vis = new Set(visible());
   const c = D.tree.filter(n => vis.has(n.n)).reduce((acc, n) => add(acc, n.c), ZERO);
   const p = D.prev.ok ? Object.keys(D.prev_media || {}).filter(k => vis.has(k)).reduce((acc, k) => add(acc, D.prev_media[k]), ZERO) : null;
-  const keys = ['cost', 'click', 'ctr'].concat(D.has.conversion ? ['conversion'] : []).concat(D.has.revenue ? ['roas'] : ['cpc']);
-  $('kpis').innerHTML = !vis.size ? '' : keys.map(k => {
-    const m = M(k);
-    return `<div class="kpi"><dt>${m.l}</dt><dd>${f[m.fm](m.v(c))}${p ? deltaHtml(c, p, m, 'delta') : ''}</dd></div>`;
+  const keys = ['cost', 'impression', 'click', 'ctr'].concat(D.has.revenue ? ['roas'] : D.has.conversion ? ['conversion'] : ['cpc']);
+  $('kpi-desc').textContent = `${visible().join(' + ') || '선택한 매체 없음'} 합산, ${dots(D.start)} ~ ${dots(D.end)}`;
+  $('kpis').innerHTML = keys.map(k => {
+    const m = M(k), ch = p ? change(c, p, m) : null;
+    return `<div class="lh-kpi"><div class="lh-kpi-label">${m.l}</div><div class="lh-kpi-value">${f[m.fm](m.v(c))}</div>
+      ${p ? `<div class="lh-kpi-delta ${ch ? ch.cls : ''}">직전 기간 대비 ${ch ? ch.t : '—'}</div><div class="lh-kpi-sub">직전 기간 ${f[m.fm](m.v(p))}</div>` : ''}</div>`;
   }).join('');
   const label = (D.sorts.find(s => s[0] === st.sort) || ['', ''])[1];
-  $('print-state').textContent = `매체: ${visible().join(', ') || '없음'} · 카드 순위 기준: ${label}`;
+  $('print-state').textContent = `매체: ${visible().join(', ') || '없음'} · 순위 기준: ${label}`;
 }
 
-// ── 매체 선택: 이번 기간 매체 + 직전 기간에만 집행한 매체(머리말 증감에 들어가므로 끄고 켤 수 있게) ──
-function drawBar() {
-  const chip = n => {
+// ── 매체 선택: 이번 기간에 집행한 매체, 그리고 직전 기간에만 집행해 이번 기간 광고비가 없는 매체를 따로 묶는다 ──
+function drawControls() {
+  const tab = n => {
     const on = !st.hidden.has(n);
-    return `<button type="button" class="chip" aria-pressed="${on}" data-m="${esc(n)}">${esc(n)}${PREV_ONLY.has(n) ? ' <span class="badge" style="height:18px;padding:0 5px">직전만</span>' : ''}</button>`;
+    return `<button type="button" class="lh-tab${on ? '' : ' is-off'}" aria-pressed="${on}" data-m="${esc(n)}">${mdot(n)}${esc(n)}</button>`;
   };
-  $('bar').innerHTML = '<span class="lbl">매체</span>' + D.media.map(g => chip(g.summary.media)).join('')
-    + ((D.prev_only || []).length ? '<span class="sep"></span><span class="lbl">이번 기간 집행 없음</span>' + D.prev_only.map(chip).join('') : '');
+  $('media-tabs').innerHTML = `<span class="lh-tabs">${D.media.map(g => tab(g.summary.media)).join('')}</span>`
+    + ((D.prev_only || []).length ? `<span class="cr-sep"></span><span class="lh-muted" style="font-size:12px">이번 기간 집행 없음</span><span class="lh-tabs">${D.prev_only.map(tab).join('')}</span>` : '');
+  $('sort-tabs').innerHTML = D.sorts.map(([k, l]) => `<button type="button" class="lh-tab${st.sort === k ? ' is-on' : ''}" aria-pressed="${st.sort === k}" data-s="${k}">${l}</button>`).join('');
 }
-$('bar').addEventListener('click', e => {
+$('media-tabs').addEventListener('click', e => {
   const b = e.target.closest('button[data-m]'); if (!b) return;
   const n = b.dataset.m; st.hidden.has(n) ? st.hidden.delete(n) : st.hidden.add(n); draw();
 });
-function showAll() { st.hidden.clear(); draw(); }
+$('sort-tabs').addEventListener('click', e => { const b = e.target.closest('button[data-s]'); if (b) { st.sort = b.dataset.s; draw(); } });
 
-// ── 매체별 소재 TOP ──
-$('top-n').textContent = D.top;
+// ── 매체별 상위 소재 ──
+$('top-desc').textContent = `매체마다 순위 기준으로 상위 ${D.top}개 소재를 보여 줍니다. CTR·ROAS 순위는 노출 ${D.min.impression.toLocaleString('ko-KR')} 이상이면서 매체 광고비의 ${D.min.share * 100}% 이상을 쓴 소재끼리만 매깁니다.`;
 function rank(rows, sort) {
   let pool = rows, fallback = false;
   if (sort === 'ctr' || sort === 'roas') {
@@ -365,112 +260,101 @@ function card(x, i, mediaCost, noImages) {
   const share = mediaCost ? x.cost / mediaCost * 100 : 0;
   const isNew = D.prev.ok && (!x.prev || !x.prev[0]);
   const path = [x.campaign_name, x.ad_group_name].filter(p => p && p !== x.name);
-  const badges = `<span class="badge badge-solid rank">${i + 1}</span>${isNew ? '<span class="badge badge-info">신규</span>' : ''}`;
-  const a = atoms(x), b = x.prev;
-  const top = noImages ? `<div class="card-top">${badges}</div>`
-    : `<div class="shot">${x.thumb ? `<img src="${x.thumb}" alt="${esc(x.name)}" tabindex="0">` : ''}<div class="badges">${badges}</div></div>`;
-  return `<article class="card">${top}
-    <div class="card-body">
-      <div><div class="cname" title="${esc(x.name)}">${esc(x.name)}</div>
-        ${path.length ? `<div class="cpath" title="${esc(path.join(' › '))}">${esc(path.join(' › '))}</div>` : ''}</div>
-      <div class="share" title="이 소재가 매체 광고비에서 차지하는 비중"><div class="progress"><span style="width:${Math.min(100, share).toFixed(1)}%"></span></div>
-        <span class="lab">매체 광고비의 <b>${share.toFixed(1)}%</b></span></div>
-      <dl class="mx">${CARD_MX.map(k => { const m = M(k);
-        return `<div class="${k === st.sort ? 'hl' : ''}"><dt>${short(m)}</dt><dd><span>${f[m.fm](m.v(a))}</span>${isNew ? '' : deltaHtml(a, b, m)}</dd></div>`; }).join('')}</dl>
+  const badges = `<div class="cr-badges"><span class="cr-rank">${i + 1}</span>${isNew ? '<span class="cr-new" title="직전 기간에는 집행하지 않은 소재">신규</span>' : ''}</div>`;
+  const a = atoms(x);
+  return `<article class="cr-card">
+    ${noImages ? '' : `<div class="cr-shot">${x.thumb ? `<img src="${x.thumb}" alt="${esc(x.name)}" tabindex="0">` : ''}${badges}</div>`}
+    <div class="cr-body">
+      ${noImages ? badges : ''}
+      <div><div class="cr-name" title="${esc(x.name)}">${esc(x.name)}</div>
+        ${path.length ? `<div class="cr-path" title="${esc(path.join(' › '))}">${esc(path.join(' › '))}</div>` : ''}</div>
+      <div class="cr-share" title="이 소재가 매체 광고비에서 차지하는 비중"><div class="lh-bar"><div class="lh-bar-fill" style="--w:${Math.min(100, share).toFixed(1)}%"></div></div>
+        <span>매체 광고비의 <b>${share.toFixed(1)}%</b></span></div>
+      <dl class="cr-mx">${CARD_MX.map(k => { const m = M(k);
+        return `<div class="${k === st.sort ? 'hl' : ''}"><dt>${m.l}</dt><dd><span>${f[m.fm](m.v(a))}</span>${isNew ? '' : deltaHtml(a, x.prev, m)}</dd></div>`; }).join('')}</dl>
     </div></article>`;
 }
 function drawGroups() {
   const label = (D.sorts.find(s => s[0] === st.sort) || ['', ''])[1];
-  $('sort-seg').innerHTML = D.sorts.map(([k, l]) => `<button type="button" aria-pressed="${st.sort === k}" data-s="${k}">${l}</button>`).join('');
-  $('sort-help').title = `CTR·ROAS 순위는 노출 ${D.min.impression.toLocaleString('ko-KR')} 이상이면서 매체 광고비의 ${D.min.share * 100}% 이상인 소재만 비교합니다. 그런 소재가 없으면 전체 소재로 순위를 매깁니다.`;
-  if (!visible().length) {
-    $('groups').innerHTML = `<div class="empty"><div class="e-title">선택한 매체가 없습니다</div><div class="e-desc">위에서 매체를 하나 이상 켜면 소재 순위를 보여 줍니다.</div><div class="e-actions"><button type="button" class="btn-secondary" onclick="showAll()">모든 매체 보기</button></div></div>`;
-    return;
-  }
+  if (!visible().length) { $('groups').innerHTML = '<div class="lh-placeholder">선택한 매체가 없습니다. 위에서 매체를 하나 이상 골라 주세요.</div>'; return; }
   const blocks = D.media.filter(g => !st.hidden.has(g.summary.media)).map(g => {
     const m = g.summary, r = rank(g.rows, st.sort);
     const topCost = r.top.reduce((acc, x) => acc + x.cost, 0), rest = g.rows.length - r.top.length;
     const noImages = !g.rows.some(x => x.thumb);
-    return `<div class="media">
-      <div class="media-head"><h3>${esc(m.media)}</h3>
+    return `<div class="cr-media">
+      <div class="cr-media-head"><span class="nm">${mdot(m.media)}${esc(m.media)}</span>
         <span class="st">광고비<b>${f.money(m.cost)}</b></span>
-        <span class="st">TOP ${r.top.length}<b>매체 광고비의 ${m.cost ? (topCost / m.cost * 100).toFixed(1) : '0.0'}%</b></span>
+        <span class="st">CTR<b>${f.pct(m.ctr)}</b></span>
         <span class="st">소재<b>${m.creatives}개</b></span>
-        ${rest > 0 ? `<span class="st">나머지 ${rest}개는 아래 세부 광고 성과에 있습니다</span>` : ''}</div>
-      <div class="grid">${r.top.map((x, i) => card(x, i, m.cost, noImages)).join('')}</div>
-      ${r.fallback ? `<p class="hint" style="margin-top:var(--sp-2)">최소 표본을 채운 소재가 없어 전체 소재로 ${esc(label)} 순위를 매겼습니다.</p>` : ''}
+        <span class="st">상위 ${r.top.length}개 소재가 쓴 광고비<b>${m.cost ? (topCost / m.cost * 100).toFixed(1) : '0.0'}%</b></span>
+        ${rest > 0 ? `<span class="st">나머지 소재 ${rest}개는 아래 세부 광고 성과 표에서 볼 수 있습니다</span>` : ''}</div>
+      <div class="cr-grid">${r.top.map((x, i) => card(x, i, m.cost, noImages)).join('')}</div>
+      ${r.fallback ? `<p class="lh-note">조건을 채운 소재가 없어 모든 소재로 ${esc(label)} 순위를 매겼습니다.</p>` : ''}
     </div>`;
   });
   const gone = (D.prev_only || []).filter(n => !st.hidden.has(n));
-  if (gone.length) blocks.push(`<div class="media"><div class="gone">이번 기간 집행이 없는 매체: ${gone.map(n =>
-    `<b>${esc(n)}</b>(직전 기간 광고비 ${f.money(D.prev_media[n][0])})`).join(', ')}</div></div>`);
+  if (gone.length) blocks.push(`<div class="cr-media"><div class="cr-gone">이번 기간에 광고비를 쓰지 않은 매체: ${gone.map(n =>
+    `${mdot(n)}<b>${esc(n)}</b>(직전 기간 광고비 ${f.money(D.prev_media[n][0])})`).join(', ')}</div></div>`);
   $('groups').innerHTML = blocks.join('');
 }
-$('sort-seg').addEventListener('click', e => { const b = e.target.closest('button[data-s]'); if (b) { st.sort = b.dataset.s; draw(); } });
 
-// ── 요약: 모델이 guides/creative-summary.md를 따라 쓴 불릿. 톤은 Harbor 상태 배지로(증감 빨강·파랑과 뜻을 나눈다) ──
+// ── 소재 Summary: 다른 보고서와 같은 요약 불릿(모델이 guides/creative-summary.md를 따라 씀). <strong>만 허용 ──
 (function drawSummary() {
   const items = D.summary || [];
   if (!items.length) { $('summary-sec').style.display = 'none'; return; }
-  $('summary-meta').textContent = '전체 매체 기준입니다(매체 선택과 상관없음).' + (D.prev.ok ? ` 직전 기간 ${dots(D.prev.start)} – ${dots(D.prev.end)}과 비교했습니다.` : '');
-  const TONE = { red: ['badge-danger', '확인 필요'], yellow: ['badge-warning', '주의'], green: ['badge-success', '좋음'] };
+  $('summary-meta').textContent = '모든 매체를 합친 기준입니다(위 매체 선택과 상관없음).' + (D.prev.ok ? ` 직전 기간(${dots(D.prev.start)} ~ ${dots(D.prev.end)})과 비교했습니다.` : '');
   const rich = t => esc(t).replace(/&lt;(\/?)strong&gt;/g, '<$1strong>');
-  $('summary').innerHTML = items.map(it => {
-    const t = TONE[it.tone];
-    return `<li><div class="t">${t ? `<span class="badge ${t[0]}">${t[1]}</span>` : ''}<span>${esc(it.head || '')}</span></div><p>${rich(it.text || '')}</p></li>`;
-  }).join('');
+  $('summary').innerHTML = '<ul class="lh-bullets">' + items.map(it =>
+    `<li class="lh-bullet tone-${['red', 'green', 'yellow'].includes(it.tone) ? it.tone : 'neutral'}"><span class="lh-dot"></span>
+      <span class="lh-bullet-text">${it.head ? `<strong>${esc(it.head)}</strong> ` : ''}<span>${rich(it.text || '')}</span></span></li>`).join('') + '</ul>';
 })();
 
-// ── 일별 추이: 웹 MediaTrend 규칙(매체 색, 범례 = 기간 합계, 일요일 빨강·토요일 파랑) ──
-const MEDIA_COLORS = ['#2FA877', '#4583E1', '#EF7A68', '#F4C77F', '#9F9CF1', '#6AC7D6', '#739FE2', '#F49786'];
+// ── 매체별 일별 추이(다른 보고서의 추이 그래프와 같은 탭·범례) ──
 const TR = { view: 'media', metric: 'cost', chart: null, off: new Set() };
 const TRM = METRICS.filter(m => m.k !== 'cvr');
-const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 function drawTrend() {
   if (!D.trend || !window.Chart) { $('trend-sec').style.display = 'none'; return; }
   const names = Object.keys(D.trend.media), media = names.filter(n => !st.hidden.has(n));
   const m = TRM.find(x => x.k === TR.metric) || TRM[0];
-  const days = D.trend.dates.map(d => new Date(d + 'T00:00:00'));
   const at = i => media.reduce((acc, k) => add(acc, D.trend.media[k][i]), ZERO);
-  const color = k => MEDIA_COLORS[names.indexOf(k) % MEDIA_COLORS.length];
   const series = TR.view === 'total'
-    ? [{ name: '선택한 매체 합계', color: '#4583E1', raw: D.trend.dates.map((_, i) => at(i)) }]
-    : media.filter(k => !TR.off.has(k)).map(k => ({ name: k, color: color(k), raw: D.trend.media[k] }));
-  $('tr-view').innerHTML = [['media', '매체별'], ['total', '합계']].map(([k, l]) => `<button type="button" aria-pressed="${TR.view === k}" data-v="${k}">${l}</button>`).join('');
-  $('tr-metric').innerHTML = TRM.map(x => `<button type="button" aria-pressed="${TR.metric === x.k}" data-k="${x.k}">${short(x)}</button>`).join('');
+    ? [{ name: '선택한 매체 합계', color: '#2a78d6', raw: D.trend.dates.map((_, i) => at(i)) }]
+    : media.filter(k => !TR.off.has(k)).map(k => ({ name: k, color: colorOf(k), raw: D.trend.media[k] }));
+  $('tr-metric').innerHTML = TRM.map(x => `<button type="button" class="lh-tab${TR.metric === x.k ? ' is-on' : ''}" data-k="${x.k}">${x.l}</button>`).join('');
+  $('tr-view').innerHTML = [['media', '매체별'], ['total', '전체 합계']].map(([k, l]) => `<button type="button" class="lh-tab${TR.view === k ? ' is-on' : ''}" data-v="${k}">${l}</button>`).join('');
   $('tr-legend').innerHTML = TR.view === 'total' ? '' : media.map(k => {
     const tot = D.trend.media[k].reduce((acc, v) => add(acc, v), ZERO);
-    return `<button type="button" class="chip" aria-pressed="${!TR.off.has(k)}" data-l="${esc(k)}"><span class="sw" style="background:${color(k)}"></span>${esc(k)} <b>${f[m.fm](m.v(tot))}</b></button>`;
+    return `<button type="button" class="lh-legend-item${TR.off.has(k) ? ' is-off' : ''}" data-l="${esc(k)}"><span class="lh-swatch" style="--c:${colorOf(k)}"></span>${esc(k)} <span class="lh-legend-val">${f[m.fm](m.v(tot))}</span></button>`;
   }).join('');
   if (TR.chart) TR.chart.destroy();
-  if (!media.length) { $('tr-legend').innerHTML = '<p class="hint">선택한 매체가 없습니다.</p>'; return; }
+  if (!media.length) { $('tr-legend').innerHTML = '<span class="lh-muted">선택한 매체가 없습니다.</span>'; return; }
+  const days = D.trend.dates.map(d => new Date(d + 'T00:00:00'));
+  const W = ['일', '월', '화', '수', '목', '금', '토'];
   const tick = v => m.fm === 'money' ? f.short(v) : m.fm === 'int' ? (v >= 1e4 ? Math.round(v / 1e3) + 'K' : f.int(v)) : f.pct(v);
   TR.chart = new Chart($('tr-cv'), {
     type: 'line',
-    // 집행하지 않은 날(광고비·노출 0)은 점을 찍지 않고 선을 끊는다 — 없는 곡선을 그리지 않는다
-    data: { labels: days.map(d => [`${d.getMonth() + 1}/${d.getDate()}`, `(${WEEK[d.getDay()]})`]),
+    // 광고를 집행하지 않은 날(광고비·노출 0)은 점을 찍지 않고 선을 끊는다
+    data: { labels: days.map(d => `${d.getMonth() + 1}/${d.getDate()}(${W[d.getDay()]})`),
       datasets: series.map(x => ({ label: x.name, raw: x.raw, data: x.raw.map(a => (a[0] || a[1]) ? fin(m.v(a)) : null),
-        borderColor: x.color, backgroundColor: x.color, tension: 0, pointRadius: 2, pointHoverRadius: 4, borderWidth: 2, spanGaps: false })) },
+        borderColor: x.color, backgroundColor: x.color, tension: 0.3, pointRadius: 3, borderWidth: 2, spanGaps: false })) },
     options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false },
         tooltip: { callbacks: { label: c => {
           const a = c.dataset.raw[c.dataIndex];
           const base = m.k === 'ctr' ? ` (노출 ${f.int(a[1])})` : m.k === 'cpc' ? ` (클릭 ${f.int(a[2])})` : m.k === 'roas' ? ` (광고비 ${f.money(a[0])})` : '';
-          return ` ${c.dataset.label}  ${f[m.fm](c.parsed.y)}${base}`; } } } },
-      scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 12,
-          color: ctx => { const w = days[ctx.index] && days[ctx.index].getDay(); return w === 0 ? '#c93b3b' : w === 6 ? '#2e5bd8' : '#6b7683'; } } },
-        y: { beginAtZero: true, border: { display: false }, grid: { color: '#e6e8ec' }, ticks: { color: '#6b7683', maxTicksLimit: 5, callback: tick } } } },
+          return `${c.dataset.label}: ${f[m.fm](c.parsed.y)}${base}`; } } } },
+      scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 14 } },
+        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { maxTicksLimit: 6, callback: tick } } } },
   });
 }
 $('tr-view').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b) { TR.view = b.dataset.v; drawTrend(); } });
 $('tr-metric').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) { TR.metric = b.dataset.k; drawTrend(); } });
 $('tr-legend').addEventListener('click', e => { const b = e.target.closest('button[data-l]'); if (!b) return; const k = b.dataset.l; TR.off.has(k) ? TR.off.delete(k) : TR.off.add(k); drawTrend(); });
 
-// ── 세부 광고 성과: 웹 MetricTree 기간 뷰와 같은 구조·규칙 ──
-//  단계마다 열, 하위가 있는 줄은 다음 단계 칸에 '전체', 이미지 열은 이번 기간 소재 썸네일만,
-//  정렬은 웹 cycleSort와 같이 오름 → 내림 → 해제, 직전에만 집행한 매체도 줄로 보인다(이번 값 —)
+// ── 세부 광고 성과: 웹 세부 표와 같은 구조(단계별 열, 하위가 있는 줄은 다음 단계 칸에 '전체', 이번 기간 썸네일,
+//    정렬은 오름 → 내림 → 해제). 직전 기간에만 집행한 매체도 줄로 보인다(이번 값 —) ──
 const LV = ['매체', '캠페인', '광고그룹', '광고'];
-(function collapse(ns) {   // 하위가 같은 이름의 소재 하나뿐인 줄은 한 줄로(웹 collapseSingleLeafGroups)
+(function collapse(ns) {   // 하위가 같은 이름의 소재 하나뿐인 줄은 한 줄로
   ns.forEach(n => { collapse(n.k); if (n.k.length === 1 && !n.k[0].k.length && n.k[0].n === n.n) { n.t = n.k[0].t; n.k = []; } });
 })(D.tree);
 let uid = 0;
@@ -486,13 +370,10 @@ function sorted(ns) {
 }
 function drawTree() {
   const roots = D.tree.filter(n => !st.hidden.has(n.n));
-  if (!roots.length) {
-    $('dt').innerHTML = `<tbody><tr><td><div class="empty"><div class="e-title">선택한 매체가 없습니다</div><div class="e-actions"><button type="button" class="btn-secondary" onclick="showAll()">모든 매체 보기</button></div></div></td></tr></tbody>`;
-    $('dt-depth').innerHTML = ''; return;
-  }
+  if (!roots.length) { $('dt').innerHTML = '<tbody><tr><td class="lh-empty">선택한 매체가 없습니다.</td></tr></tbody>'; $('dt-depth').innerHTML = ''; return; }
   const img = hasImg(roots), levels = LV.slice(0, maxLv(roots) + 1);
   const head = '<thead><tr>' + levels.map((l, i) => `<th class="lv${i ? '' : ' sticky'}">${l}</th>`).join('')
-    + (img ? '<th style="text-align:center;width:72px">이미지</th>' : '')
+    + (img ? '<th>이미지</th>' : '')
     + METRICS.map((m, i) => { const on = dt.sort && dt.sort.i === i;
       return `<th class="num sortable${on ? ' sorted' : ''}" data-i="${i}" aria-sort="${on ? (dt.sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}">${m.l}<span class="sort">${on ? (dt.sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span></th>`; }).join('')
     + '</tr></thead>';
@@ -503,27 +384,27 @@ function drawTree() {
       const kids = n.k.length > 0, open = dt.q ? true : dt.open.has(n.id);
       const cells = levels.map((_, lv) => {
         let s = '';
-        if (n.d === lv) s = `<span class="sec-tree-item">${kids ? `<button type="button" class="sec-caret" data-id="${n.id}" aria-expanded="${open}" aria-label="${open ? '접기' : '펼치기'}"><span class="${open ? 'is-open' : ''}"></span></button>` : '<span class="sec-caret-ph"></span>'}<span class="tx" title="${esc(n.n)}">${esc(n.n)}</span>${n.prev_only ? ' <span class="badge" title="이번 기간 집행 없음 — 값 아래가 직전 기간 대비">집행 없음</span>' : ''}</span>`;
+        if (n.d === lv) s = `<span class="item">${kids ? `<button type="button" class="lh-caret${open ? '' : ' is-closed'}" data-id="${n.id}" aria-expanded="${open}" aria-label="${open ? '접기' : '펼치기'}">▼</button>` : '<span class="lh-caret ph">▼</span>'}${lv === 0 ? mdot(n.n) : ''}${n.prev_only ? `<span class="tx2"><span class="tx" title="${esc(n.n)}">${esc(n.n)}</span><span class="cr-off-note">이번 기간 집행 없음</span></span>` : `<span class="tx" title="${esc(n.n)}">${esc(n.n)}</span>`}</span>`;
         else if (n.d + 1 === lv && kids) s = '<span class="all">전체</span>';
         return `<td class="lv${lv ? '' : ' sticky'}">${s}</td>`;
       }).join('');
-      out.push(`<tr class="lv-${n.d}${n.prev_only ? ' ghost' : ''}">${cells}` + (img ? `<td style="text-align:center">${n.t ? `<img class="sec-thumb" src="${n.t}" alt="${esc(n.n)}" tabindex="0">` : ''}</td>` : '')
-        + METRICS.map(m => `<td class="num"><span class="sec-vc"><span>${n.prev_only ? '—' : f[m.fm](m.v(n.c))}</span>${deltaHtml(n.prev_only ? null : n.c, n.p, m)}</span></td>`).join('') + '</tr>');
+      out.push(`<tr class="lv-${n.d}${n.prev_only ? ' ghost' : ''}">${cells}` + (img ? `<td style="text-align:center">${n.t ? `<img class="cr-thumb" src="${n.t}" alt="${esc(n.n)}" tabindex="0">` : ''}</td>` : '')
+        + METRICS.map(m => `<td class="num"><span class="vc"><span>${n.prev_only ? '—' : f[m.fm](m.v(n.c))}</span>${deltaHtml(n.prev_only ? null : n.c, n.p, m)}</span></td>`).join('') + '</tr>');
       if (kids && open) walk(n.k);
     });
   })(roots);
-  $('dt').innerHTML = head + '<tbody>' + (out.join('') || `<tr><td colspan="${levels.length + METRICS.length + 1}"><div class="empty"><div class="e-title">검색 결과가 없습니다</div><div class="e-desc">다른 캠페인·광고 이름으로 검색해 보세요.</div></div></td></tr>`) + '</tbody>';
-  $('dt-depth').innerHTML = LV.slice(1, levels.length).map((l, i) => `<button type="button" aria-pressed="${dt.depth === i + 1}" data-d="${i + 1}">${l}</button>`).join('');
+  $('dt').innerHTML = head + '<tbody>' + (out.join('') || `<tr><td class="lh-empty" colspan="${levels.length + METRICS.length + 1}">검색어와 맞는 캠페인·광고가 없습니다.</td></tr>`) + '</tbody>';
+  $('dt-depth').innerHTML = LV.slice(1, levels.length).map((l, i) => `<button type="button" class="lh-tab${dt.depth === i + 1 ? ' is-on' : ''}" data-d="${i + 1}">${l}</button>`).join('');
 }
 function openTo(depth) {
   dt.depth = depth; dt.open.clear();
   (function op(ns) { ns.forEach(n => { if (n.d < depth && n.k.length) { dt.open.add(n.id); op(n.k); } }); })(D.tree);
 }
 $('dt').addEventListener('click', e => {
-  const c = e.target.closest('.sec-caret[data-id]');
+  const c = e.target.closest('.lh-caret[data-id]');
   if (c) { const id = +c.dataset.id; dt.open.has(id) ? dt.open.delete(id) : dt.open.add(id); return drawTree(); }
   const th = e.target.closest('th.sortable');
-  if (th) {   // 웹 cycleSort: 오름 → 내림 → 해제
+  if (th) {   // 오름 → 내림 → 해제(웹과 같음)
     const i = +th.dataset.i;
     dt.sort = !dt.sort || dt.sort.i !== i ? { i, dir: 'asc' } : dt.sort.dir === 'asc' ? { i, dir: 'desc' } : null;
     drawTree();
@@ -535,33 +416,27 @@ $('dt-depth').addEventListener('click', e => {
 });
 $('dt-q').addEventListener('input', e => { dt.q = e.target.value.trim().toLowerCase(); drawTree(); });
 $('dt-meta').textContent = D.prev.ok
-  ? `지표 하단은 ${dots(D.prev.start)}~${dots(D.prev.end)} 대비 ${dots(D.start)}~${dots(D.end)}의 변화율입니다. 비율 지표는 %p, 직전 값이 없으면 —로 표시합니다.`
-  : '직전 기간 데이터가 없어 증감 없이 표시합니다.';
+  ? `매체 › 캠페인 › 광고그룹 › 광고 순으로 펼쳐 봅니다. 값 아래 숫자는 직전 기간(${dots(D.prev.start)} ~ ${dots(D.prev.end)})과 비교한 증감이고, 비율 지표는 %p로, 직전 값이 없으면 —로 표시합니다.`
+  : '매체 › 캠페인 › 광고그룹 › 광고 순으로 펼쳐 봅니다. 직전 기간 데이터가 없어 증감은 표시하지 않습니다.';
 
 // ── 이미지 크게 보기 ──
 const zoom = $('zoom');
 function openZoom(src, alt) { const i = zoom.querySelector('img'); i.src = src; i.alt = alt || ''; zoom.classList.add('on'); }
 document.addEventListener('click', e => {
-  if (e.target.matches('.shot img, .sec-thumb')) openZoom(e.target.src, e.target.alt);
+  if (e.target.matches('.cr-shot img, .cr-thumb')) openZoom(e.target.src, e.target.alt);
   else if (e.target.closest('#zoom')) zoom.classList.remove('on');
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') zoom.classList.remove('on');
-  if (e.key === 'Enter' && e.target.matches('.shot img, .sec-thumb')) openZoom(e.target.src, e.target.alt);
+  if (e.key === 'Enter' && e.target.matches('.cr-shot img, .cr-thumb')) openZoom(e.target.src, e.target.alt);
 });
 
-// ── 인쇄: 세부 표를 광고 단계까지 펼치고 차트 크기를 다시 잰다(끝나면 되돌린다) ──
+// ── 인쇄: 세부 표를 광고 단계까지 펼치고 그래프 크기를 다시 잰다(끝나면 되돌린다) ──
 let saved = null;
-window.addEventListener('beforeprint', () => {
-  saved = { open: new Set(dt.open), depth: dt.depth };
-  openTo(LV.length - 1); drawTree(); if (TR.chart) TR.chart.resize();
-});
-window.addEventListener('afterprint', () => {
-  if (saved) { dt.open = saved.open; dt.depth = saved.depth; saved = null; drawTree(); }
-  if (TR.chart) TR.chart.resize();
-});
+window.addEventListener('beforeprint', () => { saved = { open: new Set(dt.open), depth: dt.depth }; openTo(LV.length - 1); drawTree(); if (TR.chart) TR.chart.resize(); });
+window.addEventListener('afterprint', () => { if (saved) { dt.open = saved.open; dt.depth = saved.depth; saved = null; drawTree(); } if (TR.chart) TR.chart.resize(); });
 
-function draw() { drawBar(); drawKpis(); drawGroups(); drawTrend(); drawTree(); }
+function draw() { drawControls(); drawKpis(); drawGroups(); drawTrend(); drawTree(); }
 draw();
 </script>
 </body>
