@@ -171,7 +171,7 @@
     let basis = null;
     if (rep.fee) {
       try { basis = localStorage.getItem(LS_BASIS); } catch (e) { /* 저장 불가 환경 */ }
-      if (basis !== 'net') basis = 'gross';
+      if (!rep.fee.options.some(o => o.key === basis)) basis = rep.fee.options[0].key;
     }
     const basisLabel = () => (basis === 'net' ? 'Net' : 'Gross');
     const basisEl = document.querySelector('[data-h="basis"]');

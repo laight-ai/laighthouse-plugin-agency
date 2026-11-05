@@ -10,8 +10,9 @@
   실효 비율(Σ Gross ÷ Σ Net)을 쓴다(eff_factors → gross_envelope(eff=...)).
 
 부품:
-- 원문용(weekly·monthly): parse_fees · has_fee · gross_envelope · eff_factors · net_target_text
-- 파싱된 예산 목록용(종합 리포트): fee_ratios · ratios_have_fee · add_gross · net_budgets
+- 원문용(weekly·monthly): parse_fees · has_fee · report_has_fee · gross_envelope · eff_factors · net_target_text
+- 파싱된 예산 목록용(종합 리포트): fee_ratios · ratios_have_fee · add_gross · add_gross_like · net_budgets
+- 화면: BASIS_UI(토글 문구) · BASIS_NOTE(digest 기준 설명) · basis_bundle · net_only
 """
 import re
 
@@ -280,7 +281,7 @@ def _net_cost(b, budgets):
                     and x.get("inc") != "N" and x["v"].get("cost")):
                 fee += x["v"]["cost"] - (x["v"].get("cost_net") or _net_cost(x, budgets))
         if nxt == "m":   # 매체 범위가 없는 매체(캠페인 목표만 있는 매체)는 그 포함 캠페인들의 수수료
-            have = {x["scope"]["m"] for x in budgets if x["mo"] == b["mo"] and set(x["scope"]) == {"m"}}
+            have = {x["scope"]["m"] for x in budgets if x["mo"] == b["mo"] and set(x["scope"]) == {"m"} and x["v"].get("cost")}
             for x in budgets:
                 xs = x["scope"]
                 if (x["mo"] == b["mo"] and set(xs) == {"m", "c"} and xs["m"] not in have and x.get("inc") != "N"
