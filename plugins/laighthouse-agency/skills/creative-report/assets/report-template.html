@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+/*__KIT_CSS__*/
+.cr-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: 13px; color: var(--label); }
+.cr-chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 13px;
+  font-weight: 600; cursor: pointer; color: var(--label); }
+.cr-chip.is-on { background: #eff6ff; border-color: var(--accent); color: var(--accent); }
+.cr-sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; padding: 12px 16px; border: 1px solid var(--line);
+  border-radius: 10px; font-size: 13px; color: var(--label); }
+.cr-sum b { font-size: 16px; color: var(--ink); margin-right: 4px; }
+.cr-sum span strong { color: var(--ink); }
+.cr-tbl { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+.cr-tbl th { text-align: right; font-weight: 600; color: var(--label); padding: 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.cr-tbl td { text-align: right; padding: 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cr-tbl th:nth-child(-n+3), .cr-tbl td:nth-child(-n+3) { text-align: left; }
+.cr-tbl td.cr-name { white-space: normal; min-width: 140px; max-width: 260px; }
+.cr-name small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.cr-rank { color: var(--muted); width: 20px; }
+.cr-th { width: 72px; height: 48px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #fafaf9;
+  display: flex; align-items: center; justify-content: center; }
+.cr-th img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+.cr-th svg { width: 100%; height: 100%; }
+.cr-hl { color: var(--accent); font-weight: 700; }
+.cr-note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.cr-wrap { overflow-x: auto; }
+.cr-zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 9; cursor: zoom-out; }
+.cr-zoom img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+.cr-zoom.is-on { display: flex; }
+</style>
+</head>
+<body>
+<div class="lh-page">
+  <header class="lh-header">
+    <div>
+      <h1 id="title"></h1>
+      <div class="lh-meta" id="period"></div>
+    </div>
+    <button class="lh-print" onclick="window.print()">PDF로 저장</button>
+  </header>
+  <section class="lh-section">
+    <div class="cr-bar">
+      <span>매체</span><span id="media-chips" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+      <span style="margin-left:auto">TOP 기준</span><span id="sort-chips" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+    </div>
+  </section>
+  <div id="groups" style="display:flex;flex-direction:column;gap:16px"></div>
+  <div class="lh-footer">— by LaightAI</div>
+</div>
+<div class="cr-zoom" id="zoom" onclick="this.classList.remove('is-on')"><img alt=""></div>
+<script>
+const D = "__DATA__";
+const st = { sort: D.sort, hidden: new Set() };
+const cur = D.currency;
+const f = {
+  int: v => v == null ? '-' : Math.round(v).toLocaleString('ko-KR'),
+  money: v => v == null ? '-' : cur + Math.round(v).toLocaleString('ko-KR'),
+  big: v => v == null ? '-' : v >= 1e6 ? cur + (v / 1e6).toFixed(1) + 'M' : cur + Math.round(v).toLocaleString('ko-KR'),
+  ctr: v => v == null ? '-' : v.toFixed(2) + '%',
+  pct: v => v == null ? '-' : v.toFixed(1) + '%',
+};
+const COLS = [['impression', '노출', 'int'], ['click', '클릭', 'int'], ['ctr', 'CTR', 'ctr'], ['cpc', 'CPC', 'money'], ['cost', '비용', 'big']]
+  .concat(D.has.conversion ? [['conversion', '전환', 'int'], ['cvr', 'CVR', 'pct']] : [])
+  .concat(D.has.revenue ? [['roas', 'ROAS', 'pct']] : []);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const NOIMG = '<svg viewBox="0 0 72 48" preserveAspectRatio="none"><path d="M0 0L72 48M72 0L0 48" stroke="#a8a29e" stroke-width="1.5"/></svg>';
+
+function rank(rows, sort) {
+  let pool = rows, fallback = false;
+  if (sort === 'ctr' || sort === 'roas') {
+    const total = rows.reduce((a, r) => a + r.cost, 0);
+    pool = rows.filter(r => r.impression >= D.min.impression && r.cost >= total * D.min.share);
+    if (!pool.length) { pool = rows; fallback = true; }
+    pool = pool.filter(r => r[sort] != null);
+  }
+  pool = pool.slice().sort((a, b) => (b[sort] || 0) - (a[sort] || 0) || b.cost - a.cost);
+  return { top: pool.slice(0, D.top), fallback };
+}
+
+function chips(el, items, isOn, onClick) {
+  el.innerHTML = '';
+  items.forEach(([k, label]) => {
+    const b = document.createElement('button');
+    b.className = 'cr-chip' + (isOn(k) ? ' is-on' : '');
+    b.textContent = label;
+    b.onclick = () => { onClick(k); draw(); };
+    el.appendChild(b);
+  });
+}
+
+function draw() {
+  chips(document.getElementById('media-chips'), D.media.map(g => [g.summary.media, g.summary.media]),
+    k => !st.hidden.has(k), k => st.hidden.has(k) ? st.hidden.delete(k) : st.hidden.add(k));
+  chips(document.getElementById('sort-chips'), D.sorts, k => k === st.sort, k => { st.sort = k; });
+  const sortLabel = (D.sorts.find(s => s[0] === st.sort) || [, ''])[1];
+  const box = document.getElementById('groups');
+  box.innerHTML = D.media.filter(g => !st.hidden.has(g.summary.media)).map(g => {
+    const m = g.summary, r = rank(g.rows, st.sort);
+    const tail = D.has.revenue ? `<span>ROAS <strong>${f.pct(m.roas)}</strong></span>` : `<span>CPC <strong>${f.money(m.cpc)}</strong></span>`;
+    const body = r.top.map((x, i) => `<tr><td class="cr-rank">${i + 1}</td>
+      <td><div class="cr-th">${x.thumb ? `<img src="${x.thumb}" alt="">` : NOIMG}</div></td>
+      <td class="cr-name">${esc(x.name)}<small>${esc(x.campaign_name || '')}${x.ad_group_name ? ' › ' + esc(x.ad_group_name) : ''}</small></td>
+      ${COLS.map(c => `<td class="${c[0] === st.sort ? 'cr-hl' : ''}">${f[c[2]](x[c[0]])}</td>`).join('')}</tr>`).join('');
+    return `<section class="lh-section">
+      <div class="cr-sum"><b>${esc(m.media)}</b><span>비용 <strong>${f.money(m.cost)}</strong></span>
+        <span>CTR <strong>${f.ctr(m.ctr)}</strong></span>${tail}<span>소재 ${m.creatives}개</span></div>
+      <h2 style="margin-top:14px">${esc(m.media)} 소재 TOP ${D.top} · ${esc(sortLabel)} 기준</h2>
+      <div class="cr-wrap"><table class="cr-tbl"><thead><tr><th></th><th>썸네일</th><th>소재명</th>
+        ${COLS.map(c => `<th>${c[1]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
+      ${r.fallback ? '<div class="cr-note">최소 표본(노출 1,000·광고비 1%)을 채운 소재가 없어 전체 소재로 순위를 냈습니다.</div>' : ''}
+    </section>`;
+  }).join('') || '<section class="lh-section">선택한 매체가 없습니다.</section>';
+}
+
+document.getElementById('title').textContent = D.brand + ' 소재 성과';
+document.getElementById('period').textContent = `기간 ${D.start} ~ ${D.end}` +
+  (D.sorts.some(s => s[0] === 'ctr') ? ` · CTR${D.has.revenue ? '·ROAS' : ''} TOP은 노출 1,000 이상·매체 광고비 1% 이상 소재만` : '');
+document.addEventListener('click', e => {
+  if (e.target.matches('.cr-th img')) {
+    const z = document.getElementById('zoom');
+    z.querySelector('img').src = e.target.src;
+    z.classList.add('is-on');
+  }
+});
+draw();
+</script>
+</body>
+</html>

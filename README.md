@@ -24,5 +24,6 @@
 | | `daily-report` | Daily 보고서(HTML) — 기준일 vs 전일·전주 동요일 |
 | | `weekly-report` | Weekly 보고서(HTML) — 이번주 vs 전주, 월 누적 진척도 |
 | | `monthly-report` | Monthly 보고서(HTML) — 대상 월 vs 전월, 예산·목표 달성 |
+| | `creative-report` | 소재 성과 — 매체별 소재 TOP을 채팅 표로, 또는 썸네일 포함 보고서(HTML)로 |
 
 자세한 내용은 [plugins/laighthouse-agency/README.md](plugins/laighthouse-agency/README.md)를 보세요.
