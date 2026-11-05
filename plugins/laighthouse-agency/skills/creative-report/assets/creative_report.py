@@ -37,6 +37,9 @@ else:
     raise SystemExit("saved_responses.py를 찾을 수 없다 (shared/assets)")
 import saved_responses as sr  # noqa: E402
 
+sys.path.insert(0, HERE)
+import creative_digest as cd  # noqa: E402
+
 KEYS = {   # 지표 키 후보(대소문자 무시, 정확히 같은 이름) — 처음 있는 것
     "cost": ("광고비", "cost", "spend", "spending"),
     "impression": ("노출", "impression", "impressions"),
@@ -301,6 +304,7 @@ def main():
     ap.add_argument("--sort", choices=tuple(SORT_LABEL), default="cost")
     ap.add_argument("--top", type=int, default=3)
     ap.add_argument("--image-file", nargs="*", default=[])
+    ap.add_argument("--summary", help="소재 Summary 불릿 JSON 파일({\"bullets\": [...]}) — 보고서 모드 2단계")
     ap.add_argument("--out")
     a = ap.parse_args()
 
@@ -340,28 +344,40 @@ def main():
     if not has["revenue"]:
         notes.append("_매출 지표가 없어 ROAS 대신 CPC를 보여 줍니다._")
 
+    # 직전 기간(같은 길이) — 표 모드는 있으면 쓰고, 보고서 모드는 필수
+    p_start, p_end = prev_period(a.start_date, a.end_date)
+    prev_rec = find_perf(recs, p_start, p_end)
+    prev_env = load_env(prev_rec) if prev_rec else None
+    prev_rows = creative_rows(prev_env, resolve_keys(prev_env.get("metrics"), prev_env["rows"]), a.media) if prev_env else None
+    # 일별 추이(day × media) — 보고서 모드만 필수
+    trend_rec = sr.pick(recs, "get_ad_performance", start_date=a.start_date, end_date=a.end_date, time_grain="day",
+                        group_by=["media"])
+    trend_env = load_env(trend_rec) if trend_rec else None
+    trend = (cd.trend_series(trend_env, resolve_keys(trend_env.get("metrics"), trend_env["rows"]), pick,
+                             a.start_date, a.end_date, a.media) if trend_env else None)
+    digest = cd.build(rows, prev_rows, has, cur, "%s ~ %s" % (a.start_date, a.end_date), "%s ~ %s" % (p_start, p_end), trend)
+
     if a.mode == "table":
         groups = []
         for m in order:
             top, fb = rank(by_media[m], sort, a.top)
             groups.append({"summary": media_summary(by_media[m]), "top": top, "fallback": fb})
         return sr.emit({"chat": chat_markdown(a.brand, a.start_date, a.end_date, groups, sort, columns(has), cur, notes),
-                        "facts": {"sort": sort, "media": order}})
+                        "facts": {"sort": sort, "media": order}, "digest": digest})
 
     # ── 보고서 ──
-    p_start, p_end = prev_period(a.start_date, a.end_date)
     items = creative_items(recs)
-    prev_rec = find_perf(recs, p_start, p_end)
     missing = []
     if items is None:
         missing.append({"tool": "get_ad_creative_info", "brand_name": a.brand})
     if prev_rec is None:
         missing.append({"tool": "get_ad_performance", "start_date": p_start, "end_date": p_end, "time_grain": "total",
                         "group_by": "이번 기간 호출과 같은 group_by"})
+    if trend_rec is None:
+        missing.append({"tool": "get_ad_performance", "start_date": a.start_date, "end_date": a.end_date, "time_grain": "day",
+                        "group_by": ["media"]})
     if missing:
         return sr.emit({"missing": missing})
-    prev_env = load_env(prev_rec)
-    prev_rows = creative_rows(prev_env, resolve_keys(prev_env.get("metrics"), prev_env["rows"]), a.media) if prev_env else None
 
     # 썸네일(최대 MAX_IMAGES개): TOP 표(정렬 지표마다 상위 N개 — 화면에서 기준을 바꿔도 붙어 있다)를 먼저, 그다음 광고비 순
     files = dict(p.split("=", 1) for p in a.image_file if "=" in p)
@@ -382,12 +398,21 @@ def main():
     if todo:
         return sr.emit({"image_calls": todo})
     thumbs = {k: uris.get(v) or None for k, v in picked.items()}
+    if not a.summary:   # 2단계: 모델이 digest로 소재 Summary를 쓰고 --summary로 다시 부른다
+        return sr.emit({"digest": digest, "next": "guides/creative-summary.md를 따라 불릿을 써서 --summary <파일>로 다시 실행"})
+    try:
+        with open(a.summary, encoding="utf-8") as f:
+            bullets = json.load(f).get("bullets") or []
+        assert isinstance(bullets, list)
+    except (OSError, ValueError, AttributeError, AssertionError) as exc:
+        return sr.emit({"error": "--summary 파일을 읽지 못했다: %s" % exc})
 
     data = {"brand": a.brand, "start": a.start_date, "end": a.end_date, "currency": cur, "top": a.top,
             "sort": sort, "sorts": [[s, SORT_LABEL[s]] for s in sorts], "has": has,
             "min": {"impression": MIN_IMP, "share": MIN_SHARE}, "media": [],
             "prev": {"start": p_start, "end": p_end, "ok": prev_rows is not None},
-            "tree": detail_tree(rows, prev_rows, thumbs)}
+            "tree": detail_tree(rows, prev_rows, thumbs), "summary": bullets,
+            "trend": trend}
     fields = ("name", "campaign_name", "ad_group_name", "cost", "impression", "click", "conversion", "revenue",
               "ctr", "cpc", "cvr", "roas")
     for m in order:
@@ -399,7 +424,9 @@ def main():
     with open(os.path.join(SHARED, "report_kit.css"), encoding="utf-8") as f:
         kit_css = f.read()
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
-    html = html.replace("/*__KIT_CSS__*/", kit_css).replace('"__DATA__"', blob).replace("__TITLE__", "%s 소재 성과" % a.brand)
+    with open(os.path.join(SHARED, "chart.umd.min.js"), encoding="utf-8") as f:
+        chart_js = f.read()
+    html = html.replace("/*__CHART_JS__*/", chart_js).replace("/*__KIT_CSS__*/", kit_css).replace('"__DATA__"', blob).replace("__TITLE__", "%s 소재 성과" % a.brand)
     out = a.out or os.path.join(os.path.expanduser("~"), "Downloads", "laighthouse-reports",
                                 "%s_creative_%s_%s.html" % (re.sub(r'[\\/:*?"<>|]', "_", a.brand), a.start_date, a.end_date))
     os.makedirs(os.path.dirname(out), exist_ok=True)
