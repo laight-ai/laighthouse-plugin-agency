@@ -1,15 +1,14 @@
-"""저장 훅 응답 리더 — MCP ``get_external_context`` 응답을 PoC 조회 객체 모양으로 바꾼다.
+"""저장 훅 응답 리더 — MCP ``get_external_context`` 응답을 집계 코드가 부르는 조회 객체로 바꾼다.
 
-PoC는 DB를 직접 읽었다(``trend_config.Db``·``search_db.SearchDb``·``buzz.BuzzDb``). 플러그인은 저장 훅
-(``hooks/save_responses.py``)이 남긴 응답 하나를 읽고, 집계 코드(``search_aggregate``·``buzz``·
-``search_db.quality``)가 부르던 같은 메서드를 응답 키로 채운다. 응답 모양은 laighthouse-elt
-``external_context/serving.py``(api-contract 1절)다.
+저장 훅(``hooks/save_responses.py``)이 남긴 응답 하나를 읽고, 집계 코드(``search_aggregate``·``buzz``·
+``search_db.quality``)가 부르는 메서드를 응답 키로 채운다. 응답 모양은 laighthouse-elt
+``external_context/serving.py``다.
 
 - :func:`find_response`: ``tool_input``의 ``brand_name``·``kind``·``start_date``·``end_date``가 같은
   가장 최근 파일.
-- :func:`tenant_of`: 응답 ``brands`` → PoC ``load_tenant`` dict(``group_name``·``own``·``keywords``·
+- :func:`tenant_of`: 응답 ``brands`` → 테넌트 dict(``group_name``·``own``·``keywords``·
   ``brand_query``·``collect_search``).
-- :class:`SearchData`·:class:`BuzzData`: PoC ``SearchDb``·``BuzzDb``의 조회 메서드.
+- :class:`SearchData`·:class:`BuzzData`: 검색량·뉴스/블로그 조회 메서드.
 """
 
 from __future__ import annotations
@@ -84,7 +83,7 @@ def tenant_of(resp: dict, range_start: date | None = None) -> dict:
             "collect_search": b.get("collect_search", True),
         }
         for b in resp["brands"]
-        # 검색량 응답에는 collect_search=false 회사의 키워드가 없다(ELT는 회사 단위, PoC는 테넌트 단위).
+        # 검색량 응답에는 collect_search=false 회사의 키워드가 없다(ELT는 회사 단위로 거른다).
         if resp.get("kind") != "search_volume" or b.get("collect_search", True)
     ]
     return {
@@ -105,7 +104,7 @@ def _in(d: date, start: date, end: date) -> bool:
 
 
 class SearchData:
-    """``kind=search_volume`` 응답 → PoC ``search_db.SearchDb``의 조회 8개."""
+    """``kind=search_volume`` 응답 → 검색량 조회 메서드."""
 
     def __init__(self, resp: dict) -> None:
         self.cfg = {
@@ -178,7 +177,7 @@ class SearchData:
 
 
 class BuzzData:
-    """``kind=news|blog`` 응답 → PoC ``buzz.BuzzDb``의 조회 3개. 문서는 서버가 거른 센 글만 있다."""
+    """``kind=news|blog`` 응답 → 뉴스·블로그 조회 메서드. 문서는 서버가 거른 센 글만 있다."""
 
     def __init__(self, resp: dict) -> None:
         self.kind = resp["kind"]

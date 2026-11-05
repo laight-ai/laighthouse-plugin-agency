@@ -1,6 +1,6 @@
 """검색량 집계 — naver-search skill의 소스. 브랜드별 추정 검색수·점유율·급증일 JSON을 만든다.
 
-원천은 저장 훅 응답(`responses.SearchData`)의 키워드별 일별 추정 검색수(PC+모바일)다. 기간 통계·급증
+원천은 조회 객체의 키워드별 일별 추정 검색수(PC+모바일)다. 기간 통계·급증
 기준선은 `trend_core.py` docstring을 따른다.
 
 - 브랜드·일 값 = 브랜드 `keywords`의 `est_volume` 합을 정수로 반올림.

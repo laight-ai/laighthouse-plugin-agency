@@ -1,7 +1,6 @@
 """외부 요인 skill(naver-search·naver-news·naver-blog)의 소스 JSON을 통합 JSON으로 묶는다.
 
-`range_report.prepare`가 소스 JSON(`search_aggregate`·`news_trend`·`blog_trend`의 `build`)을
-`combine`에 넘긴다.
+`combine`은 소스 JSON(`search_aggregate`·`news_trend`·`blog_trend`의 `build`)을 받는다.
 
 통합 JSON 키: `tenant`, `kind`(external-trend), `target`, `generated_at`, `window`, `own`(자사 브랜드
 이름), `sources{k: label·count·spike 규칙}`, `brands[]`(`name`·`role`과 소스별 `current` 기간 통계),

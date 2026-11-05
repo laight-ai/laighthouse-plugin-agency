@@ -102,6 +102,24 @@ def test_search_refuses_when_own_brand_is_not_collected():
     raise AssertionError("자사가 검색량 수집 대상이 아니면 거부해야 한다(경쟁사를 자사로 보고하면 안 된다)")
 
 
+def test_news_refuses_when_no_own_brand():
+    """자사 없이 저장된 설정(ELT require_own=False)이면 traceback 대신 거부 안내로 끝난다."""
+    import json, tempfile
+    resp = {"kind": "news", "tenant": "t", "start": "2026-10-14", "end": "2026-11-03",
+            "brands": [BRANDS[1]], "coverage": [], "documents": [], "fetch_info": []}
+    rec = {"tool_name": "x__get_external_context", "saved_at": 1, "response": json.dumps(resp),
+           "tool_input": {"brand_name": "자사", "kind": "news",
+                          "start_date": "2026-10-14", "end_date": "2026-11-03"}}
+    with tempfile.TemporaryDirectory() as root:
+        with open(os.path.join(root, "1_get_external_context.json"), "w", encoding="utf-8") as f:
+            json.dump(rec, f, ensure_ascii=False)
+        try:
+            range_report.prepare("naver-news", "자사", "2026-10-21~2026-11-03", root)
+        except range_report.Refusal:
+            return
+    raise AssertionError("자사 브랜드가 없으면 거부해야 한다")
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

@@ -30,7 +30,7 @@ def test_monday_after_weekend_is_not_spike():
     values = week(100, 40, MON - timedelta(days=7)) | {MON: 120}
     # 직전 7일 전체 평균(82.9)으로는 1.45배지만, 평일 평균 100 기준으로는 1.2배다.
     assert core.same_daytype_avg(values, MON) == 100.0
-    assert core.is_spike(values, MON, 1.4, 10) == (True, core.trailing_avg(values, MON))
+    assert core.is_spike(values, MON, 1.4, 10) == (True, 82.9)
     assert core.is_spike(values, MON, 1.4, 10, same_daytype=True) == (False, 100.0)
     sun = MON + timedelta(days=6)
     values = week(100, 40, MON - timedelta(days=7)) | week(100, 40, MON) | {sun: 100}

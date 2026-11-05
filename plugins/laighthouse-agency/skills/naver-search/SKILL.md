@@ -5,7 +5,7 @@ description: >
   "검색량", "네이버 검색량", "검색 추이", "검색수 비교" 요청 시 사용. 입력은 브랜드와 날짜 범위(시작~끝, 기본 어제까지 14일).
   광고 성과와는 결합하지 않는다.
 metadata:
-  version: "3.3.0"
+  version: "1.9.0"
 ---
 
 > ⚡ thinking은 짧게. MCP 1회 → `prepare.py` → 요약 + `build_report.py` → 게시, 이 순서로만 진행한다.
@@ -31,7 +31,7 @@ metadata:
    - `missing`이 나오면 2의 인자가 다른 것이다 — 그 인자 그대로 다시 호출하고 재실행한다.
    - 종료 코드 2(stderr 메시지)는 사용자에게 그대로 전한다(예: 검색량은 매일 10시 수집 뒤에 어제 값이 들어온다).
    - 도구가 "is not collected for external context"로 거절하면 외부 데이터 수집 대상이 아닌 브랜드라고 알린다.
-4. `references/rules.md`대로 `facts`만 근거로 **요약 3문단(수정본 양식: 굵은 결론 → 회색 보조 문단 → "수치:" 보조 문단)**을 쓰고 빌더를 1회 호출한다:
+4. `references/rules.md`대로 `facts`만 근거로 **요약 3문단(화면 양식: 굵은 결론 → 회색 보조 문단 → "수치:" 보조 문단)**을 쓰고 빌더를 1회 호출한다:
    ```
    python3 assets/build_report.py --json <prepare가 준 json> <<'EOF'
    ["<결론>", "<근거>", "<수치>"]

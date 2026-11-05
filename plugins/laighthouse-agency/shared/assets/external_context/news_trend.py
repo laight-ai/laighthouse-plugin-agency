@@ -1,6 +1,6 @@
 """뉴스 언급량 집계 — naver-news skill의 소스.
 
-저장 훅 응답(`responses.BuzzData`, kind=news)을 읽어 브랜드별 언급량과 급증일
+조회 객체(kind=news)를 읽어 브랜드별 언급량과 급증일
 기사를 JSON으로 낸다. 브랜드 대표 검색어·고유 링크 집계·집계 불완전·급증 판정은 `buzz.py`, 기간
 통계는 `trend_core.py` docstring을 따른다.
 

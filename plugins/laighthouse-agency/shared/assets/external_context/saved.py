@@ -7,7 +7,7 @@ laighthouse-plugin(``laighthouse-analytics-prod``)과 laighthouse-plugin-agency(
 
 - :func:`response_text`: 레코드 → 응답 본문(호스트가 잘라 둔 파일·``{"result": …}`` 래퍼 처리).
 - :func:`work_dir`: 보고서 중간 JSON을 둘 작업 폴더.
-- :func:`daily_ad_envelope`: weather-impact가 겹쳐 그릴 ``get_ad_performance``(day, group_by media) 응답.
+- :func:`daily_ad_envelope`: 브랜드·기간의 ``get_ad_performance``(day, group_by media) 응답.
 - :func:`metric_keys`: 지표 이름 → 클릭·전환·매출 키(laighthouse-plugin ``report_kit`` 역할 규칙과 같다).
 """
 
@@ -84,17 +84,18 @@ def _is_daily_media_call(ti: dict, start: str, end: str) -> bool:
     )
 
 
-def daily_ad_envelope(brand: str, start: str, end: str) -> dict | None:
-    """``ROOT`` 아래 이 브랜드·기간의 가장 최근 ``get_ad_performance`` 응답 봉투. 없거나 오류면 None."""
+def daily_ad_envelope(brand: str, start: str, end: str, root: str | None = None) -> dict | None:
+    """``root``(없으면 ``ROOT``, 이때만 ``MAX_AGE`` 이내) 아래 이 브랜드·기간의 가장 최근
+    ``get_ad_performance`` 응답 봉투. 없거나 오류면 None."""
     hits = []
     now = time.time()
-    for dirpath, _, names in os.walk(ROOT):
+    for dirpath, _, names in os.walk(root or ROOT):
         for name in names:
             if not name.endswith("_get_ad_performance.json"):
                 continue
             path = os.path.join(dirpath, name)
             try:
-                if now - os.path.getmtime(path) > MAX_AGE:
+                if not root and now - os.path.getmtime(path) > MAX_AGE:
                     continue
                 with open(path, encoding="utf-8") as f:
                     rec = json.load(f)

@@ -1,8 +1,6 @@
 """외부 요인 skill 4개가 함께 쓰는 HTML 한 장 — 파트별 요약 → 비교 차트(1개 이상) → 근거 목록.
 
-템플릿·근거 카드·색 토큰은 external-context-poc ``experiments/skill_samples/make_samples.py``(시안
-아티팩트 4개)의 것을 그대로 옮겼다. Chart.js는 같은 폴더의 ``chart.umd.min.js``를 인라인한다.
-요약 구성·토·일 음영·차트별 성과 지표 토글은 Sung Kang 님 수정본(11/04) 그대로다. 표준 라이브러리만 쓴다.
+Chart.js는 같은 폴더의 ``chart.umd.min.js``를 인라인한다. 표준 라이브러리만 쓴다.
 """
 
 from __future__ import annotations
@@ -62,7 +60,7 @@ body {{ background:var(--bg); color:var(--fg); font-family:var(--sans); line-hei
 .eyebrow {{ font-size:12px; letter-spacing:.06em; color:var(--muted); }}
 h1 {{ font-size:22px; text-wrap:balance; }}
 .card {{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; min-width:0; }}
-/* 요약 카드 4가지 양식 — Sung Kang 님 수정본(11/04) 아티팩트의 CSS 그대로 */
+/* 요약 카드 4가지 양식 */
 .summary {{ font-size:17px; font-weight:600; }}
 .summary .lab, .lab {{ display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:4px; letter-spacing:.04em; }}
 .summary .sub {{ display:block; margin-top:8px; font-size:14px; font-weight:400; color:var(--muted); }}
@@ -193,7 +191,7 @@ class SummaryError(ValueError):
     """요약 입력이 파트 구성과 맞지 않는다(모델에게 그대로 돌려줄 메시지)."""
 
 
-# 요약 양식(skill마다 수정본 아티팩트 그대로)
+# 요약 양식(skill마다 하나)
 #   lead : 굵은 결론 + 회색 보조 문단들(검색량). 파트는 문자열, ``prefix``에 든 라벨은 "라벨: "을 앞에 붙인다.
 #   rows : 파란 라벨 + 본문, 행 사이 구분선(뉴스). 파트는 문자열.
 #   chips: 회색 칩 라벨 + 굵은 결론 + 근거(블로그). 파트는 {"head", "body"}.
@@ -259,7 +257,7 @@ def summary_text(parts: list) -> str:
 
 
 def docs_card(title: str, rows: list) -> str:
-    """주요 기사·글 목록. ``rows``가 비면 '특이점 없음' 한 줄(docs/16 Q3)."""
+    """주요 기사·글 목록. ``rows``가 비면 '특이점 없음' 한 줄."""
     if not rows:
         return f'<div class="card"><h2>{escape(title)}</h2><p class="note">특이점 없음</p></div>'
     def href(link: str) -> str:

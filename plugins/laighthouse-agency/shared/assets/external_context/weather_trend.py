@@ -3,16 +3,15 @@
 skill 폴더의 ``assets/prepare.py``·``assets/build_report.py``가 부른다. 표준 라이브러리만 쓴다.
 
 - 날씨: 저장 훅의 ``get_external_context``(``kind=weather``, ``start_date = 시작``, ``end_date = 끝``)
-  응답 ``rows``. 유형·결측 규칙은 external-context-poc ``experiments/namyang_report_samples/scripts``의
-  ``common.weather_types``·``context_db.weather_record``를 그대로 옮겼다(docs/16 D11): 비 ≥1mm,
+  응답 ``rows``. 유형·결측 규칙: 비 ≥1mm,
   폭우 ≥30mm(비 대신 표기), 폭염 최고기온 ≥30℃, 무더위 불쾌지수 최대 ≥75, 시간자료 결측이 6시간을
   넘으면 불쾌지수 없음·"(DI 결측)".
 - 광고 성과: 저장 훅의 ``get_ad_performance``(같은 범위, ``time_grain: day``, ``group_by: ["media"]``,
   ``metrics``·``filters`` 생략) 응답이 있으면 날짜별 전체 매체 합(클릭·전환·매출, 구매전환율 = 전환 ÷ 클릭)을
-  겹친다. 없거나 오류(광고 mart가 없는 브랜드)면 날씨만 낸다. 가상 수치는 만들지 않는다(docs/16 Q9).
-- 비 온 날 차이(시안 ``make_samples.py``의 ``rain_gap``): 지표마다 비 온 날을 같은 요일 유형(평일·주말)의
+  겹친다. 없거나 오류(광고 mart가 없는 브랜드)면 날씨만 낸다. 가상 수치는 만들지 않는다.
+- 비 온 날 차이(``rain_gap``): 지표마다 비 온 날을 같은 요일 유형(평일·주말)의
   비 없는 날 평균과 비교한 변화율의 평균. 기온·불쾌지수는 지표와의 상관계수(연관일 뿐 원인이 아니다).
-- 차트(Sung Kang 님 수정본 11/04): 불쾌지수(시간자료 일평균)·평균기온·강수량 3개, 차트마다 성과 지표 토글.
+- 차트: 불쾌지수(시간자료 일평균)·평균기온·강수량 3개, 차트마다 성과 지표 토글.
 """
 
 from __future__ import annotations
@@ -29,7 +28,7 @@ import responses
 import saved
 import trend_config as config
 import trend_core as core
-from range_report import Refusal, parse_range, write_report
+from range_report import SHORT_RANGE_DAYS, Refusal, parse_range, write_report
 
 SKILL = "weather-impact"
 RAIN_MM = 1
@@ -39,7 +38,7 @@ MUGGY_DI = 75
 MAX_DI_MISSING_HOURS = 6
 
 
-# ── namyang 실험 common.py·context_db.py에서 그대로 ────────────────────────────
+# ── 날씨 유형·일 기록 ─────────────────────────────────────────────────────────
 
 
 def weather_types(sum_rn: float, max_ta, di_max) -> tuple:
@@ -107,9 +106,9 @@ METRICS = [
 ]
 
 
-def daily_metrics(brand: str, start: date, end: date) -> dict:
+def daily_metrics(brand: str, start: date, end: date, root: str | None = None) -> dict:
     """저장된 day grain 광고 성과 → {지표: {날짜: 전체 매체 합}}. 응답·클릭 키가 없으면 {}."""
-    env = saved.daily_ad_envelope(brand, start.isoformat(), end.isoformat())
+    env = saved.daily_ad_envelope(brand, start.isoformat(), end.isoformat(), root)
     if not env:
         return {}
     keys = saved.metric_keys(list(env.get("metrics") or []))
@@ -247,10 +246,7 @@ def prepare(brand: str, rng: str, root: str | None = None) -> dict:
     recs = records(resp)
     if not recs:
         raise Refusal(f"{start}~{end} 날씨 관측값이 아직 없습니다. 범위 끝을 앞당겨 다시 요청하세요.")
-    if root:
-        # shortcut: 광고 성과도 --responses 폴더에서 읽도록 저장 폴더를 바꾼다(CLI 한 번 실행용 전역 변경).
-        saved.ROOT = root
-    metrics = daily_metrics(brand, start, end)
+    metrics = daily_metrics(brand, start, end, root)
     facts = make_facts(brand, start, end, recs, metrics, resp.get("station_id"))
     r = {"skill": SKILL, "facts": facts, "metrics": metrics}
     folder = saved.work_dir(brand, SKILL, f"{start}_{end}")
@@ -273,7 +269,6 @@ FACTORS = [
 ]
 NUMS = "①②③"
 CHART_HEIGHT = 240
-SHORT_DAYS = 3  # range_report.SHORT_RANGE_DAYS와 같은 기준
 STRONG_CORR = 0.5
 CLEAR_GAP_PCT = 10.0  # rules.md 1절과 같은 기준
 
@@ -321,10 +316,10 @@ def charts(recs: list, metrics: dict, label: str, metric_facts: dict) -> list:
         else:
             factor = {"type": "line", "label": name, "data": values, "tok": tok,
                       "tension": 0.25, "pointRadius": 3, "borderWidth": 2, "spanGaps": False}
-        if len(recs) <= SHORT_DAYS and factor["type"] == "line":
+        if len(recs) <= SHORT_RANGE_DAYS and factor["type"] == "line":
             factor["pointRadius"] = 5  # 점 1~3개뿐이라 크게
         if toggles:
-            # 강수량 차트는 비 온 날(1mm 이상) 지표 막대를 강수 색으로 칠한다(수정본).
+            # 강수량 차트는 비 온 날(1mm 이상) 지표 막대를 강수 색으로 칠한다.
             bar = {"type": "bar", "label": toggles[0]["name"], "data": toggles[0]["data"], "yAxisID": "y",
                    "order": 1, "borderRadius": 3}
             bar |= {"toks": ["--rain" if x else "--c1" for x in rain]} if key == "sum_rn" else {"tok": "--c1"}

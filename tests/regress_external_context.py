@@ -13,7 +13,7 @@ naver-blog·weather-impact)의 ``prepare``를 돌려 report.json을 ``<skill>_<�
 ``today_kst``는 ``--today``(기본 2026-11-05, 기준을 만든 날)로 고정한다 — 데이터 상태 문장이 오늘 날짜에
 따라 바뀌기 때문이다. 기준은 그 시점 코드의 결과이므로, 의도한 동작 변경 뒤에는 차이를 검토한 다음에만 ``--write``로 다시 쓴다.
 ``--weather-csv``를 주면 날씨 응답의 일별 값(최고·최저기온, 강수량, 시간자료 수, 불쾌지수 평균·최대)을
-PoC namyang 실험 SQL로 뽑은 CSV와도 비교한다. 표준 라이브러리만 쓴다(macOS 기본 python3 3.9 포함).
+DB에서 직접 뽑은 CSV와도 비교한다. 표준 라이브러리만 쓴다(macOS 기본 python3 3.9 포함).
 """
 
 import argparse

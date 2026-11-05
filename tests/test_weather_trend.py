@@ -140,6 +140,27 @@ def test_station_label_follows_response():
         saved.ROOT = before
 
 
+def test_prepare_reads_old_ad_performance_from_the_given_folder():
+    """--responses 폴더를 주면 광고 성과도 날씨처럼 저장 시각과 상관없이 그 폴더에서 읽는다."""
+    with tempfile.TemporaryDirectory() as root:
+        _weather_root(root, [ROW], 108)
+        env = {"metrics": ["클릭"], "metric_units": {},
+               "rows": [{"date": "2026-07-06", "media": "네이버", "클릭": 50}]}
+        rec = {"tool_name": "x__get_ad_performance", "saved_at": 1,
+               "tool_input": {"brand_name": "자사", "start_date": "2026-07-06",
+                              "end_date": "2026-07-07", "time_grain": "day", "group_by": ["media"]},
+               "response": json.dumps(env, ensure_ascii=False)}
+        path = os.path.join(root, "2_get_ad_performance.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(rec, f, ensure_ascii=False)
+        two_days_ago = os.path.getmtime(path) - 2 * 24 * 3600
+        os.utime(path, (two_days_ago, two_days_ago))
+        out = wt.prepare("자사", "2026-07-06~2026-07-07", root)
+        with open(out["json"], encoding="utf-8") as f:
+            metrics = json.load(f)["metrics"]
+        assert metrics == {"click": {"2026-07-06": 50}}, metrics
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

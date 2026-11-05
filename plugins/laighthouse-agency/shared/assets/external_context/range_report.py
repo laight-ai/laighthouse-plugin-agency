@@ -6,18 +6,17 @@ prepare: 저장 훅 응답(``get_external_context``, ``start_date = 시작 − 7
 소스 집계(``search_aggregate``·``news_trend``·``blog_trend``의 ``build``) → 통합 JSON(``trend_report.combine``)과
 facts. facts는 모델이 파트별 요약을 쓰는 유일한 근거다.
 
-- 범위 합계·순위: 브랜드별 범위 합(쓸 수 있는 날이 절반 미만이면 None, PoC ``period_stats``).
-- 끝 7일 vs 앞 7일: 범위가 14일 이상일 때만(범위 안의 끝 7일과 그 앞 7일). PoC ``period_stats``와 같이
-  값이 있는 날이 4일 미만이면 합계·변화율이 없고, 날 수(``last7_days``·``prev7_days``)를 함께 낸다.
+- 범위 합계·순위: 브랜드별 범위 합(쓸 수 있는 날이 절반 미만이면 None).
+- 끝 7일 vs 앞 7일: 범위가 14일 이상일 때만(범위 안의 끝 7일과 그 앞 7일). 값이 있는 날이 4일 미만이면 합계·변화율이 없고, 날 수(``last7_days``·``prev7_days``)를 함께 낸다.
 - 점유율(검색만): 끝 7일, 14일 이상이면 앞 7일 대비 pp. 14일 미만이면 범위 전체.
-- 급증: PoC 배수·최소 건수 그대로, 기준선만 직전 7일 중 같은 요일 유형(평일·주말) 평균(범위 안 모든 날).
+- 급증: 소스별 배수·최소 건수, 기준선은 직전 7일 중 같은 요일 유형(평일·주말) 평균(범위 안 모든 날).
   급증마다 지난주 같은 요일 값·변화율, 뉴스·블로그는 급증일 상위 기사·글 제목 SPIKE_DOCS건.
 - 브랜드별 평일·주말 평균과 지난주 같은 요일 대비 변화율이 가장 큰·작은 날(특이사항 판단용).
-- 주요 기사·글 4건(docs/16 Q7): 뉴스는 자사 기사 ``cluster_articles``(같은 제목 묶음 크기 순),
-  블로그는 자사 글 ``pick_posts``(제목 일치·최신순·블로거 1건). 없으면 빈 목록 → 화면은 '특이점 없음'.
+- 주요 기사·글 4건: 뉴스·블로그 모두 자사 글 ``topic_clusters``(제목에 대표 검색어가 든 글, 같은 주제
+  묶음 크기 순). 없으면 빈 목록 → 화면은 '특이점 없음'.
   같은 규칙으로 TITLE_SAMPLE건까지 제목 표본(광고 성과 영향·평판 위험 판단용)도 facts에 넣는다.
 
-build: 통합 JSON + 모델의 파트별 요약(JSON 배열, 파트는 SKILLS ``parts``) → 시안 구성 HTML(``page.py``)을
+build: 통합 JSON + 모델의 파트별 요약(JSON 배열, 파트는 SKILLS ``parts``) → HTML(``page.py``)을
 ``~/Downloads/laighthouse-reports/{브랜드}_{skill}_{시작}_{끝}.html``에 쓰고, 요약의 숫자를 JSON·facts와
 대조한다(``check_citations``).
 """
@@ -122,7 +121,7 @@ def parse_range(text: str, today: date) -> tuple[date, date]:
 
 
 def tool_call(brand: str, kind: str, start: date, end: date) -> dict:
-    """skill이 보내는 MCP 호출 인자(api-contract 4절)."""
+    """skill이 보내는 MCP 호출 인자."""
     return {
         "brand_name": brand,
         "kind": kind,
@@ -351,7 +350,9 @@ def prepare(skill: str, brand: str, rng: str, root: str | None = None) -> dict:
     except ValueError as e:
         return {"errors": [str(e)]}
     own = next((b for b in resp["brands"] if b["role"] == "own"), None)
-    if spec["source"] == "search" and not (own and own.get("collect_search", True)):
+    if own is None:
+        raise Refusal(f"{brand}의 외부 맥락 설정에 자사 브랜드가 없습니다.")
+    if spec["source"] == "search" and not own.get("collect_search", True):
         raise Refusal(f"{brand}는 검색량 수집 대상이 아닙니다.")
     tenant = responses.tenant_of(resp, start)
     db = responses.data_of(resp)
@@ -375,7 +376,7 @@ def prepare(skill: str, brand: str, rng: str, root: str | None = None) -> dict:
 
 
 def brand_total_spec(r: dict, source: str) -> dict:
-    """브랜드별 가로 누적 막대(누적 칸 = 날짜). SHORT_RANGE_DAYS 이하 범위(블로그 수정본 11/04 모양)."""
+    """브랜드별 가로 누적 막대(누적 칸 = 날짜). SHORT_RANGE_DAYS 이하 범위."""
     counts, dates = r["daily"]["counts"][source], r["daily"]["dates"]
     names = list(counts)
     toks = [page.token(i) for i in range(len(names))]
