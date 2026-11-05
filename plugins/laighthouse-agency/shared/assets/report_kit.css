@@ -17,12 +17,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR
 .lh-header h1 { font-size: 20px; font-weight: 700; color: var(--ink); }
 .lh-meta { font-size: 13px; color: var(--label); margin-top: 4px; }
 .lh-meta + .lh-meta { margin-top: 0; }
-/* 보기 묶음 토글(report.basis) — 머리말에 붙는다 */
-.lh-basis { display: inline-flex; align-items: center; gap: 2px; padding: 2px; margin-left: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
-.lh-basis-k { font-size: 11px; color: var(--muted); padding: 0 6px; white-space: nowrap; }
-.lh-basis-b { border: none; background: none; border-radius: 6px; padding: 4px 10px; font: inherit; font-size: 12px; font-weight: 600; color: var(--label); cursor: pointer; }
-.lh-basis-b:hover { background: var(--sub-bg); color: var(--ink); }
-.lh-basis-b.is-on { background: var(--ink); color: #fff; }
+/* 보기 묶음 토글(report.basis) — 머리말에 눈에 띄게(파란 테두리·배경), 아래에 설명(note — 예: 수수료율) */
+.lh-basis-wrap { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 4px; margin-left: auto; }
+.lh-basis { display: inline-flex; align-items: center; gap: 4px; padding: 4px; border: 2px solid var(--accent); border-radius: 10px;
+  background: #eff6ff; box-shadow: 0 2px 8px rgba(37, 99, 235, .15); }
+.lh-basis-k { font-size: 12px; font-weight: 700; color: var(--accent); padding: 0 8px 0 6px; white-space: nowrap; }
+.lh-basis-b { border: none; background: #fff; border-radius: 7px; padding: 6px 16px; font: inherit; font-size: 13px; font-weight: 700;
+  color: var(--label); cursor: pointer; min-width: 64px; }
+.lh-basis-b:hover { color: var(--accent); }
+.lh-basis-b.is-on { background: var(--accent); color: #fff; box-shadow: 0 1px 3px rgba(37, 99, 235, .4); }
+.lh-basis-fee { font-size: 12px; font-weight: 600; color: var(--accent); white-space: nowrap; }
 .lh-print { padding: 8px 14px; background: var(--accent); border: none; border-radius: 8px; font: inherit; font-size: 13px;
   color: #fff; cursor: pointer; }
 .lh-print:hover { filter: brightness(.95); }
