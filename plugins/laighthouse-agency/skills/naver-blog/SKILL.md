@@ -6,7 +6,7 @@ description: >
   광고 성과와는 결합하지 않는다.
   출력 형식(HTML·표 등)을 말하지 않아도 이 요청이면 항상 이 스킬로 HTML 보고서를 만든다 — `get_external_context`(kind `blog`)를 직접 불러 채팅 표·글로만 답하지 않는다.
 metadata:
-  version: "1.9.0"
+  version: "1.10.0"
 ---
 
 > ⚡ thinking은 짧게. MCP 1회 → `prepare.py` → 요약 + `build_report.py` → 게시, 이 순서로만 진행한다.
@@ -17,7 +17,7 @@ metadata:
 
 사용자가 말한 브랜드의 **네이버 블로그 언급** 보고서(HTML 한 장: 요약 → 브랜드 비교 차트 → 주요 글 4건)를 만든다.
 같은 묶음의 자매 스킬: `naver-search`(검색량)·`naver-news`(뉴스)·`naver-blog`(블로그)·`weather-impact`(날씨).
-브랜드명은 호출의 `brand_name`과 제목·파일명에 **그대로** 쓴다(실패 2에서 다른 이름을 확인받았으면 그 이름).
+브랜드명은 호출의 `brand_name`과 제목·파일명에 **그대로** 쓴다.
 
 계산·렌더링은 스크립트가 한다. 모델이 할 일은 (1) MCP 호출 1회, (2) 스크립트 실행, (3) 요약 작성뿐이다.
 **MCP 응답 원문을 읽거나 옮겨 적지 않는다** — 플러그인 저장 훅이 응답을 파일로 남기고 `prepare.py`가 읽는다.
@@ -53,7 +53,7 @@ metadata:
 | 번호 | 언제 | 안내 |
 |---|---|---|
 | 실패 1 | `get_external_context` 도구가 없다 | 외부 맥락 도구를 쓸 수 없다. `/mcp`에서 laighthouse 서버 연결·로그인을 확인하고, 연결돼 있으면 아직 이 서버에 배포되지 않은 기능이다 |
-| 실패 2 | 도구 오류 `Unknown brand` | 브랜드를 찾지 못했다. **멈추지 않고** `get_brand_list`로 가장 비슷한 이름을 찾아 맞는지 묻는다(`shared/references/mcp-tools.md` 공통 규칙). 확인되면 그 이름으로 2부터 다시 한다 |
+| 실패 2 | 도구 오류 `Unknown brand` | 브랜드를 찾지 못했다. **멈추지 않고** `get_brand_list`로 가장 비슷한 이름을 찾아 맞는지 묻는다(플러그인 루트 `shared/references/mcp-tools.md` 공통 규칙). 확인되면 그 이름을 2의 `brand_name`과 3의 `--brand`에 넣어 2부터 다시 한다 |
 | 실패 2-1 | 도구 오류 `Several brands are named` | 같은 이름의 브랜드가 여럿이라 구분할 수 없다. 서버 메시지를 그대로 전하고 관리자에게 브랜드 이름을 구분해 달라고 요청하게 한다 |
 | 실패 3 | 도구 오류 `MCP service is not enabled for brand` | 이 브랜드는 MCP 사용이 꺼져 있다. 관리자에게 켜 달라고 요청하게 한다 |
 | 실패 4 | 도구 오류 `is not ELT-published yet` | 이 브랜드의 데이터 저장소가 아직 준비되지 않았다 |
