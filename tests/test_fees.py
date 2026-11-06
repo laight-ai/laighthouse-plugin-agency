@@ -27,6 +27,8 @@ def _builder(skill):
 
 
 weekly, monthly, overall = _builder("weekly-report"), _builder("monthly-report"), _builder("overall-summary")
+sys.path.insert(0, os.path.join(PLUGIN, "skills", "overall-summary", "assets"))
+import budget_targets  # noqa: E402
 
 KEYS = {"cost": "cost", "impression": "impressions", "cpm": "cpm"}
 METRICS = ["cost", "impressions", "cpm", "roas"]
@@ -174,10 +176,30 @@ def test_split_envelopes_keep_every_months_fees():
 def test_fee_note_and_ui():
     fl = [fee("Meta", "2026-09", "markup", 10), fee("Meta", "2026-10", "markup", 12.5), fee("Google", "2026-10", "commission", 15)]
     table = fees.fee_table([env([], ["media"], fee_list=fl)])
-    assert fees.served_fee_note(table, "net") == "브랜드 기준 Net · 수수료 Meta(9월 마크업 10%, 10월 마크업 12.5%) · Google 커미션 15%"
+    both = ["2026-09", "2026-10"]
+    assert fees.served_fee_note(table, "net", both) == "브랜드 기준 Net · 수수료 Meta(9월 마크업 10%, 10월 마크업 12.5%) · Google(10월 커미션 15%)"
+    assert fees.served_fee_note(table, "net", ["2026-10"]) == "브랜드 기준 Net · 수수료 Meta 마크업 12.5% · Google 커미션 15%"
+    assert fees.served_fee_note(table, "net", ["2026-10", "2026-11"]) == "브랜드 기준 Net · 수수료 Meta(10월 마크업 12.5%) · Google(10월 커미션 15%)"
+    assert fees.served_fee_note(table, "net", ["2026-08"]) == "브랜드 기준 Net"
+    same = fees.fee_table([env([], ["media"], fee_list=[fee("Meta", "2026-09", "markup", 12.5), fee("Meta", "2026-10", "markup", 12.5)])])
+    assert fees.served_fee_note(same, "net", both) == "브랜드 기준 Net · 수수료 Meta 마크업 12.5%"
     ui = fees.served_ui("net")
     assert ui["default"] == "net" and [o["key"] for o in ui["options"]] == ["gross", "net"]
     assert "브랜드 설정" in ui["options"][1]["title"] and "환산" in ui["options"][0]["title"]
+
+
+def test_conflicting_fee_stops():
+    a = env([], ["media"], fee_list=[fee("Meta", "2026-10", "markup", 10)])
+    text = NEW_TEXT.format(**NET)
+    assert fees.fee_table([a], [text])[("meta", "2026-10")]["rate"] == 10   # 같은 수수료는 그대로 합친다
+    for other in (NEW_TEXT.replace("| Meta | markup | 10 |", "| Meta | markup | 12 |"),
+                  NEW_TEXT.replace("| Meta | markup | 10 |", "| meta | commission | 10 |")):
+        try:
+            fees.fee_table([a], [other.format(**NET)])
+        except SystemExit as e:
+            assert "Meta" in str(e) and "2026-10" in str(e) and "마크업 10%" in str(e), e
+            continue
+        raise AssertionError("같은 매체·달의 수수료가 응답마다 다르면 멈춰야 한다")
 
 
 # ── 빌더 연결 ────────────────────────────────────────────────────────────────
@@ -220,14 +242,20 @@ fee_basis: net
 def weekly_payload(new):
     """E = 10/7: 이번주 10/1~7(10월), 전주 9/24~30(9월). Meta 수수료 9월 마크업 10%, 10월 20%. Naver 수수료 없음."""
     b = "net" if new else None
-    fl = lambda k: WEEK_FEES[k] if new else ()  # noqa: E731
+
+    def fl(k):
+        return WEEK_FEES[k] if new else ()
+
     s3 = [{"date": "2026-09-07", "media": "Meta", "cost": 100, "impressions": 100},
           {"date": "2026-09-25", "media": "Meta", "cost": 200, "impressions": 400},
           {"date": "2026-09-25", "media": "Naver", "cost": 100, "impressions": 200},
           {"date": "2026-10-02", "media": "Meta", "cost": 300, "impressions": 1000},
           {"date": "2026-10-02", "media": "Naver", "cost": 100, "impressions": 500}]
-    week = lambda m, n, mi, ni: [{"media": "Meta", "campaign_name": "A", "cost": m, "impressions": mi},  # noqa: E731
-                                 {"media": "Naver", "campaign_name": "B", "cost": n, "impressions": ni}]
+
+    def week(m, n, mi, ni):
+        return [{"media": "Meta", "campaign_name": "A", "cost": m, "impressions": mi},
+                {"media": "Naver", "campaign_name": "B", "cost": n, "impressions": ni}]
+
     return {"out": "unused.html", "title": "t", "target_date": "2026-10-07", "metric_keys": KEYS, "currency": "₩",
             "dims": "valid dimensions: ['date', 'media', 'campaign_name']",
             "s1": {"json": json.dumps(env([{"month": "2026-09", "cost": 100}, {"month": "2026-10", "cost": 400}], [],
@@ -252,6 +280,27 @@ def test_weekly_served_net():
     assert close(cur["Meta"]["cost"], 360) and close(base["Meta"]["cost"], 220) and cur["Naver"]["cost"] == 100
     s3 = {(r["date"], r["media"]): r["cost"] for r in c["e3"]["rows"]}
     assert close(s3[("2026-09-07", "Meta")], 110) and close(s3[("2026-10-02", "Meta")], 360)
+
+
+def prev_month_cost(target_date, basis):
+    """E = target_date. s1 9월 MTD(9/1~E의 일) 광고비 200, s3(일 × 매체)는 E-34부터. Meta 수수료 9월 마크업 10%·10월 20%."""
+    s3 = [{"date": "2026-09-03", "media": "Meta", "cost": 100}, {"date": "2026-09-04", "media": "Naver", "cost": 100},
+          {"date": "2026-09-20", "media": "Meta", "cost": 500}, {"date": "2026-10-02", "media": "Meta", "cost": 200},
+          {"date": "2026-10-02", "media": "Naver", "cost": 100}]
+    p = {"out": "unused.html", "title": "t", "target_date": target_date, "metric_keys": KEYS, "currency": "₩",
+         "s1": {"json": json.dumps(env([{"month": "2026-09", "cost": 200}, {"month": "2026-10", "cost": 300}], [], grain="month")),
+                "target_progress": NEW_TP},
+         "s3": {"json": json.dumps(env(s3, ["media"], fee_list=WEEK_FEES["s3"]))}}
+    cards = {c["key"]: c for c in weekly.compute(p, check_dims=False, basis=basis)[0]["s1"]["cards"]}
+    return cards["cost"]["sub"]
+
+
+def test_weekly_previous_month_needs_covered_window():
+    # E = 10/4: E-34 = 8/31이라 9월 1일~4일이 s3에 모두 있다 — 9월 실효 배수 (100×1.1 + 100) ÷ 200 = 1.05 → 210
+    assert prev_month_cost("2026-10-04", "gross") == "전월 동기간 ₩210"
+    # E = 10/7: E-34 = 9/3이라 9월 1~2일이 s3에 없다 — 9월에 Meta 수수료가 있으니 추정하지 않고 빈칸. 서버 기준 보기는 그대로 200
+    assert prev_month_cost("2026-10-07", "gross") == "전월 동기간 -"
+    assert prev_month_cost("2026-10-07", "net") == "전월 동기간 ₩200"
 
 
 def test_weekly_old_format_unchanged():
@@ -348,11 +397,13 @@ fee_basis: gross
 
 def test_overall_budgets_and_rows():
     """서버 기준 Gross. Meta 마크업 10%, Google 커미션 20%, Naver 수수료 없음."""
-    budgets = overall.parse_budget({"month": "2026-10", "target_progress": OVERALL_TP})
+    budgets = budget_targets.parse_budget({"month": "2026-10", "target_progress": OVERALL_TP})
     table = fees.fee_table([], [OVERALL_TP])
     net = {json.dumps(sorted(b["scope"].items())): b["v"] for b in fees.convert_budgets(budgets, table, "gross", "net",
-                                                                                         overall.derive_targets)}
-    key = lambda **sc: json.dumps(sorted(sc.items()))  # noqa: E731
+                                                                                         budget_targets.derive_targets)}
+
+    def key(**sc):
+        return json.dumps(sorted(sc.items()))
     assert close(net[key()]["cost"], 3100)   # 1000 + 1600 + 500
     assert close(net[key(m="Meta")]["cost"], 1000) and close(net[key(m="Meta")]["cpm"], 5000)
     assert close(net[key(m="Meta")]["imp"], 200)   # 노출 = 예산 ÷ CPM × 1000 — 기준이 바뀌어도 같다
@@ -375,10 +426,26 @@ def test_overall_compute_served_gross():
     assert report["fee"]["default"] == "gross" and "브랜드 기준 Gross" in report["fee"]["note"]
     by = {r["m"]: (r["cost"], r["cost_g"]) for r in out}
     assert by == {"Meta": (1000, 1100), "Google": (400, 500), "Naver": (400, 400)}, by
-    total = lambda bs: next(b["v"]["cost"] for b in bs if not b["scope"])  # noqa: E731
+
+    def total(bs):
+        return next(b["v"]["cost"] for b in bs if not b["scope"])
     assert total(report["table"]["budgets"]) == 3600 and close(total(report["table"]["budgets_net"]), 3100)
     rep, rs = overall.basis_view(report, out, "net")   # _net.xlsx가 보는 값
     assert rep["header"]["basis"] == "Net" and sorted(r["cost"] for r in rs) == [400, 400, 1000]
+
+
+def test_overall_stops_on_legacy_placement():
+    rows = [{"date": "2026-10-01", "media": "Meta", "campaign_name": "A", "cost": 1100, "impressions": 100}]
+    prow = [{"date": "2026-10-01", "media": "Meta", "placement": "feed", "cost": 1000, "impressions": 100}]
+    p = {"out": "unused.html", "brand": "b", "target_date": "2026-10-05", "start_date": "2026-10-01", "metric_keys": KEYS,
+         "currency": "₩", "dims": "valid dimensions: ['date', 'media', 'campaign_name']",
+         "data": {"json": json.dumps(env(rows, ["media", "campaign_name"], "gross"))},
+         "place": {"json": json.dumps(env(prow, ["media", "placement"], None))}}
+    try:
+        overall.compute(p)
+    except SystemExit:
+        return
+    raise AssertionError("fee_basis가 없는 Placement 응답에서 멈추지 않았다")
 
 
 if __name__ == "__main__":

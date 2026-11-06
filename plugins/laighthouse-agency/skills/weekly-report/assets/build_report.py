@@ -29,12 +29,7 @@ MCP 응답 원문(봉투·목표 표)을 섹션별로 그대로 받아, 공용 �
 }
 - 목표 표에 행이 있는 지표만 목표 대비 카드가 된다(현재 서버는 cost뿐). 목표가 없는 지표는 전월 동기간 대비 카드다.
 - 응답에 없는 차원(예: 상품)은 표의 Dimension 메뉴에 나오지 않는다 — 조용히 빠진다.
-- Gross / Net(규칙은 shared/assets/fees.py): 수수료가 있으면 Gross/Net 두 벌을 만들어 머리말 토글로 바꾼다.
-  · 서버가 fee_basis를 주면: 광고비·예산은 그 기준(브랜드 설정)으로 오고 그 기준이 기본 보기다. 다른 보기는 행의 매체·달 수수료
-    (봉투 fees, 목표 원문 셋째 표)로 환산한다 — s3(일 × 매체)는 행마다, s4(주 합계)는 그 주가 걸친 달의 수수료가 같으면 그 값·다르면
-    s3의 (주, 매체) 실효 배수, s1(달 합계, 매체 없음)은 s3의 같은 날짜 범위(그 달 1일~E의 일) 실효 배수.
-  · 옛 서버(fee_basis 없음): 광고비 실적은 Net, 기준 달 예산에 수수료가 있으면(목표 원문의 cost ≠ cost_net) 기본 Gross —
-    광고비·CPM·CPC·CPV는 기준 달 수수료 비율로 환산(수수료는 달마다 같다고 본다).
+- Gross / Net: 수수료가 있으면 Gross/Net 두 벌을 만들어 머리말 토글로 바꾼다. 규칙은 shared/assets/fees.py(현재 응답)·fees_legacy.py(fee_basis 없는 옛 응답).
 - 출력(stdout): {"out", "bytes", "sections": {"s1".."s4": "ok"|"placeholder"}}
 """
 import io
@@ -58,6 +53,7 @@ else:
     raise SystemExit("report_kit.py를 찾을 수 없다 (shared/assets)")
 import report_kit as kit  # noqa: E402
 import fees  # noqa: E402
+import fees_legacy  # noqa: E402
 
 P = kit.PRODUCT_DIM
 VOL_ROLES = ("impression", "click", "views")       # 월 목표 대비 누적 달성률(진행률 세로선)
@@ -139,39 +135,46 @@ def compute(payload, check_dims=True, basis=None):
 
     tp = (sec("s1") or {}).get("target_progress")
     served = fees.served_basis([e1, e3, *fine.values()], [tp])
-    if served:   # 서버 기준 그대로가 기본 보기 — 다른 보기만 실적·예산을 행의 매체·달 수수료로 환산
+    if served:
         if basis and basis != served:
             table = fees.fee_table([e1, e3, *fine.values()], [tp])
-            g3 = fees.convert_envelope(e3, table, served, basis, keys)   # 일 × 매체: 그 날 달의 수수료
+            g3 = fees.convert_envelope(e3, table, served, basis, keys)
             weeks_of = {(a + timedelta(days=i)).isoformat(): k for k, (a, b) in (("cur", cur_w), ("base", base_w))
                         for i in range((b - a).days + 1)}
             eff = fees.eff_factors([(e3, g3, lambda r: weeks_of.get(kit.period_of(r)))], keys)
             fine = {k: fees.convert_envelope(v, table, served, basis, keys, eff=eff, eff_key=lambda r, k=k: k,
                                              window=fees.window_months(*{"cur": cur_w, "base": base_w}[k]))
                     for k, v in fine.items()}
-            # s1은 매체가 없다 — s3에서 s1과 같은 날짜 범위(그 달 1일 ~ E의 일)의 실효 배수
-            same = [i for i, r in enumerate((e3 or {}).get("rows") or []) if int(kit.period_of(r)[8:10] or 0) <= E.day]
-            pick = lambda env: dict(env, rows=[env["rows"][i] for i in same]) if env else None  # noqa: E731
+            covered = {mo for mo in (M0, M1) if date.fromisoformat(mo + "-01") >= E - timedelta(days=34)}
+            same = [i for i, r in enumerate((e3 or {}).get("rows") or [])
+                    if int(kit.period_of(r)[8:10] or 0) <= E.day and kit.period_of(r)[:7] in covered]
+
+            def pick(env):
+                return dict(env, rows=[env["rows"][i] for i in same]) if env else None
+
             e1 = fees.convert_envelope(e1, table, served, basis, keys, eff_key=lambda r: kit.period_of(r)[:7],
                                        eff=fees.eff_factors([(pick(e3), pick(g3), lambda r: kit.period_of(r)[:7])], keys))
             e3 = g3
             e4 = dict(next(iter(fine.values())), rows=[r for e in fine.values() for r in e["rows"]]) if fine else None
             tp = fees.convert_target_text(tp, table, served, basis)
     elif basis == "gross":   # 옛 서버 — 광고비 실적(Net) → Gross. 위 단계는 아래 단계를 환산한 실효 비율로(표끼리 숫자가 맞게):
-        fz = fees.parse_fees(tp)   # s4(캠페인, 이번주·전주) → s3(일별 매체, 그 주) → s1(월 누적 전체, 달마다)
-        gfine = {k: fees.gross_envelope(v, fz, keys) for k, v in fine.items()}
+        fz = fees_legacy.parse_fees(tp)   # s4(캠페인, 이번주·전주) → s3(일별 매체, 그 주) → s1(월 누적 전체, 달마다)
+        gfine = {k: fees_legacy.gross_envelope(v, fz, keys) for k, v in fine.items()}
         weeks_of = {}
         for k, (a, b) in (("cur", cur_w), ("base", base_w)):
             for i in range((b - a).days + 1):
                 weeks_of[(a + timedelta(days=i)).isoformat()] = k
         eff3 = fees.eff_factors([(fine[k], gfine[k], lambda r, k=k: k) for k in fine], keys)
-        g3 = fees.gross_envelope(e3, fz, keys, eff=eff3, eff_key=lambda r: weeks_of.get(kit.period_of(r)))
-        month = lambda r: kit.period_of(r)[:7]  # noqa: E731
-        e1 = fees.gross_envelope(e1, fz, keys, eff=fees.eff_factors([(e3, g3, month)], keys), eff_key=month)
+        g3 = fees_legacy.gross_envelope(e3, fz, keys, eff=eff3, eff_key=lambda r: weeks_of.get(kit.period_of(r)))
+
+        def month(r):
+            return kit.period_of(r)[:7]
+
+        e1 = fees_legacy.gross_envelope(e1, fz, keys, eff=fees.eff_factors([(e3, g3, month)], keys), eff_key=month)
         e3, fine = g3, gfine
         e4 = dict(next(iter(fine.values())), rows=[r for e in fine.values() for r in e["rows"]]) if fine else None
     elif basis == "net":   # 옛 서버 — 예산 = Net
-        tp = fees.net_target_text(tp)
+        tp = fees_legacy.net_target_text(tp)
     i3 = kit.index_rows(e3, ["media"])
     media = kit.ordered_names(i3) or kit.ordered_names(kit.index_rows(e4, ["media"]))
     colors = kit.media_colors(media)
@@ -303,11 +306,7 @@ def fee_view(payload):
     envs = [kit.section_envelope(payload.get("s1")), kit.section_envelope(payload.get("s3"))]
     envs += [kit.section_envelope(s4.get(k)) for k in ("cur", "base")] if isinstance(s4, dict) else []
     tp = (payload.get("s1") or {}).get("target_progress")
-    served = fees.served_basis(envs, [tp])
-    if served:
-        table = fees.fee_table(envs, [tp])
-        return (served if table else None), served, table
-    return ("gross" if fees.report_has_fee(tp) else None), None, {}
+    return fees_legacy.view(envs, [tp], tp)
 
 
 def digest(payload):
@@ -320,7 +319,7 @@ def digest(payload):
     unit_of = lambda k: units.get(k) or (cur_c if k in {keys.get(r) for r in kit.MONEY_ROLES} else None)  # noqa: E731
 
     out = {"이번주": rep["__CUR_SHORT__"], "전주": rep["__BASE_SHORT__"],
-           "광고비·예산 기준": fees.served_digest_note(served, bool(table)) if served else fees.BASIS_NOTE[bool(view)]}
+           "광고비·예산 기준": fees_legacy.digest_note(view, served, table)}
     if c["tot"]:
         sp, bud = c["tot"].get(keys.get("cost")), c["targets"].get(keys.get("cost"))
         out["월누적"] = {"광고비": kit.fmt_metric(sp, cur_c, cur_c), "월예산": kit.fmt_metric(bud, cur_c, cur_c) if bud else None,
@@ -347,13 +346,13 @@ def digest(payload):
 def main():
     payload = kit.read_payload()
     view, served, table = fee_view(payload)
-    sections, rep, _ = compute(payload, basis=view)
+    sections, rep, ctx = compute(payload, basis=view)
     report = {"currency": payload.get("currency") or "₩", "sections": sections}
     if view:   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 = 서버 기준, 옛 서버는 Gross)
         alt = compute(payload, check_dims=False, basis=fees.other(view))[0]
-        note = f"* Weekly Summary는 {fees.LABEL[view]} 기준 숫자로 작성되었습니다."
-        report["basis"] = (fees.served_bundle(served, sections, alt, note, fees.served_fee_note(table, served)) if served else
-                           fees.basis_bundle(sections, alt, note, fees.fee_note((payload.get("s1") or {}).get("target_progress"))))
+        months = sorted(fees.window_months(ctx["E"] - timedelta(days=34), ctx["E"]))
+        report["basis"] = fees_legacy.bundle(view, served, table, sections, alt, "Weekly Summary",
+                                             (payload.get("s1") or {}).get("target_progress"), months)
     path, size = kit.build_html(ASSETS_DIR, rep, report, payload["out"])
     json.dump({"out": path, "bytes": size,
                "sections": {k: ("ok" if sections[k] is not None else "placeholder") for k in sorted(sections)}},
