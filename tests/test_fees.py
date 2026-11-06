@@ -200,6 +200,13 @@ def test_conflicting_fee_stops():
             assert "Meta" in str(e) and "2026-10" in str(e) and "마크업 10%" in str(e), e
             continue
         raise AssertionError("같은 매체·달의 수수료가 응답마다 다르면 멈춰야 한다")
+    for rate in (100, 120):
+        try:
+            fees.fee_table([env([], ["media"], fee_list=[fee("Google", "2026-10", "commission", rate)])])
+        except SystemExit as e:
+            assert "Google" in str(e) and "100%" in str(e), e
+            continue
+        raise AssertionError("커미션율이 100% 이상이면 멈춰야 한다")
 
 
 # ── 빌더 연결 ────────────────────────────────────────────────────────────────
@@ -282,7 +289,7 @@ def test_weekly_served_net():
     assert close(s3[("2026-09-07", "Meta")], 110) and close(s3[("2026-10-02", "Meta")], 360)
 
 
-def prev_month_cost(target_date, basis):
+def prev_month_cost(target_date, basis, fee_list=WEEK_FEES["s3"]):
     """E = target_date. s1 9월 MTD(9/1~E의 일) 광고비 200, s3(일 × 매체)는 E-34부터. Meta 수수료 9월 마크업 10%·10월 20%."""
     s3 = [{"date": "2026-09-03", "media": "Meta", "cost": 100}, {"date": "2026-09-04", "media": "Naver", "cost": 100},
           {"date": "2026-09-20", "media": "Meta", "cost": 500}, {"date": "2026-10-02", "media": "Meta", "cost": 200},
@@ -290,7 +297,7 @@ def prev_month_cost(target_date, basis):
     p = {"out": "unused.html", "title": "t", "target_date": target_date, "metric_keys": KEYS, "currency": "₩",
          "s1": {"json": json.dumps(env([{"month": "2026-09", "cost": 200}, {"month": "2026-10", "cost": 300}], [], grain="month")),
                 "target_progress": NEW_TP},
-         "s3": {"json": json.dumps(env(s3, ["media"], fee_list=WEEK_FEES["s3"]))}}
+         "s3": {"json": json.dumps(env(s3, ["media"], fee_list=fee_list))}}
     cards = {c["key"]: c for c in weekly.compute(p, check_dims=False, basis=basis)[0]["s1"]["cards"]}
     return cards["cost"]["sub"]
 
@@ -301,6 +308,40 @@ def test_weekly_previous_month_needs_covered_window():
     # E = 10/7: E-34 = 9/3이라 9월 1~2일이 s3에 없다 — 9월에 Meta 수수료가 있으니 추정하지 않고 빈칸. 서버 기준 보기는 그대로 200
     assert prev_month_cost("2026-10-07", "gross") == "전월 동기간 -"
     assert prev_month_cost("2026-10-07", "net") == "전월 동기간 ₩200"
+    assert prev_month_cost("2026-10-07", "gross", [fee("Meta", "2026-10", "markup", 20)]) == "전월 동기간 ₩200"
+
+
+def test_weekly_week_across_months_uses_s3_effective_factor():
+    fl = [fee("Meta", "2026-09", "markup", 10), fee("Meta", "2026-10", "markup", 20)]
+    s3 = [{"date": "2026-09-28", "media": "Meta", "cost": 100, "impressions": 100},
+          {"date": "2026-10-02", "media": "Meta", "cost": 600, "impressions": 300}]
+    s4 = [{"media": "Meta", "cost": 700, "impressions": 400}]
+    p = {"out": "unused.html", "title": "t", "target_date": "2026-10-03", "metric_keys": KEYS, "currency": "₩",
+         "s3": {"json": json.dumps(env(s3, ["media"], fee_list=fl))},
+         "s4": {"cur": {"json": json.dumps(env(s4, ["media"], fee_list=fl, grain="total"))}}}
+    _, _, c = weekly.compute(p, check_dims=False, basis="gross")
+    # s3 실효 배수로 환산 — 100 × 1.1 + 600 × 1.2 = 830 (일수 가중 (4 × 1.1 + 3 × 1.2) ÷ 7 × 700 = 800이 아니다)
+    assert close(c["fine"]["cur"]["rows"][0]["cost"], 830), c["fine"]["cur"]["rows"]
+
+
+def test_weekly_empty_fee_table_has_no_toggle():
+    p = weekly_payload(new=True)
+    p["s1"]["target_progress"] = NEW_TP.split("\n\n| media | fee_mode")[0]
+    for sec in (p["s3"], p["s4"]["cur"], p["s4"]["base"], p["s1"]):
+        sec["json"] = json.dumps(dict(json.loads(sec["json"]), fees=[]))
+    assert weekly.fee_view(p) == (None, "net", {})
+
+
+def test_weekly_mixed_old_and_new_responses_stop():
+    p = weekly_payload(new=True)
+    cur = p["s4"]["cur"]
+    cur["json"] = json.dumps({k: v for k, v in json.loads(cur["json"]).items() if k != "fee_basis"})
+    try:
+        weekly.compute(p, check_dims=False, basis="net")
+    except SystemExit as e:
+        assert "수수료 기준" in str(e.code), e
+        return
+    raise AssertionError("s4 이번주만 fee_basis가 없으면 멈춰야 한다")
 
 
 def test_weekly_old_format_unchanged():
@@ -323,7 +364,10 @@ def test_weekly_main_report_basis():
             script = os.path.join(PLUGIN, "skills", "weekly-report", "assets", "build_report.py")
             subprocess.run([sys.executable, script, path], check=True, capture_output=True)
             html = open(p["out"], encoding="utf-8").read()
-            assert f'"default":"{default}"' in html.replace(" ", "") and f'"sections":{{"{alt}"' in html.replace(" ", ""), new
+            flat = html.replace(" ", "")
+            assert f'"default":"{default}"' in flat and f'"sections":{{"{alt}":{{"s1"' in flat, new
+            # 다른 보기의 내용: 새 형식 Gross 10월 MTD 광고비 460(10/1~7 실효 배수 1.15 × 400), 옛 형식 Net 월예산 1,000(Gross 1,060 − 60)
+            assert ("MTD광고비₩460" if new else "월예산₩1,000") in flat, new
 
 
 MONTH_TP = """month: 2026-10
@@ -408,9 +452,9 @@ def test_overall_budgets_and_rows():
     assert close(net[key(m="Meta")]["cost"], 1000) and close(net[key(m="Meta")]["cpm"], 5000)
     assert close(net[key(m="Meta")]["imp"], 200)   # 노출 = 예산 ÷ CPM × 1000 — 기준이 바뀌어도 같다
     assert close(net[key(m="Meta", c="A")]["cost"], 400) and close(net[key(m="Google")]["cost"], 1600)
-    rows = [{"day": date(2026, 10, 1), "m": "Meta", "cost": 1100}, {"day": date(2026, 10, 1), "m": "Google", "cost": 500},
+    rows = [{"day": date(2026, 10, 1), "m": "Meta", "cost": 1000}, {"day": date(2026, 10, 1), "m": "Google", "cost": 400},
             {"day": date(2026, 10, 1), "m": "Naver", "cost": 400}]
-    fees.add_cost_views(rows, table, "gross")
+    fees.add_cost_views(rows, table, "net")   # 서버 기준 Net — Gross는 1000 × 1.1, 400 ÷ 0.8, 수수료 없음 그대로
     assert [(r["cost"], r["cost_g"]) for r in rows] == [(1000, 1100), (400, 500), (400, 400)]
 
 
