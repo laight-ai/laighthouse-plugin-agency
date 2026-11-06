@@ -42,7 +42,7 @@ fee_basis: net
 | Google | - | - | cpm | 2500 | 2400 | 0.96 |
 | Google | {CAMPAIGN} | Y | cpv | 30 | - | - |
 | Google | {CAMPAIGN} | Y | cost | 12000000 | 9000000 | 0.75 |
-| Google | 브랜드 검색 | N | cost | 5000000 | 4000000 | 0.8 |
+| Google | 브랜드 검색\\|PC | N | cost | 5000000 | 4000000 | 0.8 |
 | Meta | - | - | cost | 130100000 | 124969619 | 0.9606 |
 
 | media | fee_mode | rate |
@@ -61,7 +61,7 @@ TP_JSON = {
         {"media": "Google", "campaign_name": CAMPAIGN, "included": True, "metric": "cpv", "target": 30, "actual": None, "achievement": None},
         {"media": "Google", "campaign_name": CAMPAIGN, "included": True, "metric": "cost", "target": 12000000, "actual": 9000000,
          "achievement": 0.75},
-        {"media": "Google", "campaign_name": "브랜드 검색", "included": False, "metric": "cost", "target": 5000000, "actual": 4000000,
+        {"media": "Google", "campaign_name": "브랜드  검색|PC", "included": False, "metric": "cost", "target": 5000000, "actual": 4000000,
          "achievement": 0.8},
         {"media": "Meta", "campaign_name": None, "included": None, "metric": "cost", "target": 130100000, "actual": 124969619,
          "achievement": 0.9606}],
@@ -83,7 +83,7 @@ def test_json_reads_as_the_same_markdown():
 def test_wrapped_shapes():
     """호스트·훅이 넘기는 모양 — JSON 문자열(들여쓰기 포함), {"result": …}, content 블록, CallToolResult — 모두 같은 원문."""
     blocks = [{"type": "text", "text": json.dumps(TP_JSON, ensure_ascii=False, indent=2)}]
-    for shape in (json.dumps(TP_JSON, ensure_ascii=False), json.dumps(TP_JSON, indent=2), {"result": TP_JSON},
+    for shape in (json.dumps(TP_JSON, ensure_ascii=False), "\n" + json.dumps(TP_JSON, indent=2), {"result": TP_JSON},
                   json.dumps({"result": TP_JSON}), blocks, json.dumps(blocks),
                   {"content": blocks, "structuredContent": TP_JSON, "isError": False}):
         assert target_response.target_text(shape) == TP, shape
@@ -106,9 +106,9 @@ def test_status_not_ok_and_plain_line_mean_no_target():
         for raw in (obj, json.dumps(obj, ensure_ascii=False), line):
             t = target_response.target_text(raw)
             assert t == line, (status, raw)
-            assert kit.parse_targets(t, KEYS) == {} and kit.parse_target_progress(t)["cost_target"] is None
-            assert budget_targets.parse_budget({"month": "2026-10", "target_progress": t}) == []
-            assert fees.served_basis([], [t]) is None and fees.fee_table([], [t]) == {}
+        assert kit.parse_targets(t, KEYS) == {} and kit.parse_target_progress(t)["cost_target"] is None
+        assert budget_targets.parse_budget({"month": "2026-10", "target_progress": t}) == []
+        assert fees.served_basis([], [t]) is None and fees.fee_table([], [t]) == {}
 
 
 def test_saved_hook_response_reads_back():

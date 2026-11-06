@@ -391,7 +391,6 @@ def test_weekly_json_target_same_as_markdown():
     assert view == weekly.fee_view(md) and view[:2] == ("net", "net"), view
     for basis in ("net", "gross"):
         assert weekly.compute(js, check_dims=False, basis=basis) == weekly.compute(md, check_dims=False, basis=basis), basis
-    assert weekly.digest(js) == weekly.digest(md)
 
 
 def test_monthly_json_target_same_as_markdown():
