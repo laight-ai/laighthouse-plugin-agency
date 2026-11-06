@@ -265,7 +265,6 @@
     const defaultDims = id => { const on = DIM_DEF[id]; return [...on, ...dimsFor(id).map(d => d.key).filter(k => !on.includes(k))].map(k => ({ k, on: on.includes(k) })); };
 
     /* 예산·목표: 정확한 범위가 있으면 그 값, 없으면 더 잘게 받은 범위가 이 행의 단위를 모두 덮을 때만 합(비율 목표는 합하지 않는다) */
-    // Net 보기의 예산은 빌더가 미리 계산해 둔다(T.budgets_net — 규칙은 shared/assets/fees.py net_budgets)
     const budgetsOf = () => (basis === 'net' && T.budgets_net ? T.budgets_net : T.budgets || []);
     let B = budgetsOf();
     const keysetOf = b => Object.keys(b.scope).sort().join(',');
