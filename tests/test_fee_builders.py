@@ -15,7 +15,7 @@ PLUGIN = os.path.normpath(os.path.join(HERE, "..", "plugins", "laighthouse-agenc
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(PLUGIN, "shared", "assets"))
 
-from test_fees import KEYS, OVERALL_TP, close, env, fee  # noqa: E402
+from test_fees import KEYS, OVERALL_TP, OVERALL_TP_JSON, close, env, fee  # noqa: E402
 
 
 def _builder(skill):
@@ -62,6 +62,14 @@ fee_basis: net
 | media | fee_mode | rate |
 | --- | --- | --- |
 | Meta | markup | 20 |"""
+# NEW_TP와 같은 내용의 JSON 응답 — 원문에서 손으로 옮겼다('-' 칸 = null)
+NEW_TP_JSON = {
+    "status": "ok", "message": None, "month": "2026-10", "as_of_date": "2026-10-07", "media": "all", "fee_basis": "net",
+    "summary": [{"metric": "cost", "target": 1000, "actual": 400, "progress_ratio": 0.4}],
+    "scopes": [
+        {"media": "Meta", "campaign_name": None, "included": None, "metric": "cost", "target": 600, "actual": 300, "achievement": 0.5},
+        {"media": "Naver", "campaign_name": None, "included": None, "metric": "cost", "target": 400, "actual": 100, "achievement": 0.25}],
+    "fees": [{"media": "Meta", "fee_mode": "markup", "rate": 20}]}
 
 
 def weekly_payload(new):
@@ -172,17 +180,21 @@ def test_weekly_old_format_unchanged():
     assert c["tot"]["cost"] == 400 and c["targets"]["cost"] == 1000   # Net 예산 = 1060 − Meta 수수료 60
 
 
+def main_html(skill, p, d):
+    """빌더 main을 그대로 실행(입력 파일 → HTML) — 결과 HTML 문자열."""
+    p = dict(p, out=os.path.join(d, "out.html"))
+    path = os.path.join(d, "in.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(p, f, ensure_ascii=False)
+    script = os.path.join(PLUGIN, "skills", skill, "assets", "build_report.py")
+    subprocess.run([sys.executable, script, path], check=True, capture_output=True)
+    return open(p["out"], encoding="utf-8").read()
+
+
 def test_weekly_main_report_basis():
     with tempfile.TemporaryDirectory() as d:
         for new, default, alt in ((True, "net", "gross"), (False, "gross", "net")):
-            p = dict(weekly_payload(new), out=os.path.join(d, "w.html"))
-            path = os.path.join(d, "in.json")
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(p, f, ensure_ascii=False)
-            script = os.path.join(PLUGIN, "skills", "weekly-report", "assets", "build_report.py")
-            subprocess.run([sys.executable, script, path], check=True, capture_output=True)
-            html = open(p["out"], encoding="utf-8").read()
-            flat = html.replace(" ", "")
+            flat = main_html("weekly-report", weekly_payload(new), d).replace(" ", "")
             assert f'"default":"{default}"' in flat and f'"sections":{{"{alt}":{{"s1"' in flat, new
             # 다른 보기의 내용: 새 형식 Gross 10월 MTD 광고비 460(10/1~7 실효 배수 1.15 × 400), 옛 형식 Net 월예산 1,000(Gross 1,060 − 60)
             assert ("MTD광고비₩460" if new else "월예산₩1,000") in flat, new
@@ -207,9 +219,18 @@ fee_basis: net
 | --- | --- | --- |
 | Meta | markup | 20 |
 | Google | commission | 20 |"""
+# MONTH_TP와 같은 내용의 JSON 응답 — 원문에서 손으로 옮겼다('-' 칸 = null, included Y = true)
+MONTH_TP_JSON = {
+    "status": "ok", "message": None, "month": "2026-10", "as_of_date": "2026-10-31", "media": "all", "fee_basis": "net",
+    "summary": [{"metric": "cost", "target": 3000, "actual": 1800, "progress_ratio": 0.6}],
+    "scopes": [
+        {"media": "Meta", "campaign_name": None, "included": None, "metric": "cost", "target": 1500, "actual": 1000, "achievement": 0.67},
+        {"media": "Meta", "campaign_name": "A", "included": True, "metric": "cost", "target": 900, "actual": 600, "achievement": 0.67},
+        {"media": "Google", "campaign_name": None, "included": None, "metric": "cost", "target": 1500, "actual": 800, "achievement": 0.53}],
+    "fees": [{"media": "Meta", "fee_mode": "markup", "rate": 20}, {"media": "Google", "fee_mode": "commission", "rate": 20}]}
 
 
-def test_monthly_served_net():
+def served_monthly_payload(tp=MONTH_TP):
     """Meta 9월 마크업 10%·10월 20%, Google 9월 없음·10월 커미션 20%."""
     fl = [fee("Meta", "2026-09", "markup", 10), fee("Meta", "2026-10", "markup", 20), fee("Google", "2026-10", "commission", 20)]
     s4 = [{"month": m, "media": x, "cost": v} for m in ("2026-09", "2026-10") for x, v in (("Meta", 1000), ("Google", 800))]
@@ -218,11 +239,15 @@ def test_monthly_served_net():
           {"month": "2026-10", "media": "Meta", "campaign_name": "A", "cost": 600},
           {"month": "2026-10", "media": "Meta", "campaign_name": "B", "cost": 400},
           {"month": "2026-10", "media": "Google", "campaign_name": "C", "cost": 800}]
-    p = {"out": "unused.html", "title": "t", "month": "2026-10", "metric_keys": KEYS, "currency": "₩",
-         "s1": {"json": json.dumps(env([{"month": "2026-09", "cost": 1800}, {"month": "2026-10", "cost": 1800}], [],
-                                       grain="month")), "target_progress": MONTH_TP},
-         "s4": {"json": json.dumps(env(s4, ["media"], fee_list=fl, grain="month"))},
-         "s6": {"json": json.dumps(env(s6, ["media", "campaign_name"], fee_list=fl, grain="month"))}}
+    return {"out": "unused.html", "title": "t", "month": "2026-10", "metric_keys": KEYS, "currency": "₩",
+            "s1": {"json": json.dumps(env([{"month": "2026-09", "cost": 1800}, {"month": "2026-10", "cost": 1800}], [],
+                                          grain="month")), "target_progress": tp},
+            "s4": {"json": json.dumps(env(s4, ["media"], fee_list=fl, grain="month"))},
+            "s6": {"json": json.dumps(env(s6, ["media", "campaign_name"], fee_list=fl, grain="month"))}}
+
+
+def test_monthly_served_net():
+    p = served_monthly_payload()
     view, served, _ = monthly.fee_view(p)
     assert (view, served) == ("net", "net")
     _, _, _, c = monthly.compute(p, check_dims=False, basis="gross")
@@ -235,15 +260,18 @@ def test_monthly_served_net():
 
 
 
-def test_overall_compute_served_gross():
+def served_overall_payload(tp=OVERALL_TP):
     rows = [{"date": "2026-10-01", "media": m, "campaign_name": c, "cost": v, "impressions": 100}
             for m, c, v in (("Meta", "A", 1100), ("Google", "G", 500), ("Naver", "N", 400))]
     fl = [fee("Meta", "2026-10", "markup", 10), fee("Google", "2026-10", "commission", 20)]
-    p = {"out": "unused.html", "brand": "b", "target_date": "2026-10-05", "start_date": "2026-10-01", "metric_keys": KEYS,
-         "currency": "₩", "dims": "valid dimensions: ['date', 'media', 'campaign_name']",
-         "data": {"json": json.dumps(env(rows, ["media", "campaign_name"], "gross", fl))},
-         "budgets": [{"month": "2026-10", "target_progress": OVERALL_TP}]}
-    report, out = overall.compute(p)
+    return {"out": "unused.html", "brand": "b", "target_date": "2026-10-05", "start_date": "2026-10-01", "metric_keys": KEYS,
+            "currency": "₩", "dims": "valid dimensions: ['date', 'media', 'campaign_name']",
+            "data": {"json": json.dumps(env(rows, ["media", "campaign_name"], "gross", fl))},
+            "budgets": [{"month": "2026-10", "target_progress": tp}]}
+
+
+def test_overall_compute_served_gross():
+    report, out = overall.compute(served_overall_payload())
     assert report["fee"]["default"] == "gross" and "브랜드 기준 Gross" in report["fee"]["note"]
     by = {r["m"]: (r["cost"], r["cost_g"]) for r in out}
     assert by == {"Meta": (1000, 1100), "Google": (400, 500), "Naver": (400, 400)}, by
@@ -351,6 +379,74 @@ def test_overall_stops_on_legacy_placement():
         assert "수수료 기준" in str(e.code)
         return
     raise AssertionError("fee_basis가 없는 Placement 응답에서 멈추지 않았다")
+
+
+# ── get_target_progress_v2 JSON 응답: 같은 내용의 원문과 빌더 결과가 같다(형식 읽기 자체는 test_target_progress.py) ──
+
+
+def test_weekly_json_target_same_as_markdown():
+    md, js = weekly_payload(new=True), weekly_payload(new=True)
+    js["s1"]["target_progress"] = NEW_TP_JSON   # 구조화 응답(dict) 그대로
+    view = weekly.fee_view(js)
+    assert view == weekly.fee_view(md) and view[:2] == ("net", "net"), view
+    for basis in ("net", "gross"):
+        assert weekly.compute(js, check_dims=False, basis=basis) == weekly.compute(md, check_dims=False, basis=basis), basis
+    assert weekly.digest(js) == weekly.digest(md)
+    _, _, c = weekly.compute(js, check_dims=False, basis="gross")
+    assert close(c["targets"]["cost"], 1120)   # 600 × 1.2 + 400
+
+
+def test_monthly_json_target_same_as_markdown():
+    """s1 목표가 JSON 문자열(텍스트 응답, 들여쓰기)일 때, 그리고 예전 입력 s6.targets(매체마다 부른 응답 — 내용은 s1 응답을 다시 쓴다)가
+    JSON 객체일 때 모두 원문과 같다."""
+    pairs = [(served_monthly_payload(), served_monthly_payload(json.dumps(MONTH_TP_JSON, ensure_ascii=False, indent=2))),
+             (served_monthly_payload(), served_monthly_payload(MONTH_TP_JSON))]
+    pairs[1][0]["s6"]["targets"], pairs[1][1]["s6"]["targets"] = {"Meta": MONTH_TP}, {"Meta": MONTH_TP_JSON}
+    for md, js in pairs:
+        assert monthly.fee_view(js) == monthly.fee_view(md)
+        for basis in ("net", "gross"):   # ctx는 함수(tot)를 담아 비교하지 않는다
+            assert monthly.compute(js, check_dims=False, basis=basis)[:3] == monthly.compute(md, check_dims=False, basis=basis)[:3], basis
+        assert monthly.digest(js) == monthly.digest(md)
+    _, _, _, c = monthly.compute(served_monthly_payload(MONTH_TP_JSON), check_dims=False, basis="gross")
+    assert close(c["target_all"], 3675) and close(c["t_camp"][("Meta", "A")]["cost"], 1080)   # 1500×1.2 + 1500÷0.8, 900×1.2
+
+
+def test_overall_json_target_same_as_markdown():
+    assert overall.compute(served_overall_payload(json.dumps(OVERALL_TP_JSON))) == overall.compute(served_overall_payload())
+    report, _ = overall.compute(served_overall_payload(OVERALL_TP_JSON))
+    net = next(b["v"]["cost"] for b in report["table"]["budgets_net"] if not b["scope"])
+    assert report["fee"]["default"] == "gross" and close(net, 3100)   # 1100÷1.1 + 2000×0.8 + 500
+
+
+def test_no_target_json_and_plain_line_read_alike():
+    """status가 ok가 아닌 JSON 응답(키는 모두 있고 목록은 빈다)과 옛 서버의 한 줄 평문은 둘 다 목표 없음 — 수수료 기준은 봉투에서만 온다."""
+    line = "No all budget/target available for 2026-10."
+    obj = dict(NEW_TP_JSON, status="no_target", message=line, summary=[], scopes=[], fees=[])
+    got = []
+    for tp in (line, obj, json.dumps(obj)):
+        p = weekly_payload(new=True)
+        p["s1"]["target_progress"] = tp
+        _, _, c = weekly.compute(p, check_dims=False, basis="gross")
+        got.append((weekly.fee_view(p)[:2], c["targets"], c["tot"]))
+    assert got[0][:2] == (("net", "net"), {}) and got[1] == got[0] and got[2] == got[0], got
+
+
+def test_main_reads_wrapped_old_server_response():
+    """옛 서버(cost·cost_net) 원문이 {"result": 원문}(FastMCP 구조화 출력)으로 와도 Weekly·Monthly main이 원문과 같은 HTML을 만든다.
+    토글 옆 수수료 문구(수수료율 = 1 − Net ÷ Gross): Weekly Meta 600/660 → 9.1%, Monthly Meta 1000/1100 → 9.1%·캠페인 A 550/660 → 16.7%,
+    Google 캠페인 C 500/600 → 16.7%."""
+    dims = "valid dimensions: ['date', 'media', 'campaign_name']"
+    with tempfile.TemporaryDirectory() as d:
+        for skill, payload, note in (("weekly-report", lambda: weekly_payload(new=False), "수수료 Meta 9.1%"),
+                                     ("monthly-report", lambda: dict(old_monthly_payload(), dims=dims),
+                                      "수수료 Meta 9.1~16.7% · Google 16.7%")):
+            html = []
+            for wrap in (False, True):
+                p = payload()
+                if wrap:
+                    p["s1"]["target_progress"] = {"result": p["s1"]["target_progress"]}
+                html.append(main_html(skill, p, d))
+            assert html[0] == html[1] and note in html[0], skill
 
 
 if __name__ == "__main__":

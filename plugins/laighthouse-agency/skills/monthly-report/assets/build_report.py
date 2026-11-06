@@ -17,13 +17,14 @@ MCP 응답 봉투 원문을 섹션별로 그대로 받아, 공용 킷(`shared/as
   "metric_keys": {...}, "currency": "₩",          # discover.py 출력 그대로
   "dims": "<차원 확인(group_by [\"__list_dimensions__\"]) 에러 메시지 원문>",   # 필수(표가 있을 때) — 빠진 차원이 있으면 멈춘다
   "s1": {"json": "<month, group_by 없음, M-5 1일~M0 말일 응답 원문>",
-         "target_progress": "<get_target_progress_v2(month=M0, media 생략) 응답 원문 그대로>"},
+         "target_progress": <get_target_progress_v2(month=M0, media 생략) 응답 그대로 — JSON 객체·옛 서버 원문>},
   "s2": {"groups": [{"title": "소진", "lead": "...", "media": [{"name", "desc", "bullets": [{"label", "text", "tone"}]}]}, ...]},
         # weekly와 같은 [소진]·[효율] 그룹. 예전 {"bullets": [{"head", "text", "tone"}]}도 받는다
   "s4": {"json": "<month, group_by [\"media\"], M-5~M0 응답 원문>"},
   "s6": {"json": "<month, group_by = 제공 차원 전부(date·source 제외), M-1~M0 응답 원문>",   # 목표 달성 표(예전 ["media","상품"]도 받는다)
-         "targets": {"<매체>": "<get_target_progress_v2(month=M0, media=<매체>) 응답 원문>", ...}}   # 선택 — 예전 입력
-  # 브랜드 전체 목표는 s1.target_progress 첫째 표, 매체 목표는 같은 원문의 둘째 표 매체 행을 쓴다(매체마다 부르지 않는다).
+         "targets": {"<매체>": <get_target_progress_v2(month=M0, media=<매체>) 응답>, ...}}   # 선택 — 예전 입력
+  # 브랜드 전체 목표는 s1.target_progress의 summary(옛 서버 첫째 표), 매체 목표는 같은 응답의 scopes 매체 행(옛 서버 둘째 표)을 쓴다
+  # (매체마다 부르지 않는다). 목표 응답은 어느 형식이든 kit.target_text가 같은 원문으로 읽는다.
   # 목표가 없는 지표·단위는 조용히 '-'.
 }
 - s3(월별 광고 성과)은 s1 봉투, s5(매체 성과 비교)는 s4 봉투에서 만든다 — 따로 넘기지 않는다.
@@ -86,8 +87,8 @@ def compute(payload, check_dims=True, basis=None):
         kit.require_dims(payload.get("dims"), [("s6", e6)], "s6 피벗 표")
     kit.require_rollup([("전체 ↔ 매체(s1·s4)", kit.check_rollup(e1, [], e4, [], keys)),
                         ("매체 ↔ 표(s4·s6)", kit.check_rollup(e4, ["media"], e6, ["media"], keys))])
-    tp = (sec("s1") or {}).get("target_progress")
-    olds = {str(x): raw for x, raw in ((sec("s6") or {}).get("targets") or {}).items()}   # 예전 입력(매체마다 부른 원문)
+    tp = kit.target_text((sec("s1") or {}).get("target_progress"))
+    olds = {str(x): kit.target_text(raw) for x, raw in ((sec("s6") or {}).get("targets") or {}).items()}   # 예전 입력(매체마다 부른 원문)
     served = fees.served_basis([e1, e4, e6], [tp, *olds.values()])
     if served:
         if basis and basis != served:
@@ -223,8 +224,8 @@ def fee_view(payload):
     if payload.get("skeleton"):
         return None, None, {}
     envs = [kit.section_envelope(payload.get(k)) for k in ("s1", "s4", "s6")]
-    tp = (payload.get("s1") or {}).get("target_progress")
-    texts = [tp, *((payload.get("s6") or {}).get("targets") or {}).values()]
+    tp = kit.target_text((payload.get("s1") or {}).get("target_progress"))
+    texts = [tp, *map(kit.target_text, ((payload.get("s6") or {}).get("targets") or {}).values())]
     return fee_views.view(envs, texts, tp)
 
 
@@ -284,7 +285,7 @@ def main():
     if view:   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 = 서버 기준, 옛 서버는 Gross)
         alt = compute(payload, check_dims=False, basis=fees.other(view))[0]
         report["basis"] = fee_views.bundle(view, served, table, sections, alt, "Executive Summary",
-                                          (payload.get("s1") or {}).get("target_progress"), ctx["months"])
+                                          kit.target_text((payload.get("s1") or {}).get("target_progress")), ctx["months"])
     path, size = kit.build_html(ASSETS_DIR, rep, report, payload["out"])
     json.dump({"out": path, "bytes": size,
                "sections": {k: ("ok" if v is not None else "placeholder") for k, v in sections.items()}},

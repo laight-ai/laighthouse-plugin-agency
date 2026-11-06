@@ -24,9 +24,10 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
         # day grain, group_by = FINE_DIMS, 집계 기간을 달마다 나눠(첫 달은 시작일부터, 마지막 달은 E까지) 받은 응답을 함께 넣는다
   "media": {"json_files": [...]} 또는 {"json": "..."},
         # day grain, group_by ["media"], 집계 기간 전체 — 대조 검증(매체별 일 합 = 표 데이터 합)
-  "budgets": [{"month": "2026-09", "target_progress": "<get_target_progress_v2(media 생략) 원문>"},
-              {"month": "2026-10", "target_progress": "<원문>"}]
-        # 첫째 표(metric|target|…) = 전체 합계, 둘째 표(media|campaign_name|included|metric|target|…) = 매체·캠페인 행.
+  "budgets": [{"month": "2026-09", "target_progress": <get_target_progress_v2(media 생략) 응답 — JSON 객체·옛 서버 원문>},
+              {"month": "2026-10", "target_progress": <응답>}]
+        # 어느 형식이든 kit.target_text가 같은 원문으로 읽는다: summary(옛 서버 첫째 표 metric|target|…) = 전체 합계,
+        # scopes(옛 서버 둘째 표 media|campaign_name|included|metric|target|…) = 매체·캠페인 행.
         # cost 행 = 예산, impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표. 행이 없으면 빈칸.
         # 수수료(Gross/Net)는 shared/assets/fees.py(현재 응답)·fees_legacy.py(fee_basis 없는 옛 응답).
         # 항목에 범위 키(media·상품·campaign_name·ad_group_name)를 주면 첫째 표를 그 범위로 읽는다(그 인자로 부른 경우).
@@ -495,7 +496,8 @@ def compute(payload):
         tot[r["m"]] = tot.get(r["m"], 0) + r["cost"]
     media = sorted(tot, key=lambda m: (-tot[m], m))
     header["media"] = " · ".join(media)
-    budgets = [b for e in (payload.get("budgets") or []) for b in parse_budget(e)]
+    entries = [dict(e, target_progress=kit.target_text(e.get("target_progress"))) for e in payload.get("budgets") or []]
+    budgets = [b for e in entries for b in parse_budget(e)]
     # 목표 표의 매체·캠페인 표기를 데이터 표기에 맞춘다 — BE와 같은 기준(앞뒤 공백·대소문자 무시).
     # 맞는 표기가 없으면 그대로 둔다(그 달 실적이 없는 매체·캠페인 → 어느 행에도 붙지 않는다).
     canon = {k: {str(v).strip().lower(): v for v in {r[k] for r in rows if k in r}} for k in ("m", "c")}
@@ -504,7 +506,7 @@ def compute(payload):
             if k in b["scope"]:
                 b["scope"][k] = canon[k].get(str(b["scope"][k]).strip().lower(), b["scope"][k])
     ld = line_dims(dims)
-    texts = [e.get("target_progress") for e in payload.get("budgets") or []]
+    texts = [e["target_progress"] for e in entries]
     # Placement는 전체 보고서와 tables(표를 고르지 않았거나 place를 골랐을 때)에서만 쓴다
     want_place = not part or (part == "tables" and (not tables or "place" in tables))
     penv = kit.section_envelope(payload.get("place")) if want_place and payload.get("place") else None

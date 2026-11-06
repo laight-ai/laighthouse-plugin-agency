@@ -20,7 +20,7 @@ MCP 응답 원문(봉투·목표 표)을 섹션별로 그대로 받아, 공용 �
   "metric_keys": {...}, "currency": "₩",          # discover.py 출력 그대로
   "dims": "<차원 확인(group_by [\"__list_dimensions__\"]) 에러 메시지 원문>",   # 필수(표가 있을 때) — 빠진 차원이 있으면 멈춘다
   "s1": {"json": "<month, group_by 없음, day_offset = E의 일, E의 전월 1일 ~ E 응답 원문>",
-         "target_progress": "<get_target_progress_v2(month = E의 달, media 생략, as_of_date = E) 응답 원문>"},
+         "target_progress": <get_target_progress_v2(month = E의 달, media 생략, as_of_date = E) 응답 그대로 — JSON 객체·옛 서버 원문>},
   "s2": {"groups": [{"title": "소진", "lead": "...", "media": [{"name": "Google", "desc": "...",
                      "bullets": [{"label": "Masthead", "text": "...", "tone": "red|yellow|green|neutral"}]}]}, ...]},
   "s3": {"json": "<day, group_by [\"media\"], E-34 ~ E 응답 원문>"},
@@ -134,7 +134,7 @@ def compute(payload, check_dims=True, basis=None):
                            kit.check_rollup(parent, ["media"], kit.with_period(fine[k], "date", k), ["media"], keys)))
         kit.require_rollup(checks)
 
-    tp = (sec("s1") or {}).get("target_progress")
+    tp = kit.target_text((sec("s1") or {}).get("target_progress"))
     weeks_of = {(a + timedelta(days=i)).isoformat(): k for k, (a, b) in (("cur", cur_w), ("base", base_w))
                 for i in range((b - a).days + 1)}
     served = fees.served_basis([e1, e3, *fine.values()], [tp])
@@ -301,7 +301,7 @@ def fee_view(payload):
     s4 = payload.get("s4") or {}
     envs = [kit.section_envelope(payload.get("s1")), kit.section_envelope(payload.get("s3"))]
     envs += [kit.section_envelope(s4.get(k)) for k in ("cur", "base")] if isinstance(s4, dict) else []
-    tp = (payload.get("s1") or {}).get("target_progress")
+    tp = kit.target_text((payload.get("s1") or {}).get("target_progress"))
     return fee_views.view(envs, [tp], tp)
 
 
@@ -348,7 +348,7 @@ def main():
         alt = compute(payload, check_dims=False, basis=fees.other(view))[0]
         months = sorted(fees.window_months(ctx["weeks"][0][0], ctx["E"]))
         report["basis"] = fee_views.bundle(view, served, table, sections, alt, "Weekly Summary",
-                                          (payload.get("s1") or {}).get("target_progress"), months)
+                                          kit.target_text((payload.get("s1") or {}).get("target_progress")), months)
     path, size = kit.build_html(ASSETS_DIR, rep, report, payload["out"])
     json.dump({"out": path, "bytes": size,
                "sections": {k: ("ok" if sections[k] is not None else "placeholder") for k in sorted(sections)}},

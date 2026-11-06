@@ -6,8 +6,8 @@ Dimension·지표 메뉴·검색·페이지 규칙은 `shared/references/pivot-t
 
 - `get_ad_performance` ×1 — `time_grain:"month"`, `group_by` = FINE_DIMS(차원 확인 결과), M-1 1일 ~ M0 말일, `metrics`·`filters` 생략.
   (M0만 쓴다. M-1은 예전 입력과의 호환을 위해 그대로 받아도 된다.)
-- 목표는 따로 부르지 않는다 — s1의 `get_target_progress_v2`(media 생략) 원문 하나에서 첫째 표 = 브랜드 전체 목표,
-  둘째 표의 매체 행(campaign_name `-`) = 매체 목표, 둘째 표의 캠페인 행 = 캠페인 목표를 빌더가 읽는다.
+- 목표는 따로 부르지 않는다 — s1의 `get_target_progress_v2`(media 생략) 응답 하나에서 `summary` = 브랜드 전체 목표,
+  `scopes`의 매체 행(`campaign_name` null) = 매체 목표, `scopes`의 캠페인 행 = 캠페인 목표를 빌더가 읽는다(옛 서버는 첫째 표·둘째 표).
 
 ## 빌더 입력 (`assets/prepare.py`가 채운다 — 저장 훅이 없을 때만 직접 만든다)
 
@@ -15,13 +15,13 @@ Dimension·지표 메뉴·검색·페이지 규칙은 `shared/references/pivot-t
 "s6": {"json_files": ["<응답 파일>"]}
 ```
 
-(예전 입력 `"targets": {"<매체>": "<get_target_progress_v2(media=<매체>) 원문>"}`도 받는다 — 있으면 그 매체는 이 원문이 우선이다.)
+(예전 입력 `"targets": {"<매체>": <get_target_progress_v2(media=<매체>) 응답>}`도 받는다 — 있으면 그 매체는 이 응답이 우선이다.)
 
 ## 화면
 
 - Dimension = **매체 → 캠페인만**(응답의 더 잘게 받은 차원은 요약 근거에만 쓴다), 기본 지표 = 광고비 하나(맨 앞 고정, 사용자가 지표 메뉴에서 늘린다).
 - 열 = 지표마다 3열: 광고비 [월 예산, 집행액, 소진율(막대)], 합산 지표 [월 목표, 실적, 달성률(막대)], 비율 지표 [목표, 실적, 목표 대비(%)].
-- 목표는 브랜드 전체·매체·캠페인 단위(`report_kit.parse_targets`·`parse_media_targets`·`parse_campaign_targets` — 같은 원문의 첫째 표, 둘째 표 매체 행, 둘째 표 캠페인 행).
+- 목표는 브랜드 전체·매체·캠페인 단위(`report_kit.parse_targets`·`parse_media_targets`·`parse_campaign_targets` — 같은 응답의 `summary`, `scopes` 매체 행, `scopes` 캠페인 행).
   캠페인 행은 목표 그리드에 캠페인 예산이 저장된 경우에만 온다. 목표가 없는 지표·단위는 **묻지 않고 "-"**로 둔다.
   CPC 등 역할이 없는 지표의 목표도 서빙 지표 이름과 같으면 읽는다. 단가·비율 목표는 여러 단위를 합친 행(검색으로 묶인 행 등)에는 쓰지 않는다.
 - 색: 광고비 소진율이 100% ± 10%p를 벗어나면 빨강(초과)·주황(미소진). 그 외 합산 지표는 100% 이상 초록·90% 이상 주황·미만 빨강.

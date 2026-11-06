@@ -70,7 +70,7 @@ MCP 데이터를 받아 **라이트하우스 Monthly 보고서**(HTML 한 파일
    - s6 표: `get_ad_performance` `time_grain:"month"`, `group_by` = FINE_DIMS, M-1 1일 ~ M0 말일.
      크기 오류(서버 5만 행·"larger than 16MB" 등)면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절).
    - 목표: `get_target_progress_v2` — `month` = M0, `as_of_date` = M0 말일, `cost_metric` = `metric_keys.cost`, **`media` 생략 1회**
-     (응답 둘째 표에 매체 행이 온다 — 매체마다 부르지 않는다). 한 줄 메시지·에러는 "목표 없음" — 그대로 둔다.
+     (응답 `scopes`에 매체 행이 온다 — 매체마다 부르지 않는다). `status`가 `ok`가 아닌 응답(옛 서버는 한 줄 메시지)·에러는 "목표 없음" — 그대로 둔다.
 4. **빌드 입력 준비**:
    ```
    python3 assets/prepare.py --brand <브랜드> --month <M0>

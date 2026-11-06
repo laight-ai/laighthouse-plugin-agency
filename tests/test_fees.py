@@ -222,6 +222,17 @@ fee_basis: gross
 | --- | --- | --- |
 | Meta | markup | 10 |
 | Google | commission | 20 |"""
+# 같은 내용의 JSON 응답(report-backend JSON 형식) — 위 원문에서 손으로 옮겼다('-' 칸 = null, included Y/N = true/false)
+OVERALL_TP_JSON = {
+    "status": "ok", "message": None, "month": "2026-10", "as_of_date": "2026-10-05", "media": "all", "fee_basis": "gross",
+    "summary": [{"metric": "cost", "target": 3600, "actual": 2000, "progress_ratio": 0.56}],
+    "scopes": [
+        {"media": "Meta", "campaign_name": None, "included": None, "metric": "cost", "target": 1100, "actual": 1100, "achievement": 1},
+        {"media": "Meta", "campaign_name": None, "included": None, "metric": "cpm", "target": 5500, "actual": 5500, "achievement": 1},
+        {"media": "Meta", "campaign_name": "A", "included": True, "metric": "cost", "target": 440, "actual": 440, "achievement": 1},
+        {"media": "Google", "campaign_name": None, "included": None, "metric": "cost", "target": 2000, "actual": 500, "achievement": 0.25},
+        {"media": "Naver", "campaign_name": None, "included": None, "metric": "cost", "target": 500, "actual": 400, "achievement": 0.8}],
+    "fees": [{"media": "Meta", "fee_mode": "markup", "rate": 10}, {"media": "Google", "fee_mode": "commission", "rate": 20}]}
 
 
 def test_overall_budgets_and_rows():

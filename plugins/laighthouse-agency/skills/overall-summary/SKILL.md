@@ -57,8 +57,8 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
 
 - 렌더링은 **미리 검증된 asset 스크립트**만 한다(`.py`/`.js` 신규 작성, HTML 직접 작성 금지).
   - `assets/discover.py` — 저장 훅이 없을 때만: 매체별 일별 응답(파일 경로 또는 stdin) → `metric_keys`/`currency`/`missing`.
-  - `assets/prepare.py` — 저장된 응답 → build.json(매체별 일별·월별 표 데이터·Placement·월별 목표 원문), `--build`면 빌더까지.
-  - `assets/build_report.py` — 봉투·목표 원문 → 최종 HTML 1개(Comment 생성 포함) + 같은 이름의 `.xlsx` 1개. 입력 스키마는 docstring.
+  - `assets/prepare.py` — 저장된 응답 → build.json(매체별 일별·월별 표 데이터·Placement·월별 목표 응답), `--build`면 빌더까지.
+  - `assets/build_report.py` — 봉투·목표 응답 → 최종 HTML 1개(Comment 생성 포함) + 같은 이름의 `.xlsx` 1개. 입력 스키마는 docstring.
   - `assets/campaign_history.py` — 빌더가 import 한다. 변경 이력 원본 → History 줄(매체별 규칙).
   - `assets/overall_summary_xlsx.py` — 빌더가 import 한다(직접 부르지 않는다). 표준 라이브러리만으로 엑셀을 쓴다(openpyxl 불필요).
 
@@ -90,8 +90,8 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
      `time_grain:"day"`, `group_by` = `["media", (ad_type 또는 상품 중 있는 것), 노출 위치 차원]`, 달마다 1회(표 데이터와 같은 기간 나눔).
      없으면 부르지 않는다(Placement 자리에 '노출 위치 데이터 준비 중' 안내가 나온다 — 사용자에게 묻지 않는다).
    - 예산·목표: `get_target_progress_v2` — `month` = 걸친 달마다, `cost_metric` = `metric_keys.cost`,
-     `as_of_date` = 지난 달은 그 달 말일, 마지막 달은 E. **달마다 `media` 생략 1회**(응답 둘째 표에 매체·캠페인 행이 모두 온다 —
-     매체마다 따로 부르지 않는다). 한 줄 메시지·에러는 "목표 없음"(원문 그대로, 에러면 빈 문자열).
+     `as_of_date` = 지난 달은 그 달 말일, 마지막 달은 E. **달마다 `media` 생략 1회**(응답 `scopes`에 매체·캠페인 행이 모두 온다 —
+     매체마다 따로 부르지 않는다). `status`가 `ok`가 아닌 응답(옛 서버는 한 줄 메시지)·에러는 "목표 없음"(응답 그대로, 에러면 빈 문자열).
    - 변경 이력: `list_campaign_change_raw`(`date_from` = S, `date_to` = E, `limit` = 1000,
      `streams` = `["change_event","activities","changelog","campaigns","campaign_detail","adgroups","ad_groups","ad_group_detail"]`).
      응답은 훅이 `next_cursor` 안내로 바꿔 보여 준다 — `next_cursor`가 있으면 **같은 인자에 `cursor`만 바꿔** 다시 부르고,
@@ -129,14 +129,15 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
  "data": {"json_files": ["<첫 달 표 데이터 파일>", "<다음 달 표 데이터 파일>", ...]},
  "media": {"json_files": ["<매체별 일별 파일>"]},
  "place": {"json_files": ["<첫 달 Placement 파일>", ...]},   ← 노출 위치 차원이 있을 때만
- "budgets": [{"month": "2026-09", "target_progress": "<첫 달 원문>"},
-             {"month": "2026-10", "target_progress": "<다음 달 원문>"}],   ← 걸친 달마다 1개
+ "budgets": [{"month": "2026-09", "target_progress": <첫 달 응답>},
+             {"month": "2026-10", "target_progress": <다음 달 응답>}],   ← 걸친 달마다 1개
  "history": {"json": ["<변경 이력 첫 페이지 원문>", "<다음 페이지 원문>", ...]},   ← 페이지마다 원문 그대로
  "names": {"json_files": ["<이름 호출 파일>"]}}   ← 차원에 *_id가 있을 때만
 ```
 
 - 스텁(파일)으로 온 응답은 `json_files`, 원본이 그대로 온 응답은 `json`(문자열 또는 문자열 배열)에 넣는다.
-- `budgets[].target_progress`는 응답 원문 전체(두 표 모두)를 그대로 넣는다 — 빌더가 둘째 표의 매체·캠페인 행을 범위별 목표로 읽는다.
+- `budgets[].target_progress`는 응답 전체를 그대로 넣는다(JSON 객체 그대로, 또는 받은 문자열 그대로 — 옛 서버의 markdown 원문도)
+  — 빌더가 `scopes`(옛 서버는 둘째 표)의 매체·캠페인 행을 범위별 목표로 읽는다.
 
 ## 완료 메시지 형식
 

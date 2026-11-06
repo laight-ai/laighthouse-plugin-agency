@@ -38,24 +38,30 @@
 { "brand_name": "<brand>", "month": "YYYY-MM", "as_of_date": "YYYY-MM-DD", "cost_metric": "<metric_keys.cost>" }
 ```
 
-- `media` 생략 = 전체. 이 플러그인의 스킬은 모두 **`media` 생략 1회**만 부른다 — 매체 목표는 둘째 표의 매체 행에서 읽는다.
-- 머리 줄은 `month`·`as_of_date`·`media`·`fee_basis`다. `fee_basis`는 위 봉투와 같은 브랜드 설정이고, 예산(cost)과 CPM·CPC·CPV·ROAS
-  목표·실적이 모두 이 기준이다.
-- 응답 첫째 표(`| metric | target | actual | progress_ratio |`)는 전체 합계(cost = 매체 예산 합),
-  둘째 표(`| media | campaign_name | included | metric | target | actual | achievement |`)는 매체·캠페인 행이다(cost = 예산).
-- 그 달 수수료가 있는 매체가 있으면 둘째 표 뒤에 셋째 표 `| media | fee_mode | rate |`가 온다 — 둘째 표의 매체 표기, 수수료가 있는
-  매체만. 캠페인 행은 그 매체의 수수료를 따른다.
+- `media` 생략 = 전체. 이 플러그인의 스킬은 모두 **`media` 생략 1회**만 부른다 — 매체 목표는 `scopes`의 매체 행에서 읽는다.
+- **응답은 JSON 객체 하나**다(키는 늘 같다):
+  `{"status": "ok", "message": null, "month": "YYYY-MM", "as_of_date": "YYYY-MM-DD", "media": "all", "fee_basis": "net", "summary": [...], "scopes": [...], "fees": [...]}`
+  - `fee_basis`는 위 봉투와 같은 브랜드 설정이고, 예산(cost)과 CPM·CPC·CPV·ROAS 목표·실적이 모두 이 기준이다.
+  - `summary` = `[{"metric", "target", "actual", "progress_ratio"}]` — 전체 합계(cost = 매체 예산 합)·revenue·roas.
+  - `scopes` = `[{"media", "campaign_name", "included", "metric", "target", "actual", "achievement"}]` — 매체 행(`campaign_name`·`included`가
+    null)과 캠페인 행(`included` true/false)이다(cost = 예산). 값이 없는 칸은 null.
+  - `fees` = `[{"media", "fee_mode": "markup"|"commission", "rate": 퍼센트}]` — 그 달 수수료가 있는 매체만(`scopes`의 매체 표기), 없으면 빈 목록.
+    캠페인 행은 그 매체의 수수료를 따른다.
+  - `status`가 `"ok"`가 아니면(`no_target`·`no_cost_metric`·`no_media_dimension`) 오류가 아니라 **목표 없음**이다 — 목록은 비고 `message`에 이유가 온다.
+- 옛 서버는 같은 내용을 markdown으로 준다 — 머리 줄 `month`·`as_of_date`·`media`·`fee_basis`, 첫째 표 `| metric | target | actual | progress_ratio |`
+  (= `summary`), 둘째 표 `| media | campaign_name | included | metric | target | actual | achievement |`(= `scopes`, null 칸은 `-`, included는 `Y`/`N`),
+  수수료가 있으면 셋째 표 `| media | fee_mode | rate |`(= `fees`). 목표 없음은 표 대신 한 줄 평문(`No all budget/target available for {month}.` 등)이다.
+  빌더는 두 형식을 같은 함수(`report_kit.target_text`)로 읽는다.
 - **Gross / Net**: 응답 기준(`fee_basis`)이 보고서의 기본 보기이고, 수수료가 있으면 빌더가 다른 기준의 보기를 더 만든다 — 행마다 그 매체의
   그 달 수수료로 마크업은 Gross = Net × (1 + r/100), 커미션은 Gross = Net ÷ (1 − r/100)(수수료가 없으면 그대로). 실적은 봉투의 `fees`,
-  예산·단가 목표는 셋째 표를 쓴다. 매체 차원이 없는 응답(전체 합계)은 같은 기간을 매체별로 받은 응답에서 구한 실효 배수를 쓴다.
+  예산·단가 목표는 목표 응답의 `fees`를 쓴다. 매체 차원이 없는 응답(전체 합계)은 같은 기간을 매체별로 받은 응답에서 구한 실효 배수를 쓴다.
   규칙은 `shared/assets/fees.py`. 모델이 환산하지 않는다(원문 그대로 넘긴다).
 - `fee_basis`가 없는 옛 서버 응답은 광고비 실적이 Net이고 예산이 cost(Gross)·cost_net(Net) 두 행이고 처음 보기는 Gross다 — 빌더가 예전 규칙
   (Gross 광고비 = Net × cost ÷ cost_net, 수수료는 달마다 같다고 본다)으로 읽는다. 비율은 캠페인 비율, 없으면 매체 비율(없으면 그 매체에
   포함된 캠페인들의 합, included N 제외), 그 달 비율이 없으면 가장 최근 달 비율, 없으면 1이다. Net 보기 예산 = `cost_net`(없는 범위는
   Gross − 한 단계 아래 범위의 수수료 합)이고, 단가 목표는 기준에 따라 바꾸지 않는다. `fee_basis`가 있는 응답과 없는 응답이 섞이면 빌더가
   멈춘다 — 모두 다시 받는다.
-- 표 대신 한 줄 평문(`No all budget/target available for {month}.` 등)은 오류가 아니라 **목표 없음**이다.
-- 응답 원문을 그대로 빌더에 넘긴다 — `actual` 열은 쓰지 않는다(실적은 `get_ad_performance` 값).
+- 응답을 그대로 빌더에 넘긴다(JSON 객체든 문자열이든) — `actual` 값은 쓰지 않는다(실적은 `get_ad_performance` 값).
 - `cost_metric`을 구버전 서버가 거절하면 그 인자를 빼고 1회 재호출한다. 그 밖의 에러는 목표 없음(빈 문자열)으로 두고 계속한다.
 
 ## 3. `list_campaign_change_raw` — 캠페인 변경 이력 원본 (종합 리포트 Campaign History)

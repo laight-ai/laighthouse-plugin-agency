@@ -12,16 +12,17 @@
 
 ## 예산·목표 (budgets)
 
-- 빌더 입력 `budgets` = `[{"month", "target_progress": "<원문>"}]` — 달마다 `get_target_progress_v2`(media 생략) 원문 1개.
-  응답 규약(2026-10-16 report-backend 확정):
-  - 헤더 `month` · `as_of_date` · `media` · `fee_basis`(브랜드 기준 — 예산·CPM·CPC·CPV 목표가 이 기준이다)
-  - 첫째 표 `| metric | target | actual | progress_ratio |` = 호출 범위 합계(cost = 매체 예산 합) → 전체 범위.
-  - 둘째 표 `| media | campaign_name | included | metric | target | actual | achievement |` = 매체 행(campaign_name `-`) 뒤에
-    그 매체의 캠페인 행(저장된 경우에만, included Y/N — 미포함 캠페인도 온다). 단위는 캠페인이 끝이다.
-  - 셋째 표 `| media | fee_mode | rate |` = 그 달 수수료가 있는 매체(둘째 표 표기). 아래 Gross / Net이 쓴다.
+- 빌더 입력 `budgets` = `[{"month", "target_progress": <응답>}]` — 달마다 `get_target_progress_v2`(media 생략) 응답 1개(JSON 객체 또는
+  옛 서버 markdown 원문 — 빌더가 같은 함수로 읽는다, 형식은 `shared/references/mcp-tools.md` 2절):
+  - `fee_basis` = 브랜드 기준 — 예산·CPM·CPC·CPV 목표가 이 기준이다.
+  - `summary`(옛 서버 첫째 표) = 호출 범위 합계(cost = 매체 예산 합) → 전체 범위.
+  - `scopes`(옛 서버 둘째 표) = 매체 행(`campaign_name` null) 뒤에 그 매체의 캠페인 행(저장된 경우에만, `included` true/false —
+    미포함 캠페인도 온다). 단위는 캠페인이 끝이다.
+  - `fees`(옛 서버 셋째 표) = 그 달 수수료가 있는 매체(`scopes` 표기). 아래 Gross / Net이 쓴다.
+  - `status`가 `ok`가 아니면(옛 서버는 한 줄 평문) 그 달은 목표 없음이다.
 - `cost` 행 = 예산, `impression`·`click`·`views`·`ctr`·`vtr`·`cpm`·`cpc`·`cpv` 행 = e.* 목표.
-  `revenue`·`roas` 행과 `actual`·`achievement` 열은 쓰지 않는다(실적은 get_ad_performance 값).
-  (호출에 `media`를 넣어 받은 원문이면 그 범위로 읽고, 범위 열을 가진 다른 표 형식도 같은 방식으로 읽는다.)
+  `revenue`·`roas` 행과 `actual`·`achievement` 값은 쓰지 않는다(실적은 get_ad_performance 값).
+  (호출에 `media`를 넣어 받은 응답이면 그 범위로 읽고, 범위 열을 가진 다른 표 형식도 같은 방식으로 읽는다.)
 - 매체·캠페인 이름은 BE와 같은 기준(앞뒤 공백·대소문자 무시)으로 데이터 표기에 맞춘다. 맞는 표기가 없는 행(그 달 실적이 없는
   매체·캠페인, 저장 코드 `NAVER GFA` 등)은 어느 행에도 붙지 않는다.
 - 칸마다: 그 행의 범위와 **정확히 같은 범위**의 값이 있으면 그 값. 없으면 더 잘게 받은 범위가 그 행에 집행된 단위를 **모두** 덮을 때만 합
@@ -39,12 +40,12 @@
 
 - 환산 공식(마크업·커미션)·브랜드 기준 보기와 다른 기준 보기의 관계·`fee_basis`가 없는 옛 서버 규칙은 `shared/references/mcp-tools.md` 2절
   (Gross / Net)이 정한다. 여기에는 종합 리포트에만 해당하는 동작을 적는다.
-- 수수료가 있으면(봉투 `fees`나 셋째 표에 매체가 있으면) 머리말에 `광고비·예산 기준 [Gross][Net]` 토글이 생기고(토글 아래에
+- 수수료가 있으면(봉투나 목표 응답의 `fees`에 매체가 있으면) 머리말에 `광고비·예산 기준 [Gross][Net]` 토글이 생기고(토글 아래에
   `브랜드 기준 Net · 수수료 Meta 마크업 15% · Google(9월 커미션 10%, 10월 커미션 12%)` — 달마다 다르면 같은 수수료가 이어지는 달끼리 묶는다)
   표마다 지금 기준 배지가 붙는다(처음 보기 = 브랜드 기준, 고른 기준은 브라우저에 남는다). 수수료가 없으면 토글이 없다.
 - 표 데이터·Placement 모두 행에 매체·일이 있어 행마다 그 매체·그 날이 속한 달의 수수료로 정확히 바뀐다. CPM·CPC·CPV·소진율은 환산한
   광고비로 다시 계산된다.
 - 예산·단가 목표(cost·e.CPM·e.CPC·e.CPV, Mix 단가 초기값)도 다른 기준 보기에서는 그 매체의 그 달 수수료로 환산한다(캠페인 행은 그 매체 수수료).
-  매체가 없는 범위(첫째 표의 전체 합계)는 매체 예산 환산 합이다. 비어 있어 빌더가 계산한 목표(노출 = 예산/CPM 등)는 그 보기의 예산으로
+  매체가 없는 범위(`summary`의 전체 합계)는 매체 예산 환산 합이다. 비어 있어 빌더가 계산한 목표(노출 = 예산/CPM 등)는 그 보기의 예산으로
   다시 계산한다.
 - Comment 문장(Daily·Weekly)도, Mix 입력값도 기준마다 따로 만든다. 엑셀은 기준마다 한 파일이다(`.xlsx` = Gross, `_net.xlsx` = Net).

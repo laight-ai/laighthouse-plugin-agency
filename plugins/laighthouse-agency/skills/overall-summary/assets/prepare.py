@@ -6,7 +6,7 @@
   media   get_ad_performance(S~E, day, group_by ["media"], metrics·filters 생략)
   data    get_ad_performance(day, 표 데이터 group_by) — 걸친 달마다(첫 달 S부터, 마지막 달 E까지) 가장 최근 응답
   place   get_ad_performance(day, group_by에 노출 위치 차원) — 걸친 달마다(있을 때만)
-  budgets get_target_progress_v2(month = 걸친 달, media 생략) 원문 — 달마다 가장 최근 응답
+  budgets get_target_progress_v2(month = 걸친 달, media 생략) 응답 그대로 — 달마다 가장 최근 응답
   history list_campaign_change_raw(date_from S, date_to E) — cursor 없는 첫 응답부터 next_cursor를 따라간 페이지 전부
   names   get_ad_performance(S~E, total, group_by에 *_id) — 변경 이력의 ID에 이름을 붙인다(차원에 *_id가 있을 때만 필요)
 

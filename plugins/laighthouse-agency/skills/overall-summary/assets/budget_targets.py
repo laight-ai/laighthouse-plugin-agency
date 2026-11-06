@@ -1,4 +1,4 @@
-"""overall-summary의 목표 표(get_target_progress_v2 원문) 해석."""
+"""overall-summary의 목표 표(get_target_progress_v2 원문 — JSON 응답은 빌더가 report_kit.target_text로 같은 원문으로 바꿔 넘긴다) 해석."""
 import json
 import re
 

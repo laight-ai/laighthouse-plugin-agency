@@ -69,7 +69,7 @@ MCP 데이터를 받아 **라이트하우스 Weekly 보고서**(HTML 한 파일)
    처음 있는 것(대소문자 무시, 정확히 같은 이름만). 없을 때만 사용자에게 묻는다 — 스크립트를 따로 돌리지 않는다.
 3. **2차 호출 — 한 메시지에 동시 3회**:
    - s1 목표: `get_target_progress_v2` — `month` = E의 달, `media` 생략, `as_of_date` = E, `cost_metric` = `metric_keys.cost`
-     (한 줄 메시지·에러는 "목표 없음" — 그대로 둔다)
+     (`status`가 `ok`가 아닌 응답(옛 서버는 한 줄 메시지)·에러는 "목표 없음" — 그대로 둔다)
    - s4: 이번주(E-6 ~ E)·전주(E-13 ~ E-7) **각 1회** — `get_ad_performance` `time_grain:"total"`, `group_by` = FINE_DIMS.
      크기 오류(서버 5만 행·"larger than 16MB" 등)면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절).
 4. **빌드 입력 준비**:
