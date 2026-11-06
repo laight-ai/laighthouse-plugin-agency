@@ -397,13 +397,12 @@ def test_weekly_json_target_same_as_markdown():
 def test_monthly_json_target_same_as_markdown():
     """s1 목표가 JSON 객체일 때, 그리고 예전 입력 s6.targets(매체마다 부른 응답 — 내용은 s1 응답을 다시 쓴다)가 JSON 객체일 때
     모두 원문과 같다."""
-    pairs = [(served_monthly_payload(), served_monthly_payload(MONTH_TP_JSON))]
-    pairs[0][0]["s6"]["targets"], pairs[0][1]["s6"]["targets"] = {"Meta": MONTH_TP}, {"Meta": MONTH_TP_JSON}
-    for md, js in pairs:
-        assert monthly.fee_view(js) == monthly.fee_view(md)
-        for basis in ("net", "gross"):   # ctx는 함수(tot)를 담아 비교하지 않는다
-            assert monthly.compute(js, check_dims=False, basis=basis)[:3] == monthly.compute(md, check_dims=False, basis=basis)[:3], basis
-        assert monthly.digest(js) == monthly.digest(md)
+    md, js = served_monthly_payload(), served_monthly_payload(MONTH_TP_JSON)
+    md["s6"]["targets"], js["s6"]["targets"] = {"Meta": MONTH_TP}, {"Meta": MONTH_TP_JSON}
+    assert monthly.fee_view(js) == monthly.fee_view(md)
+    for basis in ("net", "gross"):   # ctx는 함수(tot)를 담아 비교하지 않는다
+        assert monthly.compute(js, check_dims=False, basis=basis)[:3] == monthly.compute(md, check_dims=False, basis=basis)[:3], basis
+    assert monthly.digest(js) == monthly.digest(md)
 
 
 def test_overall_json_target_same_as_markdown():

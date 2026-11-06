@@ -29,7 +29,7 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
         # summary = 전체 합계, scopes = 매체·캠페인 행.
         # cost 행 = 예산, impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표. 행이 없으면 빈칸.
         # 수수료(Gross/Net)는 shared/assets/fees.py(현재 응답)·fees_legacy.py(fee_basis 없는 옛 응답).
-        # 항목에 범위 키(media·상품·campaign_name·ad_group_name)를 주면 첫째 표를 그 범위로 읽는다(그 인자로 부른 경우).
+        # 항목에 범위 키(media·상품·campaign_name·ad_group_name)를 주면 `summary`를 그 범위로 읽는다(그 인자로 부른 경우).
   "place": {"json_files": ["<첫 달 응답>", ...]}
         # 선택 — Placement 표. day grain, group_by = [media, (ad_type 또는 상품), 노출 위치 차원(PLACE_DIMS 중 브랜드가 주는 것)],
         # 달마다 나눠 받는다. 표 데이터와 따로 받아(행 수가 적다) Placement 표만 그린다. 없거나 노출 위치 차원이 없으면 표가 빠진다.
