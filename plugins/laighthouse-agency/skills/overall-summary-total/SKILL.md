@@ -43,7 +43,7 @@ metadata:
 ```
 {브랜드명} 종합 리포트 Summary({기준_일자}) 생성 완료.
 엑셀: {xlsx 경로} (Summary)
-엑셀(Net): {xlsx_net 경로}   ← 출력에 xlsx_net이 있을 때만(예산에 수수료가 있는 브랜드 — 위 엑셀은 Gross 기준)
+엑셀(Net): {xlsx_net 경로}   ← 출력에 xlsx_net이 있을 때만(수수료가 있는 브랜드 — 위 엑셀은 Gross 기준)
 가장 인상적인 부분: {소진율·달성률에서 고른 한 문장}.
 — by LaightAI
 ```

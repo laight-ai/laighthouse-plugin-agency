@@ -87,15 +87,16 @@ HTML과 같은 폴더에 같은 이름의 `.xlsx`가 함께 생긴다(`~/Downloa
 | Raw | 표 데이터 원자 행(일 × 차원) — 필터·피벗용 |
 
 엑셀 생성이 실패해도(예: 같은 파일이 엑셀에 열려 있음) HTML 보고서는 그대로 만들어진다.
-예산에 수수료가 있는 브랜드는 Net 기준 엑셀 `…_net.xlsx`도 함께 생긴다(같은 이름의 `.xlsx`는 Gross 기준).
+수수료가 있는 브랜드는 Net 기준 엑셀 `…_net.xlsx`도 함께 생긴다(같은 이름의 `.xlsx`는 Gross 기준).
 
 ### 브랜드 비종속 동작
 
 - 실행 시작에 차원 목록을 확인하고, 지표 키는 첫 응답의 지표 목록에서 정한다(prepare.py가 같은 규칙으로 다시 확인). 브랜드가 제공하지 않는 차원(상품·노출 위치 등)은
   묻지 않고 보고서에서 조용히 빠진다.
 - 예산·목표는 `get_target_progress_v2`(전체·매체·캠페인 단위)에서 읽는다. 목표가 없으면 빈칸이다.
-- 광고비 실적은 항상 Net이다. 예산에 수수료가 있으면(cost ≠ cost_net) 종합·Weekly·Monthly 보고서 머리말에 `광고비·예산 기준 [Gross][Net]` 토글이 생긴다
-  (기본 Gross — 광고비·CPM·CPC·CPV를 수수료 비율로 환산, 수수료는 달마다 같다고 본다). 수수료가 없으면 토글 없이 예전 그대로다.
+- 광고비·예산은 서버가 알려 주는 브랜드 기준(`fee_basis` — Net 또는 Gross)으로 온다. 수수료가 있으면 종합·Weekly·Monthly 보고서 머리말에
+  `광고비·예산 기준 [Gross][Net]` 토글이 생긴다(처음 보기는 브랜드 기준). 환산 규칙과 옛 서버 규칙은 `shared/references/mcp-tools.md` 2절,
+  구현은 `shared/assets/fees.py`, 자체 검사는 `python3 tests/test_fees.py`·`tests/test_fee_builders.py`.
 - 렌더링 부품은 공용 킷 `shared/assets/report_kit.*`와 스킬의 `assets/overall_summary.js`에 있다.
 
 ## 요약 가이드 (비개발자 편집)
