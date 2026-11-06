@@ -45,15 +45,15 @@ PAGE = """<!doctype html>
 :root {{
   --bg:#f6f8fb; --card:#ffffff; --fg:#1e293b; --muted:#64748b; --line:#e2e8f0; --chip:#eef2f7;
   --own:#0b57d0; --c1:#94a3b8; --c2:#c08457; --c3:#7c9a7e; --c4:#b08fc7; --warn:#b45309;
-  --rain:#38bdf8; --temp:#ef4444; --di:#f59e0b; --wknd:rgba(100,116,139,.12);
+  --rain:#38bdf8; --temp:#ef4444; --di:#f59e0b; --wknd:rgba(100,116,139,.12); --rainband:rgba(56,189,248,.18);
   --sans:'Pretendard','Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
 }}
 @media (prefers-color-scheme: dark) {{ :root:not([data-theme="light"]) {{
   --bg:#0f141b; --card:#161d27; --fg:#e2e8f0; --muted:#94a3b8; --line:#2a3442; --chip:#1f2935;
-  --own:#7aa7ff; --c1:#64748b; --c2:#d19a6c; --c3:#8fb592; --c4:#c3a5da; --warn:#f59e0b; --wknd:rgba(148,163,184,.14); color-scheme:dark; }} }}
+  --own:#7aa7ff; --c1:#64748b; --c2:#d19a6c; --c3:#8fb592; --c4:#c3a5da; --warn:#f59e0b; --wknd:rgba(148,163,184,.14); --rainband:rgba(56,189,248,.16); color-scheme:dark; }} }}
 :root[data-theme="dark"] {{
   --bg:#0f141b; --card:#161d27; --fg:#e2e8f0; --muted:#94a3b8; --line:#2a3442; --chip:#1f2935;
-  --own:#7aa7ff; --c1:#64748b; --c2:#d19a6c; --c3:#8fb592; --c4:#c3a5da; --warn:#f59e0b; --wknd:rgba(148,163,184,.14); color-scheme:dark; }}
+  --own:#7aa7ff; --c1:#64748b; --c2:#d19a6c; --c3:#8fb592; --c4:#c3a5da; --warn:#f59e0b; --wknd:rgba(148,163,184,.14); --rainband:rgba(56,189,248,.16); color-scheme:dark; }}
 body {{ background:var(--bg); color:var(--fg); font-family:var(--sans); line-height:1.6;
   padding-block:28px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }}
 .wrap {{ max-width:960px; margin:0 auto; display:flex; flex-direction:column; gap:16px; }}
@@ -90,7 +90,8 @@ h1 {{ font-size:22px; text-wrap:balance; }}
 .seg button[aria-pressed="true"] {{ background:var(--card); color:var(--fg); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.08); }}
 .seg button:focus-visible {{ outline:2px solid var(--own); outline-offset:1px; }}
 .chart {{ position:relative; height:320px; }}
-.take {{ font-size:13px; color:var(--muted); margin:0 0 12px; }}
+.take {{ font-size:13px; color:var(--muted); margin:0 0 12px; white-space:pre-line; }}
+.wkey i.rb {{ background:var(--rainband); }}
 .card .note {{ margin-top:8px; }}
 .note {{ font-size:12px; color:var(--muted); }}
 .warn {{ font-size:13px; color:var(--warn); font-weight:600; }}
@@ -123,17 +124,26 @@ const weekendBands = {{ id:'weekendBands', beforeDatasetsDraw(ch) {{
     const c = x.getPixelForValue(i), l0 = Math.max(a.left, c - step/2), r0 = Math.min(a.right, c + step/2);
     ctx.fillRect(l0, a.top, r0 - l0, a.bottom - a.top); }});
   ctx.restore(); }} }};
+// 지정한 칸(c.bands.idx)에 세로 음영(비 온 날 등)
+const bandsOf = b => ({{ id:'bands', beforeDatasetsDraw(ch) {{
+  const {{ ctx, chartArea:a, scales:{{ x }} }} = ch, n = ch.data.labels.length;
+  const step = n > 1 ? x.getPixelForValue(1) - x.getPixelForValue(0) : a.right - a.left;
+  ctx.save(); ctx.fillStyle = css(b.tok);
+  b.idx.forEach(i => {{ const c = x.getPixelForValue(i), l0 = Math.max(a.left, c - step/2), r0 = Math.min(a.right, c + step/2);
+    ctx.fillRect(l0, a.top, r0 - l0, a.bottom - a.top); }});
+  ctx.restore(); }} }});
 const live = [], pick = charts.map(() => 0);
 function draw(i) {{
   const c = charts[i], spec = JSON.parse(JSON.stringify(c.spec));
-  if (c.metrics) {{ const m = c.metrics[pick[i]], d0 = spec.data.datasets[0];
-    d0.label = m.name; d0.data = m.data; spec.options.scales.y.title.text = m.unit;
+  if (c.metrics) {{ const m = c.metrics[pick[i]];
+    // 지표 하나에 데이터셋 여럿(매체별 막대): sets[k]가 k번째 데이터셋 값
+    m.sets.forEach((s, k) => {{ spec.data.datasets[k].data = s; }}); spec.options.scales.y.title.text = m.unit;
     const el = document.querySelector(`[data-c="${{i}}"] .mname`); if (el) el.textContent = m.name;
     const tk = document.querySelector(`[data-c="${{i}}"] .take`); if (tk && c.take) tk.textContent = c.take[pick[i]];
     document.querySelectorAll(`[data-c="${{i}}"] .seg button`).forEach((b, j) => b.setAttribute('aria-pressed', j === pick[i])); }}
   spec.data.datasets.forEach(d => {{ if (d.tok) {{ d.borderColor = css(d.tok); d.backgroundColor = d.fill ? css(d.tok) + '55' : css(d.tok); }}
     if (d.toks) d.backgroundColor = d.toks.map(css); }});
-  spec.plugins = [weekendBands];
+  spec.plugins = c.bands ? [weekendBands, bandsOf(c.bands)] : [weekendBands];
   if (live[i]) live[i].destroy();
   live[i] = new Chart(document.querySelector(`[data-c="${{i}}"] canvas`), spec);
 }}
@@ -141,7 +151,7 @@ function drawAll() {{
   Chart.defaults.color = css('--muted'); Chart.defaults.borderColor = css('--line');
   Chart.defaults.font.family = css('--sans'); charts.forEach((_, i) => draw(i));
 }}
-charts.forEach((c, i) => (c.metrics || []).forEach((m, j) => {{
+charts.forEach((c, i) => (c.metrics && c.metrics.length > 1 ? c.metrics : []).forEach((m, j) => {{
   const b = document.createElement('button'); b.type = 'button'; b.textContent = m.button;
   b.addEventListener('click', () => {{ pick[i] = j; draw(i); }});
   document.querySelector(`[data-c="${{i}}"] .seg`).appendChild(b); }}));
@@ -153,15 +163,19 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawAll);
 
 def render(charts: list, **kw) -> str:
     """``PAGE``를 채운다. ``charts``는 ``{title, spec, metrics?}`` 목록이고 ``spec``은 Chart.js 스펙 dict다.
-    ``metrics``(``[{name, button, unit, data}]``)가 있으면 첫 데이터셋을 그 지표로 바꾸는 토글을 단다.
-    차트마다 ``note``(카드 안 각주)·``take``(지표별 해석 한 줄, ``metrics``와 같은 순서)·``height``(px)를 줄 수 있다.
+    ``metrics``(``[{name, button, unit, sets}]``, ``sets[k]``는 k번째 데이터셋 값)가 있으면 앞 데이터셋들을
+    그 지표로 바꾼다. 지표가 둘 이상일 때만 토글 버튼을 단다.
+    차트마다 ``note``(카드 안 각주)·``take``(지표별 해석, ``metrics``와 같은 순서, 줄바꿈 가능)·``height``(px)·
+    ``bands``(``{idx, tok}``: 그 칸들에 세로 음영)를 줄 수 있다.
     ``summary``는 ``summary_html``이 만든 조각, ``note``(차트 아래 공통 각주 평문, 선택)·``extra``는 HTML 조각."""
     kw["note"] = f'<p class="note">{escape(kw["note"])}</p>' if kw.get("note") else ""
     kw.setdefault("banner", "")
     kw.setdefault("extra", "")
     kw["charts"] = "\n  ".join(chart_card(i, c) for i, c in enumerate(charts))
     kw["specs"] = json.dumps(
-        [{"spec": c["spec"], "metrics": c.get("metrics"), "take": c.get("take")} for c in charts], ensure_ascii=False
+        [{"spec": c["spec"], "metrics": c.get("metrics"), "take": c.get("take"), "bands": c.get("bands")}
+         for c in charts],
+        ensure_ascii=False,
     ).replace("<", "\\u003c")  # 외부 글자(브랜드명·라벨)가 script를 닫거나 주석 상태로 바꾸지 못하게
     with open(os.path.join(HERE, "chart.umd.min.js"), encoding="utf-8") as f:
         kw["chartjs"] = f.read()
@@ -172,11 +186,12 @@ def chart_card(i: int, c: dict) -> str:
     title = escape(c["title"])
     if c.get("metrics"):
         title = title.replace("{metric}", f'<span class="mname">{escape(c["metrics"][0]["name"])}</span>')
-    side = '<div class="seg" role="group" aria-label="성과 지표 선택"></div>' if c.get("metrics") else ""
+    side = '<div class="seg" role="group" aria-label="성과 지표 선택"></div>' if len(c.get("metrics") or []) > 1 else ""
     if any(f"({DOW[5]})" in x or f"({DOW[6]})" in x for x in c["spec"]["data"]["labels"]):
         side += '<span class="wkey"><i></i>음영 = 주말(토·일)</span>'
     if c.get("key"):
-        side += f'<span class="wkey">{escape(c["key"])}</span>'
+        swatch = '<i class="rb"></i>' if c.get("bands") else ""
+        side += f'<span class="wkey">{swatch}{escape(c["key"])}</span>'
     take = '<p class="take"></p>' if c.get("metrics") and c.get("take") else ""
     style = f' style="height:{int(c["height"])}px"' if c.get("height") else ""
     note = f'<p class="note">{escape(c["note"])}</p>' if c.get("note") else ""

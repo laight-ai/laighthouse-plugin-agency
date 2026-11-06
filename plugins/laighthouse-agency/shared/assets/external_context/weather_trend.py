@@ -7,11 +7,14 @@ skill 폴더의 ``assets/prepare.py``·``assets/build_report.py``가 부른다. 
   폭우 ≥30mm(비 대신 표기), 폭염 최고기온 ≥30℃, 무더위 불쾌지수 최대 ≥75, 시간자료 결측이 6시간을
   넘으면 불쾌지수 없음·"(DI 결측)".
 - 광고 성과: 저장 훅의 ``get_ad_performance``(같은 범위, ``time_grain: day``, ``group_by: ["media"]``,
-  ``metrics``·``filters`` 생략) 응답이 있으면 날짜별 전체 매체 합(클릭·전환·매출, 구매전환율 = 전환 ÷ 클릭)을
-  겹친다. 없거나 오류(광고 mart가 없는 브랜드)면 날씨만 낸다. 가상 수치는 만들지 않는다.
-- 비 온 날 차이(``rain_gap``): 지표마다 비 온 날을 같은 요일 유형(평일·주말)의
-  비 없는 날 평균과 비교한 변화율의 평균. 기온·불쾌지수는 지표와의 상관계수(연관일 뿐 원인이 아니다).
-- 차트: 불쾌지수(시간자료 일평균)·평균기온·강수량 3개, 차트마다 성과 지표 토글.
+  ``metrics``·``filters`` 생략) 응답이 있으면 매체별 날짜 값(클릭·전환·매출, 구매전환율 = 전환 ÷ 클릭)을
+  겹친다. 매체끼리 더하지 않고, 범위 안 값이 0 또는 없음뿐인 매체·지표(집계 안 함)는 뺀다.
+  없거나 오류(광고 mart가 없는 브랜드)면 날씨만 낸다. 가상 수치는 만들지 않는다.
+- 비 온 날 차이(``rain_gap``): 매체·지표마다 비 온 날을 같은 요일 유형(평일·주말)의
+  비 없는 날 평균과 비교한 변화율의 평균. 기온·불쾌지수는 지표와의 상관계수와 방향(same·opposite·none,
+  연관일 뿐 원인이 아니다).
+- 차트: 불쾌지수(시간자료 일평균)·평균기온·강수량 3개, 매체별 막대(나란히), 차트마다 성과 지표 토글
+  (지표가 둘 이상일 때만), 강수량 차트는 비 온 날 세로 음영.
 """
 
 from __future__ import annotations
@@ -106,28 +109,51 @@ METRICS = [
 ]
 
 
-def daily_metrics(brand: str, start: date, end: date, root: str | None = None) -> dict:
-    """저장된 day grain 광고 성과 → {지표: {날짜: 전체 매체 합}}. 응답·클릭 키가 없으면 {}."""
+def daily_metrics(brand: str, start: date, end: date, root: str | None = None) -> tuple[dict, list]:
+    """저장된 day grain 광고 성과 → ({매체: {지표: {날짜: 값}}}, 숨긴 [{media, metric}]).
+
+    매체끼리 더하지 않는다 — 어느 매체의 행이 빠진 날이 다른 매체 값만으로 '적은 날'이 되지 않게.
+    행이 없는 매체·날은 값이 없다(0으로 채우지 않는다). 범위 안에서 0보다 큰 값이 한 번도 없는
+    매체·지표는 집계하지 않는 것으로 보고 뺀다(구매전환율은 전환이 집계되는 매체만 남는다).
+    shortcut: 1일처럼 짧은 범위에서 실제로 전환이 0인 날도 '집계 안 함'으로 숨는다. 마트가 지표별 집계 여부를
+    알려 주게 되면 그 값으로 바꾼다. 응답·클릭 키가 없으면 ({}, [])."""
     env = saved.daily_ad_envelope(brand, start.isoformat(), end.isoformat(), root)
     if not env:
-        return {}
+        return {}, []
     keys = saved.metric_keys(list(env.get("metrics") or []))
     if not keys.get("click"):
-        return {}
-    sums: dict = {role: {} for role in ("click", "conversion", "revenue") if keys.get(role)}
+        return {}, []
+    roles = [role for role in ("click", "conversion", "revenue") if keys.get(role)]
+    raw: dict = {}
     for r in env["rows"]:
-        if r.get("media") is None:  # 광고 매체 행만(Organic 제외)
+        media = r.get("media")
+        if media is None:  # 광고 매체 행만(Organic 제외)
             continue
         d = str(r.get("date") or "")[:10]
-        for role, out in sums.items():
+        series = raw.setdefault(str(media), {role: {} for role in roles})
+        for role in roles:
             v = r.get(keys[role])
             if isinstance(v, (int, float)):
-                out[d] = out.get(d, 0) + v
-    if "conversion" in sums:
-        sums["cvr"] = {
-            d: round(100.0 * sums["conversion"].get(d, 0) / c, 2) for d, c in sums["click"].items() if c
-        }
-    return {k: v for k, v in sums.items() if k in {m[0] for m in METRICS}}
+                series[role][d] = series[role].get(d, 0) + v
+    out: dict = {}
+    hidden: list = []
+    for media in sorted(raw):
+        s = raw[media]
+        if "conversion" in s:
+            s["cvr"] = {d: round(100.0 * s["conversion"].get(d, 0) / c, 2) for d, c in s["click"].items() if c}
+        kept = {}
+        for key, *_ in METRICS:
+            if key not in s:
+                continue
+            if any(v > 0 for v in s[key].values()):
+                kept[key] = s[key]
+            else:
+                hidden.append({"media": media, "metric": key})
+        if "click" in kept:
+            out[media] = kept
+        else:  # 클릭이 없는 매체는 다른 지표가 있어도 비교 기준이 없어 통째로 뺀다
+            hidden += [{"media": media, "metric": k} for k in kept]
+    return out, hidden
 
 
 def correlation(xs: list, ys: list) -> float | None:
@@ -141,6 +167,16 @@ def correlation(xs: list, ys: list) -> float | None:
     sxx = sum((x - mx) ** 2 for x, _ in pairs)
     syy = sum((y - my) ** 2 for _, y in pairs)
     return round(sxy / (sxx * syy) ** 0.5, 2) if sxx and syy else None
+
+
+STRONG_CORR = 0.5  # rules.md 1절과 같은 기준
+
+
+def direction(r: float | None) -> str:
+    """상관계수 → 방향: same(+0.5 이상, 같은 방향), opposite(-0.5 이하, 반대 방향), none(그 사이·없음)."""
+    if r is None or abs(r) < STRONG_CORR:
+        return "none"
+    return "same" if r > 0 else "opposite"
 
 
 def rain_gap(recs: list, series: dict) -> dict | None:
@@ -176,7 +212,7 @@ def station_label(station_id) -> str:
     return f"{name}({station_id})" if name else f"관측소 {station_id}"
 
 
-def make_facts(brand: str, start: date, end: date, recs: list, metrics: dict, station_id) -> dict:
+def make_facts(brand: str, start: date, end: date, recs: list, metrics: dict, station_id, hidden: list) -> dict:
     def pick(flag):
         return [r["date"] for r in recs if r[flag]]
 
@@ -193,14 +229,18 @@ def make_facts(brand: str, start: date, end: date, recs: list, metrics: dict, st
     avg_ta = [r["avg_ta"] for r in recs if r["avg_ta"] is not None]
     di_avg = [r["di_avg"] for r in recs if r["di_avg"] is not None]
 
-    def metric_facts(key: str) -> dict:
-        series = metrics[key]
+    def metric_facts(series: dict, key: str) -> dict:
         ys = [series.get(r["date"]) for r in recs]
+        ta = correlation([r["avg_ta"] for r in recs], ys)
+        di_r = correlation([r["di_avg"] for r in recs], ys)
         return {
             "total": round(sum(series.values()), 1) if key != "cvr" else None,
+            "days_with_data": sum(r["date"] in series for r in recs),
             "rain_gap": rain_gap(recs, series),
-            "corr_avg_ta": correlation([r["avg_ta"] for r in recs], ys),
-            "corr_di_avg": correlation([r["di_avg"] for r in recs], ys),
+            "corr_avg_ta": ta,
+            "corr_avg_ta_direction": direction(ta),
+            "corr_di_avg": di_r,
+            "corr_di_avg_direction": direction(di_r),
         }
     return {
         "brand": brand,
@@ -227,8 +267,13 @@ def make_facts(brand: str, start: date, end: date, recs: list, metrics: dict, st
         "total_rain_mm": round(sum(r["sum_rn"] for r in recs), 1),
         "ad_performance": {
             "available": bool(metrics),
-            "metrics": {k: metric_facts(k) for k, *_ in METRICS if k in metrics},
-            "rule": "rain_gap = 비 온 날 vs 같은 요일 유형(평일·주말) 비 없는 날 평균, corr = 상관계수(연관)",
+            "media": {
+                m: {k: metric_facts(s[k], k) for k, *_ in METRICS if k in s} for m, s in metrics.items()
+            },
+            "hidden": hidden,
+            "rule": "매체별로 그 매체 값이 있는 날끼리 계산. rain_gap = 비 온 날 vs 같은 요일 유형(평일·주말) "
+            "비 없는 날 평균, corr = 상관계수(연관), *_direction = same(+0.5 이상)·opposite(-0.5 이하)·none, "
+            "hidden = 범위 안 값이 0 또는 없음뿐이라 집계하지 않는 것으로 보고 뺀 매체·지표",
         },
         "days": recs,
     }
@@ -246,8 +291,8 @@ def prepare(brand: str, rng: str, root: str | None = None) -> dict:
     recs = records(resp)
     if not recs:
         raise Refusal(f"{start}~{end} 날씨 관측값이 아직 없습니다. 범위 끝을 앞당겨 다시 요청하세요.")
-    metrics = daily_metrics(brand, start, end, root)
-    facts = make_facts(brand, start, end, recs, metrics, resp.get("station_id"))
+    metrics, hidden = daily_metrics(brand, start, end, root)
+    facts = make_facts(brand, start, end, recs, metrics, resp.get("station_id"), hidden)
     r = {"skill": SKILL, "facts": facts, "metrics": metrics}
     folder = saved.work_dir(brand, SKILL, f"{start}_{end}")
     path = os.path.join(folder, "report.json")
@@ -269,38 +314,59 @@ FACTORS = [
 ]
 NUMS = "①②③"
 CHART_HEIGHT = 240
-STRONG_CORR = 0.5
 CLEAR_GAP_PCT = 10.0  # rules.md 1절과 같은 기준
 
 
-def take_text(title: str, subj: str, wa: str, corr_key, metric: str, mf: dict) -> str:
-    """지표 토글마다 차트 위에 보일 해석 한 줄. facts 값으로만 만든다(모델이 쓰지 않는다).
-    지표 이름(광고 클릭·구매전환율·매출액)은 모두 받침으로 끝나 조사 '은·이'를 쓴다."""
+def take_text(title: str, subj: str, wa: str, corr_key, metric: str, mf: dict, rain_total: int = 0) -> str:
+    """지표 토글·매체마다 차트 위에 보일 해석 한 줄. facts 값으로만 만든다(모델이 쓰지 않는다).
+    지표 이름(광고 클릭·구매전환율·매출액)은 모두 받침으로 끝나 조사 '은·이'를 쓴다.
+    ``rain_total``(범위의 비 온 날 수)보다 비교한 날이 적으면(그 매체 행이 없거나 같은 요일 유형 비 없는 날이 없음)
+    비교한 날 수를 따로 밝힌다."""
     if corr_key is None:
         g = mf.get("rain_gap")
         if not g:
             return "비 온 날과 같은 요일 유형의 비 없는 날이 함께 있지 않아 비교할 수 없습니다."
         n, p = len(g["rain_days"]), g["avg_change_pct"]
+        days = f"비 온 {n}일(파란 음영)" if n >= rain_total else f"비 온 {rain_total}일 중 비교할 수 있는 {n}일"
         if abs(p) < CLEAR_GAP_PCT:
-            return f"비 온 {n}일(파란 막대)의 {metric}은 같은 평일·주말의 비 없는 날과 큰 차이가 없습니다({p:+.1f}%)."
-        return (f"비 온 {n}일(파란 막대)의 {metric}이 같은 평일·주말의 비 없는 날보다 평균 {abs(p):.1f}% "
+            return f"{days}의 {metric}은 같은 평일·주말의 비 없는 날과 큰 차이가 없습니다({p:+.1f}%)."
+        return (f"{days}의 {metric}이 같은 평일·주말의 비 없는 날보다 평균 {abs(p):.1f}% "
                 + ("높습니다." if p > 0 else "낮습니다."))
     r = mf.get(corr_key)
     if r is None:
         return f"값이 있는 날이 적어 {title}{wa} {metric}의 관계를 보지 않았습니다."
-    if abs(r) >= STRONG_CORR:
-        return f"{title}{subj} 높은 날 {metric}도 {'높은' if r > 0 else '낮은'} 경향이 보입니다(상관계수 {r:+.2f}). 요일 주기와 섞여 있을 수 있습니다."
+    way = mf[f"{corr_key}_direction"]
+    if way != "none":
+        return f"{title}{subj} 높은 날 {metric}도 {'높은' if way == 'same' else '낮은'} 경향이 보입니다(상관계수 {r:+.2f}). 요일 주기와 섞여 있을 수 있습니다."
     return f"{title}{wa} {metric} 사이에 뚜렷한 관계가 보이지 않습니다(상관계수 {r:+.2f})."
 
 
-def charts(recs: list, metrics: dict, label: str, metric_facts: dict) -> list:
-    """날씨 요인 3개 차트. 광고 성과가 있으면 첫 데이터셋이 지표 막대(토글)이고 요인은 오른쪽 축."""
+METRIC_NAMES = {k: button for k, button, _, _ in METRICS}
+
+
+def hidden_text(hidden: list) -> str:
+    """각주용 '집계하지 않아 뺀 지표' 문장. 없으면 빈 문자열."""
+    by_media: dict = {}
+    for h in hidden:
+        by_media.setdefault(h["media"], []).append(METRIC_NAMES[h["metric"]])
+    if not by_media:
+        return ""
+    items = ", ".join(f"{m} {'·'.join(names)}" for m, names in by_media.items())
+    return f" 범위 안에서 값이 0이거나 없어 집계하지 않는 것으로 본 지표는 표시하지 않았습니다({items})."
+
+
+def charts(recs: list, metrics: dict, label: str, media_facts: dict) -> list:
+    """날씨 요인 3개 차트. 광고 성과가 있으면 앞 데이터셋들이 매체별 지표 막대(나란히, 토글)이고 요인은 오른쪽 축.
+    강수량 차트는 비 온 날(1mm 이상) 칸에 세로 음영을 그린다."""
     labels = [page.md(r["date"]) for r in recs]
     rain = [r["rain"] for r in recs]
+    media = list(metrics)
+    keys = [k for k, *_ in METRICS if any(k in metrics[m] for m in media)]
     toggles = [
-        {"name": name, "button": button, "unit": unit, "data": [metrics[k].get(r["date"]) for r in recs]}
+        {"name": name, "button": button, "unit": unit,
+         "sets": [[metrics[m].get(k, {}).get(r["date"]) for r in recs] for m in media]}
         for k, button, name, unit in METRICS
-        if k in metrics
+        if k in keys
     ]
     out = []
     for num, (title, josa, subj, key, tok, unit, lo, hi, corr_key) in zip(NUMS, FACTORS):
@@ -319,37 +385,45 @@ def charts(recs: list, metrics: dict, label: str, metric_facts: dict) -> list:
         if len(recs) <= SHORT_RANGE_DAYS and factor["type"] == "line":
             factor["pointRadius"] = 5  # 점 1~3개뿐이라 크게
         if toggles:
-            # 강수량 차트는 비 온 날(1mm 이상) 지표 막대를 강수 색으로 칠한다.
-            bar = {"type": "bar", "label": toggles[0]["name"], "data": toggles[0]["data"], "yAxisID": "y",
-                   "order": 1, "borderRadius": 3}
-            bar |= {"toks": ["--rain" if x else "--c1" for x in rain]} if key == "sum_rn" else {"tok": "--c1"}
+            bars = [
+                {"type": "bar", "label": m, "data": toggles[0]["sets"][i], "yAxisID": "y", "order": 1,
+                 "borderRadius": 3, "tok": page.token(i)}
+                for i, m in enumerate(media)
+            ]
             if key == "sum_rn":
                 factor = {"type": "line", "label": name, "data": values, "tok": tok,
                           "showLine": False, "pointRadius": [5 if x else 0 for x in rain]}
-            datasets = [bar, factor | {"yAxisID": "y2", "order": 0}]
+            datasets = [*bars, factor | {"yAxisID": "y2", "order": 0}]
             scales = {"y": {"beginAtZero": True, "title": {"display": True, "text": toggles[0]["unit"]}},
                       "y2": axis | {"position": "right", "grid": {"drawOnChartArea": False}}}
         else:
             datasets, scales = [factor | {"yAxisID": "y"}], {"y": axis}
         # 짧은 범위는 점·막대가 왼쪽 끝에 붙지 않게 칸 가운데에 둔다.
         scales["x"] = {"offset": True}
+        # 지표마다 매체별 한 줄(그 지표를 집계하는 매체만). 여러 줄은 화면에서 줄바꿈된다.
         takes = [
-            take_text(title, subj, josa, corr_key, button, metric_facts[k])
+            "\n".join(
+                f"{m}: {take_text(title, subj, josa, corr_key, button, media_facts[m][k], sum(rain))}"
+                for m in media
+                if k in media_facts.get(m, {})
+            )
             for k, button, _, _ in METRICS
-            if k in metrics
+            if k in keys
         ]
         out.append({
             "title": f"{num} {title}{josa} {{metric}} ({label})" if toggles else f"{num} {title} ({label})",
             "height": CHART_HEIGHT,
             "take": takes or None,
-            "note": "주말(토·일)은 날씨와 관계없이 성과가 평일과 다르므로, 비 온 날은 같은 평일·주말끼리 비교했습니다."
+            "note": "주말(토·일)은 날씨와 관계없이 성과가 평일과 다르므로, 비 온 날은 매체마다 같은 평일·주말끼리 비교했습니다."
             if toggles and key == "sum_rn"
             else None,
             "spec": {"type": "bar", "data": {"labels": labels, "datasets": datasets},
                      "options": {"maintainAspectRatio": False,
                                  "interaction": {"mode": "index", "intersect": False}, "scales": scales}},
             "metrics": toggles or None,
-            "key": f"파란 막대 = 비 {RAIN_MM}mm 이상" if toggles and key == "sum_rn" else None,
+            "bands": {"idx": [i for i, x in enumerate(rain) if x], "tok": "--rainband"}
+            if toggles and key == "sum_rn" and any(rain) else None,
+            "key": f"파란 음영 = 비 {RAIN_MM}mm 이상" if toggles and key == "sum_rn" and any(rain) else None,
         })
     return out
 
@@ -387,12 +461,13 @@ def build(json_path: str, summary: str, out: str | None = None) -> dict:
         "시간자료가 6시간 넘게 빠진 날은 비웠습니다."
     )
     if metrics:
-        note += " 광고 성과는 전체 매체 합계이고, 구매전환율은 전환 수 ÷ 클릭 수입니다."
+        note += " 광고 성과는 매체별 값이고(매체끼리 더하지 않음, 행이 없는 날은 비움), 구매전환율은 전환 수 ÷ 클릭 수입니다."
+    note += hidden_text(facts["ad_performance"]["hidden"])
     if facts["missing_dates"]:
         note += f" 관측값이 아직 없는 날: {', '.join(page.md(d) for d in facts['missing_dates'])}."
     parts = page.parse_summary(summary, PARTS[bool(metrics)], "cols")
     html = page.render(
-        charts(recs, metrics, label, facts["ad_performance"]["metrics"]),
+        charts(recs, metrics, label, facts["ad_performance"]["media"]),
         title=escape(f"{brand} 날씨 영향"),
         skill="날씨: 불쾌지수·기온·강수",
         summary=page.summary_html(parts, "cols"),

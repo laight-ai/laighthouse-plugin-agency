@@ -61,9 +61,12 @@ def _daily_clicks_case():
                "response": json.dumps(env, ensure_ascii=False)}
         with open(os.path.join(root, "s1", "1_get_ad_performance.json"), "w", encoding="utf-8") as f:
             json.dump(rec, f, ensure_ascii=False)
-        metrics = wt.daily_metrics("라형식품", date(2026, 7, 6), date(2026, 7, 7))
-        assert metrics == {"click": {"2026-07-06": 100, "2026-07-07": 80}}, metrics
-        assert wt.daily_metrics("현대카드", date(2026, 7, 6), date(2026, 7, 7)) == {}
+        # 매체끼리 더하지 않는다: 구글은 07-07 행이 없으니 그날 값도 없다(0이 아니다). Organic(media=None)은 뺀다.
+        metrics, hidden = wt.daily_metrics("라형식품", date(2026, 7, 6), date(2026, 7, 7))
+        assert metrics == {"구글": {"click": {"2026-07-06": 40}},
+                           "네이버": {"click": {"2026-07-06": 60, "2026-07-07": 80}}}, metrics
+        assert hidden == []
+        assert wt.daily_metrics("현대카드", date(2026, 7, 6), date(2026, 7, 7)) == ({}, [])
 
 
 def test_conversion_rate_and_correlation():
@@ -78,9 +81,13 @@ def _conversion_case():
     with tempfile.TemporaryDirectory() as root:
         saved.ROOT = root
         os.makedirs(os.path.join(root, "s1"))
+        # 구글은 전환·매출이 0 또는 값 없음뿐(집계 안 함), 메타는 클릭까지 0뿐(매체째 빠진다).
         env = {"metrics": ["클릭", "전환", "매출"], "metric_units": {}, "rows": [
             {"date": "2026-07-06", "media": "네이버", "클릭": 200, "전환": 4, "매출": 1000},
             {"date": "2026-07-07", "media": "네이버", "클릭": 100, "전환": 3, "매출": 500},
+            {"date": "2026-07-06", "media": "구글", "클릭": 50, "전환": 0, "매출": 0},
+            {"date": "2026-07-07", "media": "구글", "클릭": 70, "전환": 0, "매출": None},
+            {"date": "2026-07-06", "media": "메타", "클릭": 0, "전환": 0, "매출": 0},
         ]}
         rec = {"tool_name": "mcp__laighthouse__get_ad_performance", "saved_at": 1,
                "tool_input": {"brand_name": "라형식품", "start_date": "2026-07-06",
@@ -88,9 +95,14 @@ def _conversion_case():
                "response": json.dumps(env, ensure_ascii=False)}
         with open(os.path.join(root, "s1", "1_get_ad_performance.json"), "w", encoding="utf-8") as f:
             json.dump(rec, f, ensure_ascii=False)
-        m = wt.daily_metrics("라형식품", date(2026, 7, 6), date(2026, 7, 7))
-        assert m.get("cvr") == {"2026-07-06": 2.0, "2026-07-07": 3.0}, m
-        assert "conversion" not in m
+        m, hidden = wt.daily_metrics("라형식품", date(2026, 7, 6), date(2026, 7, 7))
+        assert m["네이버"]["cvr"] == {"2026-07-06": 2.0, "2026-07-07": 3.0}, m
+        assert m["네이버"]["revenue"] == {"2026-07-06": 1000, "2026-07-07": 500}
+        assert "conversion" not in m["네이버"]
+        assert m["구글"] == {"click": {"2026-07-06": 50, "2026-07-07": 70}}, m  # 구매전환율·매출 숨김
+        assert "메타" not in m
+        assert {(h["media"], h["metric"]) for h in hidden} == {
+            ("구글", "cvr"), ("구글", "revenue"), ("메타", "click"), ("메타", "cvr"), ("메타", "revenue")}, hidden
     assert wt.correlation([1, 2, 3, 4, 5], [2, 4, 6, 8, 10]) == 1.0
     assert wt.correlation([1, 2, 3, 4, 5], [5, 4, 3, 2, 1]) == -1.0
     assert wt.correlation([1, 2, None, 4], [1, 2, 3, 4]) is None  # 5일 미만
@@ -158,7 +170,76 @@ def test_prepare_reads_old_ad_performance_from_the_given_folder():
         out = wt.prepare("자사", "2026-07-06~2026-07-07", root)
         with open(out["json"], encoding="utf-8") as f:
             metrics = json.load(f)["metrics"]
-        assert metrics == {"click": {"2026-07-06": 50}}, metrics
+        assert metrics == {"네이버": {"click": {"2026-07-06": 50}}}, metrics
+
+
+def test_correlation_direction_follows_sign():
+    # rules.md: +0.5 이상 같은 방향, -0.5 이하 반대 방향, 그 사이·없음은 관계 없음
+    assert [wt.direction(r) for r in (0.5, 0.9, -0.5, -0.9, 0.49, -0.49, None)] == [
+        "same", "same", "opposite", "opposite", "none", "none", "none"]
+    mf = {"corr_avg_ta": -0.6, "corr_avg_ta_direction": "opposite"}
+    assert "높은 날 광고 클릭도 낮은 경향" in wt.take_text("평균기온", "이", "과", "corr_avg_ta", "광고 클릭", mf)
+    mf = {"corr_avg_ta": 0.4, "corr_avg_ta_direction": "none"}
+    assert "뚜렷한 관계가 보이지 않습니다" in wt.take_text("평균기온", "이", "과", "corr_avg_ta", "광고 클릭", mf)
+
+
+def _ad_root(root: str, rows: list, metrics: list) -> None:
+    rec = {"tool_name": "x__get_ad_performance", "saved_at": 1,
+           "tool_input": {"brand_name": "자사", "start_date": "2026-07-06",
+                          "end_date": "2026-07-07", "time_grain": "day", "group_by": ["media"]},
+           "response": json.dumps({"metrics": metrics, "metric_units": {}, "rows": rows}, ensure_ascii=False)}
+    with open(os.path.join(root, "2_get_ad_performance.json"), "w", encoding="utf-8") as f:
+        json.dump(rec, f, ensure_ascii=False)
+
+
+def test_missing_media_row_does_not_shrink_baseline():
+    """07-06(월) 맑음, 07-07(화) 비. 메타는 07-06 행이 없다.
+    합산하면 07-06=100, 07-07=130으로 비 온 날이 +30%가 되지만, 매체별로는 구글 -20%이고 메타는 비교할 날이 없다."""
+    with tempfile.TemporaryDirectory() as root:
+        _weather_root(root, [ROW, dict(ROW, tm="2026-07-07", sum_rn=5.0)], 108)
+        _ad_root(root, [
+            {"date": "2026-07-06", "media": "구글", "클릭": 100},
+            {"date": "2026-07-07", "media": "구글", "클릭": 80},
+            {"date": "2026-07-07", "media": "메타", "클릭": 50},
+        ], ["클릭"])
+        media = wt.prepare("자사", "2026-07-06~2026-07-07", root)["facts"]["ad_performance"]["media"]
+        assert media["구글"]["click"]["rain_gap"]["avg_change_pct"] == -20.0, media
+        assert media["메타"]["click"]["rain_gap"] is None, media
+        assert media["메타"]["click"]["days_with_data"] == 1
+
+
+def test_all_media_untracked_falls_back_to_weather_only():
+    with tempfile.TemporaryDirectory() as root:
+        _weather_root(root, [ROW], 108)
+        _ad_root(root, [{"date": "2026-07-06", "media": "구글", "클릭": 0}], ["클릭"])
+        ad = wt.prepare("자사", "2026-07-06~2026-07-07", root)["facts"]["ad_performance"]
+        assert ad["available"] is False and ad["media"] == {}, ad
+        assert ad["hidden"] == [{"media": "구글", "metric": "click"}]
+
+
+def test_html_draws_one_bar_per_media_and_hides_untracked_metrics():
+    with tempfile.TemporaryDirectory() as root:
+        _weather_root(root, [ROW, dict(ROW, tm="2026-07-07", sum_rn=5.0)], 108)
+        _ad_root(root, [
+            {"date": "2026-07-06", "media": "구글", "클릭": 100, "매출": 0},
+            {"date": "2026-07-07", "media": "구글", "클릭": 80, "매출": 0},
+            {"date": "2026-07-06", "media": "메타", "클릭": 30, "매출": 0},
+        ], ["클릭", "매출"])
+        out = wt.prepare("자사", "2026-07-06~2026-07-07", root)
+        html_path = os.path.join(root, "r.html")
+        wt.build(out["json"], '["a", "b"]', html_path)
+        with open(html_path, encoding="utf-8") as f:
+            html = f.read()
+    start = html.index("const charts = ") + len("const charts = ")
+    charts = json.loads(html[start:html.index(";\n", start)])
+    rain = charts[2]
+    assert [d["label"] for d in rain["spec"]["data"]["datasets"] if d["type"] == "bar"] == ["구글", "메타"]
+    assert [m["name"] for m in rain["metrics"]] == ["광고 클릭"]  # 매출은 0뿐이라 토글에서 빠진다
+    assert rain["metrics"][0]["sets"] == [[100, 80], [30, None]]  # 메타 07-07은 행이 없어 비움
+    assert rain["bands"]["idx"] == [1]  # 비 온 07-07 칸에 음영
+    assert rain["take"][0].splitlines()[0].startswith("구글: ")
+    assert 'class="seg"' not in html  # 지표가 하나면 토글 버튼이 없다
+    assert "구글 매출액, 메타 매출액" in html  # 숨긴 지표는 각주에 밝힌다
 
 
 if __name__ == "__main__":

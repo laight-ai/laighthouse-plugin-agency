@@ -2,7 +2,7 @@
 name: weather-impact
 description: >
   서울 일별 날씨(불쾌지수·평균기온·강수량, 날씨 유형)를 날짜 범위로 차트 3개에 보여 주고, 브랜드에 광고 성과가
-  있으면 일별 광고 클릭·구매전환율·매출액(토글)을 겹쳐 비 온 날과 비 없는 날의 차이를 요약하는 보고서(HTML).
+  있으면 매체별 일별 광고 클릭·구매전환율·매출액(토글, 집계하는 지표만)을 겹쳐 비 온 날과 비 없는 날의 차이를 요약하는 보고서(HTML).
   "날씨 영향", "날씨", "불쾌지수", "비 온 날 성과" 요청 시 사용. 입력은 브랜드와 날짜 범위(시작~끝, 기본 어제까지 14일).
 metadata:
   version: "1.9.0"
@@ -49,9 +49,12 @@ MCP 응답 원문은 읽거나 옮겨 적지 않는다 — 저장 훅이 파일�
 `range` · `observed_days`·`missing_dates`(관측값이 아직 없는 날) · `day_counts`(`rain_1mm_or_more`(폭우 포함)·`rain_only`·
 `heavy_rain`·`heat`·`muggy`·`di_missing`) · `rain_days`·`heavy_rain_days`·`heat_days`·`muggy_days`(날짜 목록) ·
 `max_ta_range`·`di_max_range`·`avg_ta_range`·`di_avg_range`([최소, 최대]) · `total_rain_mm` · `thresholds`(판정 기준) ·
-`ad_performance`(`available`, `metrics.{click,cvr,revenue}` — `total`, `rain_gap`(비 온 날마다 같은 요일 유형(평일·주말) 비 없는 날
-평균 대비 `change_pct`와 그 평균 `avg_change_pct`), `corr_avg_ta`·`corr_di_avg`(상관계수, 5일 미만이면 null)).
-지표는 광고 응답에 있는 것만 나온다(구매전환율 = 전환 ÷ 클릭, `cvr.total`은 항상 null이라 인용하지 않는다).
+`ad_performance`(`available`, `media.{매체}.{click,cvr,revenue}` — 매체별로 그 매체 값이 있는 날만으로 계산한
+`total`·`days_with_data`, `rain_gap`(비 온 날마다 같은 요일 유형(평일·주말) 비 없는 날 평균 대비 `change_pct`와 그 평균 `avg_change_pct`),
+`corr_avg_ta`·`corr_di_avg`(상관계수, 5일 미만이면 null)와 방향 `corr_avg_ta_direction`·`corr_di_avg_direction`(`same`·`opposite`·`none`),
+`hidden`(범위 안 값이 0 또는 없음뿐이라 집계하지 않는 것으로 보고 뺀 `{media, metric}`)).
+매체끼리 더하지 않는다. 지표는 광고 응답에 있고 집계되는 것만 나온다(구매전환율 = 전환 ÷ 클릭, `cvr.total`은 항상 null이라 인용하지 않는다).
+1일처럼 짧은 범위에서는 실제로 전환이 0인 날도 `hidden`으로 빠질 수 있다 — 이때 "전환이 없었다"고 단정하지 않는다.
 
 ## 완료 메시지 형식
 
