@@ -181,7 +181,7 @@
       if (!rep.fee) { basisEl.closest('div').remove(); return; }
       basisEl.innerHTML = '';
       const g = h('span', 'lh-basis');
-      rep.fee.options.forEach(o => {   // 문구는 빌더가 넘긴다(shared/assets/fees.py BASIS_UI)
+      rep.fee.options.forEach(o => {
         const k = o.key;
         const b = h('button', 'lh-basis-b' + (basis === k ? ' is-on' : ''), o.label); b.type = 'button';
         b.setAttribute('aria-pressed', String(basis === k));
