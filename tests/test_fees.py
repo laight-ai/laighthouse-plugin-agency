@@ -443,7 +443,8 @@ def test_overall_stops_on_legacy_placement():
          "place": {"json": json.dumps(env(prow, ["media", "placement"], None))}}
     try:
         overall.compute(p)
-    except SystemExit:
+    except SystemExit as e:
+        assert "수수료 기준" in str(e.code)
         return
     raise AssertionError("fee_basis가 없는 Placement 응답에서 멈추지 않았다")
 

@@ -730,7 +730,7 @@ def merged_envelope(obj):
     if len(envs) > 1:
         for key in {k for e in envs for k in e} - {"rows", "row_count", "metrics", "metric_units"}:
             vals = [e.get(key) for e in envs]
-            if all(isinstance(v, list) for v in vals):
+            if key != "dimensions" and all(isinstance(v, list) for v in vals):
                 out[key] = list({json.dumps(i, sort_keys=True, ensure_ascii=False): i for v in vals for i in v}.values())
             elif any(v != vals[0] for v in vals):
                 raise SystemExit(f"분할 응답마다 {key} 값이 다르다 — 같은 조건으로 한 번에 다시 받는다.")

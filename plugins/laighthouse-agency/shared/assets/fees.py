@@ -4,7 +4,6 @@
 광고비 실적·예산·단가 목표는 모두 브랜드 설정 방식(fee_basis — net·gross)으로 온다. 그 방식이 기본 보기이고, 다른 보기는
 행의 매체·달 수수료로 환산한다(마크업 Gross = Net × (1 + r/100), 커미션 Gross = Net ÷ (1 − r/100), 그 매체·달의 수수료가
 없으면 수수료 없음). 수수료는 달마다 같다거나 예산이 없는 매체는 0%라는 근사는 쓰지 않는다.
-fee_basis가 없는 옛 응답의 규칙은 fees_legacy.py.
 """
 import re
 from datetime import timedelta
@@ -45,7 +44,7 @@ def scalers(metrics, metric_keys):
 def eff_factors(pairs, metric_keys):
     """[(환산 전 봉투, 같은 순서의 환산한 봉투, 기간 키 함수)] → 실효 비율 {(기간 또는 None, 매체 또는 None): Σ 환산 ÷ Σ 환산 전}
     (서버 방식 → 다른 보기). None 기간 = 모든 기간 합, None 매체 = 모든 매체 합. 덜 잘게 받은 응답을 같은 숫자로
-    환산할 때 convert_envelope(eff=...)(옛 응답은 fees_legacy.gross_envelope)에 넘긴다."""
+    환산할 때 convert_envelope(eff=...)에 넘긴다."""
     cost = metric_keys.get("cost")
     acc = {}
     for net, gross, key in pairs:
@@ -64,9 +63,8 @@ def eff_factors(pairs, metric_keys):
     return {k: g / n for k, (g, n) in acc.items() if n}
 
 
-def net_only(net, gross):
-    """Net 섹션 묶음에서 Gross와 같은 섹션을 뺀다 — 화면은 빠진 섹션을 기본(Gross) 묶음에서 가져온다."""
-    return {k: v for k, v in net.items() if v != gross.get(k)}
+def changed_only(alt, base):
+    return {k: v for k, v in alt.items() if v != base.get(k)}
 
 
 LABEL = {"gross": "Gross", "net": "Net"}
@@ -89,7 +87,7 @@ def _basis_of(v, where):
 
 
 def served_basis(envs=(), texts=()):
-    """응답의 광고비 기준 — "net"·"gross"(서버가 알려 준 브랜드 설정) 또는 None(옛 서버: fees_legacy).
+    """응답의 광고비 기준 — "net"·"gross"(서버가 알려 준 브랜드 설정) 또는 None(fee_basis 없는 옛 응답).
     봉투는 fee_basis 키, 목표 원문은 `fee_basis:` 줄을 본다(표가 없는 원문 — 목표 없음 한 줄 — 은 보지 않는다).
     응답마다 다르면(fee_basis가 있는 응답과 없는 응답, 또는 net·gross가 섞였다) 멈춘다 — 기준이 다른 금액은 함께 쓸 수 없다."""
     seen = set()
@@ -296,7 +294,7 @@ def convert_budgets(budgets, table, served, to, derive=None):
 
 def add_cost_views(rows, table, served):
     """종합 리포트 원자 행(cost = 서버 방식 served) → cost = Net, cost_g = Gross(행 매체 · 그 날 달의 수수료, 소수 둘째 자리).
-    표·엑셀·Comment는 이 두 열을 옛 응답(fees_legacy.add_gross)과 같은 뜻으로 쓴다."""
+    표·엑셀·Comment는 이 두 열을 쓴다."""
     for r in rows:
         fee = table.get((nk(r["m"]), f"{r['day']:%Y-%m}"))
         if served == "net":
@@ -318,7 +316,7 @@ def served_bundle(served, sections, alt, summary_note, note=""):
     """Weekly·Monthly report["basis"] — 기본 보기(served) 섹션은 report.sections, 다른 보기는 기본과 달라진 섹션만(alt에서),
     summary_note = 다른 보기에서 s2(모델 요약) 아래 각주, note = 토글 옆 문구(served_fee_note)."""
     o = other(served)
-    return dict(served_ui(served, note), sections={o: net_only(alt, sections)}, notes={o: {"s2": summary_note}})
+    return dict(served_ui(served, note), sections={o: changed_only(alt, sections)}, notes={o: {"s2": summary_note}})
 
 
 def _next_month(mo):

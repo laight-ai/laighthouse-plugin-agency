@@ -115,7 +115,7 @@ def basis_ui(note=""):
 def basis_bundle(gross, net, summary_note, note=""):
     """Weekly·Monthly report["basis"] — 기본(Gross) 섹션은 report.sections, Net은 달라진 섹션만, s2(모델 요약) 아래 각주,
     note = 토글 옆 수수료율 문구(fee_note)."""
-    return dict(basis_ui(note), default="gross", sections={"net": fees.net_only(net, gross)}, notes={"net": {"s2": summary_note}})
+    return dict(basis_ui(note), default="gross", sections={"net": fees.changed_only(net, gross)}, notes={"net": {"s2": summary_note}})
 
 
 def report_has_fee(target_progress):
@@ -290,13 +290,13 @@ def view(envs, texts, tp):
     return ("gross" if report_has_fee(tp) else None), None, {}
 
 
-def bundle(view, served, table, sections, alt, summary_name, tp, months):
+def bundle(default, served, table, sections, alt, summary_name, tp, months):
     """Weekly·Monthly report["basis"] — 두 경로 중 서버 응답에 맞는 것. months = 보고서가 다루는 달("YYYY-MM")."""
-    note = f"* {summary_name}는 {fees.LABEL[view]} 기준 숫자로 작성되었습니다."
+    note = f"* {summary_name}는 {fees.LABEL[default]} 기준 숫자로 작성되었습니다."
     if served:
         return fees.served_bundle(served, sections, alt, note, fees.served_fee_note(table, served, months))
     return basis_bundle(sections, alt, note, fee_note(tp))
 
 
-def digest_note(view, served, table):
-    return fees.served_digest_note(served, bool(table)) if served else BASIS_NOTE[bool(view)]
+def digest_note(default, served, table):
+    return fees.served_digest_note(served, bool(table)) if served else BASIS_NOTE[bool(default)]

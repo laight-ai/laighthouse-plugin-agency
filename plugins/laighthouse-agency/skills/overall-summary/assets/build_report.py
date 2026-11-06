@@ -99,7 +99,6 @@ DROP_THRESHOLD = 20   # Daily Comment 급감 기준(%)
 TOP_LINES = 5         # Comment 하위 불릿: 매체마다 이만큼만 적고 나머지는 "외 N개"로 묶는다(실데이터는 광고그룹·상품이 수백 개)
 
 
-
 # ── 포맷 (목업과 같은 규칙) ─────────────────────────────────────────────────
 
 
@@ -433,7 +432,7 @@ def encode(rows, dims, start, end):
     cols["d"] = [(r["day"] - start).days for r in rows]
     for _, k in ATOMS:
         cols[k] = [r[k] if not float(r[k]).is_integer() else int(r[k]) for r in rows]
-    if rows and "cost_g" in rows[0]:   # 수수료가 있을 때만 — Gross 광고비(fees.add_gross가 소수 둘째 자리로 맞춘 값)
+    if rows and "cost_g" in rows[0]:   # 수수료가 있을 때만 — Gross 광고비
         cols["cost_g"] = [r["cost_g"] for r in rows]
     return {"days": days, "dict": dic, "cols": cols, "n": len(rows)}
 

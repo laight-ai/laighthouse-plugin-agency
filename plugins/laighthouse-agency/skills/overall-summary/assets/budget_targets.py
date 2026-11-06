@@ -1,4 +1,4 @@
-"""overall-summary의 목표 표(get_target_progress_v2 원문) 해석 — build_report가 쓴다."""
+"""overall-summary의 목표 표(get_target_progress_v2 원문) 해석."""
 import json
 import re
 
@@ -73,7 +73,7 @@ def parse_budget(entry):
             if ii is not None and cells[ii] in ("Y", "N"):
                 e["inc"] = cells[ii]
     for e in out.values():
-        e["srv"] = sorted(e["v"])   # 서버가 준 목표 — Net 보기에서 파생 목표를 Net 예산으로 다시 계산할 때 쓴다(fees.net_budgets)
+        e["srv"] = sorted(e["v"])
         derive_targets(e["v"])
     return list(out.values())
 
