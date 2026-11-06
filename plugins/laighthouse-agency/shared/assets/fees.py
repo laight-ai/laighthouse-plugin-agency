@@ -1,5 +1,5 @@
 """광고비·예산 Gross / Net — 빌더가 공유하는 규칙. 서버가 수수료 방식을 알려 준다(get_ad_performance 봉투의 fee_basis·fees,
-목표 응답의 fee_basis·fees — report_kit.target_text가 바꾼 원문의 `fee_basis:` 줄·셋째 표 `| media | fee_mode | rate |`로 읽는다).
+목표 원문의 `fee_basis:` 줄·셋째 표 `| media | fee_mode | rate |`).
 
 광고비 실적·예산·단가 목표는 모두 브랜드 설정 방식(fee_basis — net·gross)으로 온다. 그 방식이 기본 보기이고, 다른 보기는
 행의 매체·달 수수료로 환산한다(마크업 Gross = Net × (1 + r/100), 커미션 Gross = Net ÷ (1 − r/100), 그 매체·달의 수수료가

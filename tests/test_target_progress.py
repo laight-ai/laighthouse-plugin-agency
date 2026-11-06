@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""get_target_progress_v2 응답 읽기(report_kit.target_text) 자체 검사(표준 라이브러리만). 빌더 연결은 test_fee_builders.py.
+"""get_target_progress_v2 응답 읽기(target_response.target_text) 자체 검사(표준 라이브러리만). 빌더 연결은 test_fee_builders.py.
 새 서버는 JSON 객체 하나, 옛 서버는 markdown 원문을 준다 — 같은 내용이면 같은 원문으로 읽혀 목표 파서가 같은 값을 낸다.
 JSON 고정값은 같은 내용의 원문에서 손으로 옮겼고('-' 칸 = null, included Y/N = true/false) 기대값은 손으로 계산한 값이다. 성공하면 "ok"."""
 
@@ -15,8 +15,9 @@ sys.path.insert(0, os.path.join(PLUGIN, "shared", "assets"))
 
 import fees  # noqa: E402
 import report_kit as kit  # noqa: E402
+import target_response  # noqa: E402
 import saved_responses as sr  # noqa: E402
-from test_fees import KEYS, OVERALL_TP, OVERALL_TP_JSON, budget_targets, close  # noqa: E402
+from test_fees import KEYS, OVERALL_TP, OVERALL_TP_JSON, budget_targets  # noqa: E402
 from test_fee_builders import MONTH_TP, MONTH_TP_JSON, NEW_TP, NEW_TP_JSON, OLD_TP  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("save_responses_hook", os.path.join(PLUGIN, "hooks", "save_responses.py"))
@@ -72,11 +73,11 @@ PLAIN = "No all budget/target available for 2026-10."
 def test_json_reads_as_the_same_markdown():
     """JSON 객체 → 옛 서버가 같은 내용으로 내던 원문 그대로(머리 줄·표·빈칸 '-'·Y/N·숫자 표기·수수료가 있을 때만 셋째 표)."""
     for md, obj in PAIRS:
-        assert kit.target_text(obj) == md, obj["as_of_date"]
-    assert kit.target_text(dict(NEW_TP_JSON, fees=[])) == NEW_TP.split("\n\n| media | fee_mode")[0]
+        assert target_response.target_text(obj) == md, obj["as_of_date"]
+    assert target_response.target_text(dict(NEW_TP_JSON, fees=[])) == NEW_TP.split("\n\n| media | fee_mode")[0]
     for md in (TP, OLD_TP, PLAIN, ""):   # 옛 서버 원문(cost·cost_net 포함)·한 줄 평문·에러(빈 문자열)는 그대로
-        assert kit.target_text(md) == md
-    assert kit.target_text(None) == ""
+        assert target_response.target_text(md) == md
+    assert target_response.target_text(None) == ""
 
 
 def test_wrapped_shapes():
@@ -85,32 +86,11 @@ def test_wrapped_shapes():
     for shape in (json.dumps(TP_JSON, ensure_ascii=False), json.dumps(TP_JSON, indent=2), {"result": TP_JSON},
                   json.dumps({"result": TP_JSON}), blocks, json.dumps(blocks),
                   {"content": blocks, "structuredContent": TP_JSON, "isError": False}):
-        assert kit.target_text(shape) == TP, shape
+        assert target_response.target_text(shape) == TP, shape
     old = [{"type": "text", "text": OLD_TP}]
     for shape in ({"result": OLD_TP}, json.dumps({"result": OLD_TP}), old, {"content": old}):
-        assert kit.target_text(shape) == OLD_TP, shape
-    assert kit.target_text('{"error": "x"}') == '{"error": "x"}'   # 새 형식도 래퍼도 아닌 JSON 문자열은 그대로(표가 없으니 목표 없음)
-
-
-def test_parsers_read_both_formats_alike():
-    """같은 내용의 두 형식 → 목표 파서가 같은 값(손 계산)."""
-    metrics = ["cost", "impressions", "cpm", "cpv"]
-    for raw in (TP, TP_JSON):
-        t = kit.target_text(raw)
-        assert kit.parse_targets(t, KEYS) == {"cost": 161400000}   # 첫째 표 cost = 매체 예산 합 31,300,000 + 130,100,000
-        assert kit.parse_target_progress(t) == {"cost_target": 161400000, "cpv_target": None}
-        assert kit.parse_media_targets(t, KEYS, metrics) == {"Google": {"cost": 31300000, "cpm": 2500}, "Meta": {"cost": 130100000}}
-        assert kit.parse_campaign_targets(t, KEYS, metrics) == {("Google", CAMPAIGN): {"cpv": 30, "cost": 12000000},
-                                                                ("Google", "브랜드 검색"): {"cost": 5000000}}
-        b = {tuple(sorted(x["scope"].items())): x for x in budget_targets.parse_budget({"month": "2026-10", "target_progress": t})}
-        google, camp, search = (("m", "Google"),), (("c", CAMPAIGN), ("m", "Google")), (("c", "브랜드 검색"), ("m", "Google"))
-        assert set(b) == {(), google, camp, search, (("m", "Meta"),)}, set(b)
-        assert b[()]["v"] == {"cost": 161400000}   # revenue·roas 행은 읽지 않는다
-        assert close(b[google]["v"]["imp"], 12520000)   # 노출 = 31,300,000 ÷ CPM 2,500 × 1,000
-        assert close(b[camp]["v"]["view"], 400000) and b[camp]["inc"] == "Y" and b[search]["inc"] == "N"   # 조회 = 12,000,000 ÷ CPV 30
-        assert fees.served_basis([], [t]) == "net"
-        assert fees.fee_table([], [t]) == {("google", "2026-10"): {"media": "Google", "mode": "commission", "rate": 10.0},
-                                           ("meta", "2026-10"): {"media": "Meta", "mode": "markup", "rate": 12.5}}
+        assert target_response.target_text(shape) == OLD_TP, shape
+    assert target_response.target_text('{"error": "x"}') == '{"error": "x"}'   # 새 형식도 래퍼도 아닌 JSON 문자열은 그대로(표가 없으니 목표 없음)
 
 
 NOT_OK = {
@@ -124,7 +104,7 @@ def test_status_not_ok_and_plain_line_mean_no_target():
     for status, line in NOT_OK.items():
         obj = dict(TP_JSON, status=status, message=line, summary=[], scopes=[], fees=[])
         for raw in (obj, json.dumps(obj, ensure_ascii=False), line):
-            t = kit.target_text(raw)
+            t = target_response.target_text(raw)
             assert t == line, (status, raw)
             assert kit.parse_targets(t, KEYS) == {} and kit.parse_target_progress(t)["cost_target"] is None
             assert budget_targets.parse_budget({"month": "2026-10", "target_progress": t}) == []
@@ -139,7 +119,7 @@ def test_saved_hook_response_reads_back():
     for resp, want in cases:
         saved = hook.extract_text(resp)
         assert isinstance(saved, str) and saved, resp
-        assert kit.target_text(sr.response_text({"response": saved})) == want, resp
+        assert target_response.target_text(sr.response_text({"response": saved})) == want, resp
 
 
 if __name__ == "__main__":

@@ -26,8 +26,7 @@ MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment�
         # day grain, group_by ["media"], 집계 기간 전체 — 대조 검증(매체별 일 합 = 표 데이터 합)
   "budgets": [{"month": "2026-09", "target_progress": <get_target_progress_v2(media 생략) 응답 — JSON 객체·옛 서버 원문>},
               {"month": "2026-10", "target_progress": <응답>}]
-        # 어느 형식이든 kit.target_text가 같은 원문으로 읽는다: summary(옛 서버 첫째 표 metric|target|…) = 전체 합계,
-        # scopes(옛 서버 둘째 표 media|campaign_name|included|metric|target|…) = 매체·캠페인 행.
+        # summary = 전체 합계, scopes = 매체·캠페인 행.
         # cost 행 = 예산, impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표. 행이 없으면 빈칸.
         # 수수료(Gross/Net)는 shared/assets/fees.py(현재 응답)·fees_legacy.py(fee_basis 없는 옛 응답).
         # 항목에 범위 키(media·상품·campaign_name·ad_group_name)를 주면 첫째 표를 그 범위로 읽는다(그 인자로 부른 경우).
@@ -74,6 +73,7 @@ for cand in (os.path.join(ASSETS_DIR, "..", "shared", "assets"),
 else:
     raise SystemExit("report_kit.py를 찾을 수 없다 (shared/assets)")
 import report_kit as kit  # noqa: E402
+import target_response  # noqa: E402
 import campaign_history  # noqa: E402
 import fees  # noqa: E402
 import fees_legacy  # noqa: E402
@@ -496,7 +496,7 @@ def compute(payload):
         tot[r["m"]] = tot.get(r["m"], 0) + r["cost"]
     media = sorted(tot, key=lambda m: (-tot[m], m))
     header["media"] = " · ".join(media)
-    entries = [dict(e, target_progress=kit.target_text(e.get("target_progress"))) for e in payload.get("budgets") or []]
+    entries = [dict(e, target_progress=target_response.target_text(e.get("target_progress"))) for e in payload.get("budgets") or []]
     budgets = [b for e in entries for b in parse_budget(e)]
     # 목표 표의 매체·캠페인 표기를 데이터 표기에 맞춘다 — BE와 같은 기준(앞뒤 공백·대소문자 무시).
     # 맞는 표기가 없으면 그대로 둔다(그 달 실적이 없는 매체·캠페인 → 어느 행에도 붙지 않는다).

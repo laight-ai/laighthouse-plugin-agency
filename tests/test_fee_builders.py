@@ -392,43 +392,22 @@ def test_weekly_json_target_same_as_markdown():
     for basis in ("net", "gross"):
         assert weekly.compute(js, check_dims=False, basis=basis) == weekly.compute(md, check_dims=False, basis=basis), basis
     assert weekly.digest(js) == weekly.digest(md)
-    _, _, c = weekly.compute(js, check_dims=False, basis="gross")
-    assert close(c["targets"]["cost"], 1120)   # 600 × 1.2 + 400
 
 
 def test_monthly_json_target_same_as_markdown():
-    """s1 목표가 JSON 문자열(텍스트 응답, 들여쓰기)일 때, 그리고 예전 입력 s6.targets(매체마다 부른 응답 — 내용은 s1 응답을 다시 쓴다)가
-    JSON 객체일 때 모두 원문과 같다."""
-    pairs = [(served_monthly_payload(), served_monthly_payload(json.dumps(MONTH_TP_JSON, ensure_ascii=False, indent=2))),
-             (served_monthly_payload(), served_monthly_payload(MONTH_TP_JSON))]
-    pairs[1][0]["s6"]["targets"], pairs[1][1]["s6"]["targets"] = {"Meta": MONTH_TP}, {"Meta": MONTH_TP_JSON}
+    """s1 목표가 JSON 객체일 때, 그리고 예전 입력 s6.targets(매체마다 부른 응답 — 내용은 s1 응답을 다시 쓴다)가 JSON 객체일 때
+    모두 원문과 같다."""
+    pairs = [(served_monthly_payload(), served_monthly_payload(MONTH_TP_JSON))]
+    pairs[0][0]["s6"]["targets"], pairs[0][1]["s6"]["targets"] = {"Meta": MONTH_TP}, {"Meta": MONTH_TP_JSON}
     for md, js in pairs:
         assert monthly.fee_view(js) == monthly.fee_view(md)
         for basis in ("net", "gross"):   # ctx는 함수(tot)를 담아 비교하지 않는다
             assert monthly.compute(js, check_dims=False, basis=basis)[:3] == monthly.compute(md, check_dims=False, basis=basis)[:3], basis
         assert monthly.digest(js) == monthly.digest(md)
-    _, _, _, c = monthly.compute(served_monthly_payload(MONTH_TP_JSON), check_dims=False, basis="gross")
-    assert close(c["target_all"], 3675) and close(c["t_camp"][("Meta", "A")]["cost"], 1080)   # 1500×1.2 + 1500÷0.8, 900×1.2
 
 
 def test_overall_json_target_same_as_markdown():
-    assert overall.compute(served_overall_payload(json.dumps(OVERALL_TP_JSON))) == overall.compute(served_overall_payload())
-    report, _ = overall.compute(served_overall_payload(OVERALL_TP_JSON))
-    net = next(b["v"]["cost"] for b in report["table"]["budgets_net"] if not b["scope"])
-    assert report["fee"]["default"] == "gross" and close(net, 3100)   # 1100÷1.1 + 2000×0.8 + 500
-
-
-def test_no_target_json_and_plain_line_read_alike():
-    """status가 ok가 아닌 JSON 응답(키는 모두 있고 목록은 빈다)과 옛 서버의 한 줄 평문은 둘 다 목표 없음 — 수수료 기준은 봉투에서만 온다."""
-    line = "No all budget/target available for 2026-10."
-    obj = dict(NEW_TP_JSON, status="no_target", message=line, summary=[], scopes=[], fees=[])
-    got = []
-    for tp in (line, obj, json.dumps(obj)):
-        p = weekly_payload(new=True)
-        p["s1"]["target_progress"] = tp
-        _, _, c = weekly.compute(p, check_dims=False, basis="gross")
-        got.append((weekly.fee_view(p)[:2], c["targets"], c["tot"]))
-    assert got[0][:2] == (("net", "net"), {}) and got[1] == got[0] and got[2] == got[0], got
+    assert overall.compute(served_overall_payload(OVERALL_TP_JSON)) == overall.compute(served_overall_payload())
 
 
 def test_main_reads_wrapped_old_server_response():

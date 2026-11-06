@@ -51,7 +51,7 @@
 - 옛 서버는 같은 내용을 markdown으로 준다 — 머리 줄 `month`·`as_of_date`·`media`·`fee_basis`, 첫째 표 `| metric | target | actual | progress_ratio |`
   (= `summary`), 둘째 표 `| media | campaign_name | included | metric | target | actual | achievement |`(= `scopes`, null 칸은 `-`, included는 `Y`/`N`),
   수수료가 있으면 셋째 표 `| media | fee_mode | rate |`(= `fees`). 목표 없음은 표 대신 한 줄 평문(`No all budget/target available for {month}.` 등)이다.
-  빌더는 두 형식을 같은 함수(`report_kit.target_text`)로 읽는다.
+  빌더는 두 형식을 같은 함수(`target_response.target_text`)로 읽는다.
 - **Gross / Net**: 응답 기준(`fee_basis`)이 보고서의 기본 보기이고, 수수료가 있으면 빌더가 다른 기준의 보기를 더 만든다 — 행마다 그 매체의
   그 달 수수료로 마크업은 Gross = Net × (1 + r/100), 커미션은 Gross = Net ÷ (1 − r/100)(수수료가 없으면 그대로). 실적은 봉투의 `fees`,
   예산·단가 목표는 목표 응답의 `fees`를 쓴다. 매체 차원이 없는 응답(전체 합계)은 같은 기간을 매체별로 받은 응답에서 구한 실효 배수를 쓴다.

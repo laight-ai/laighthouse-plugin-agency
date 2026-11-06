@@ -12,14 +12,12 @@
 
 ## 예산·목표 (budgets)
 
-- 빌더 입력 `budgets` = `[{"month", "target_progress": <응답>}]` — 달마다 `get_target_progress_v2`(media 생략) 응답 1개(JSON 객체 또는
-  옛 서버 markdown 원문 — 빌더가 같은 함수로 읽는다, 형식은 `shared/references/mcp-tools.md` 2절):
-  - `fee_basis` = 브랜드 기준 — 예산·CPM·CPC·CPV 목표가 이 기준이다.
-  - `summary`(옛 서버 첫째 표) = 호출 범위 합계(cost = 매체 예산 합) → 전체 범위.
-  - `scopes`(옛 서버 둘째 표) = 매체 행(`campaign_name` null) 뒤에 그 매체의 캠페인 행(저장된 경우에만, `included` true/false —
-    미포함 캠페인도 온다). 단위는 캠페인이 끝이다.
-  - `fees`(옛 서버 셋째 표) = 그 달 수수료가 있는 매체(`scopes` 표기). 아래 Gross / Net이 쓴다.
-  - `status`가 `ok`가 아니면(옛 서버는 한 줄 평문) 그 달은 목표 없음이다.
+- 빌더 입력 `budgets` = `[{"month", "target_progress": <응답>}]` — 달마다 `get_target_progress_v2`(media 생략) 응답 1개
+  (형식은 `shared/references/mcp-tools.md` 2절). 이 보고서에서 읽는 규칙:
+  - `fee_basis`의 기준이 예산·CPM·CPC·CPV 목표의 기준이다.
+  - `summary` = 전체 범위(cost = 매체 예산 합), `scopes` = 매체 행 뒤에 그 매체의 캠페인 행(`included` true/false — 미포함 캠페인도 온다).
+    단위는 캠페인이 끝이다.
+  - `fees`는 아래 Gross / Net이 쓴다. `status`가 `ok`가 아니면 그 달은 목표 없음이다.
 - `cost` 행 = 예산, `impression`·`click`·`views`·`ctr`·`vtr`·`cpm`·`cpc`·`cpv` 행 = e.* 목표.
   `revenue`·`roas` 행과 `actual`·`achievement` 값은 쓰지 않는다(실적은 get_ad_performance 값).
   (호출에 `media`를 넣어 받은 응답이면 그 범위로 읽고, 범위 열을 가진 다른 표 형식도 같은 방식으로 읽는다.)

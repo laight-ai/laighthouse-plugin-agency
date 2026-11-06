@@ -7,7 +7,7 @@ Dimension·지표 메뉴·검색·페이지 규칙은 `shared/references/pivot-t
 - `get_ad_performance` ×1 — `time_grain:"month"`, `group_by` = FINE_DIMS(차원 확인 결과), M-1 1일 ~ M0 말일, `metrics`·`filters` 생략.
   (M0만 쓴다. M-1은 예전 입력과의 호환을 위해 그대로 받아도 된다.)
 - 목표는 따로 부르지 않는다 — s1의 `get_target_progress_v2`(media 생략) 응답 하나에서 `summary` = 브랜드 전체 목표,
-  `scopes`의 매체 행(`campaign_name` null) = 매체 목표, `scopes`의 캠페인 행 = 캠페인 목표를 빌더가 읽는다(옛 서버는 첫째 표·둘째 표).
+  `scopes`의 매체 행(`campaign_name` null) = 매체 목표, `scopes`의 캠페인 행 = 캠페인 목표를 빌더가 읽는다
 
 ## 빌더 입력 (`assets/prepare.py`가 채운다 — 저장 훅이 없을 때만 직접 만든다)
 

@@ -179,7 +179,7 @@ class Workdir:
         return {"json_files": [path.replace("\\", "/")]}
 
     def text(self, rec, call):
-        """목표 응답 그대로(JSON 객체 문자열·옛 서버 원문·한 줄 '목표 없음' — 빌더가 report_kit.target_text로 읽는다). rec이 None이면 missing."""
+        """목표 응답 원문(한 줄 '목표 없음' 메시지도 그대로). rec이 None이면 missing."""
         if rec is None:
             self.missing.append(call)
             return None

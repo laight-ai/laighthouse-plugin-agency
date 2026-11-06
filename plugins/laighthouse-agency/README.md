@@ -93,8 +93,7 @@ HTML과 같은 폴더에 같은 이름의 `.xlsx`가 함께 생긴다(`~/Downloa
 
 - 실행 시작에 차원 목록을 확인하고, 지표 키는 첫 응답의 지표 목록에서 정한다(prepare.py가 같은 규칙으로 다시 확인). 브랜드가 제공하지 않는 차원(상품·노출 위치 등)은
   묻지 않고 보고서에서 조용히 빠진다.
-- 예산·목표는 `get_target_progress_v2`(전체·매체·캠페인 단위)에서 읽는다(응답은 JSON 객체, 옛 서버는 markdown — 둘 다
-  `report_kit.target_text`로 읽는다). 목표가 없으면 빈칸이다.
+- 예산·목표는 `get_target_progress_v2`(전체·매체·캠페인 단위)에서 읽는다. 목표가 없으면 빈칸이다.
 - 광고비·예산은 서버가 알려 주는 브랜드 기준(`fee_basis` — Net 또는 Gross)으로 온다. 수수료가 있으면 종합·Weekly·Monthly 보고서 머리말에
   `광고비·예산 기준 [Gross][Net]` 토글이 생긴다(처음 보기는 브랜드 기준). 환산 규칙과 옛 서버 규칙은 `shared/references/mcp-tools.md` 2절,
   구현은 `shared/assets/fees.py`, 자체 검사는 `python3 tests/test_fees.py`·`tests/test_fee_builders.py`·`tests/test_target_progress.py`.
