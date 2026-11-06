@@ -6,7 +6,7 @@ description: >
   광고 성과와는 결합하지 않는다.
   출력 형식(HTML·표 등)을 말하지 않아도 이 요청이면 항상 이 스킬로 HTML 보고서를 만든다 — `get_external_context`(kind `search_volume`)를 직접 불러 채팅 표·글로만 답하지 않는다.
 metadata:
-  version: "1.9.0"
+  version: "1.10.0"
 ---
 
 > ⚡ thinking은 짧게. MCP 1회 → `prepare.py` → 요약 + `build_report.py` → 게시, 이 순서로만 진행한다.
@@ -48,12 +48,13 @@ metadata:
 
 ## 실패하면
 
-아래 경우는 **원인 한 줄과 사용자가 할 일 한 줄로 안내하고 멈춘다.** 멈출 때는 다른 도구(`get_ad_performance` 등)나 MCP 응답 원문으로 대신 집계하지 않고, 표·추정치·HTML을 만들지 않는다. 도구 호출이 오류로 끝나면 `prepare.py`를 실행하지 않는다.
+아래 경우는 **원인 한 줄과 사용자가 할 일 한 줄로 안내하고 멈춘다**(실패 2만 예외 — 브랜드를 확인한 뒤 다시 진행한다). 멈출 때는 다른 도구(`get_ad_performance` 등)나 MCP 응답 원문으로 대신 집계하지 않고, 표·추정치·HTML을 만들지 않는다. 도구 호출이 오류로 끝나면 `prepare.py`를 실행하지 않는다.
 
 | 번호 | 언제 | 안내 |
 |---|---|---|
 | 실패 1 | `get_external_context` 도구가 없다 | 외부 맥락 도구를 쓸 수 없다. `/mcp`에서 laighthouse 서버 연결·로그인을 확인하고, 연결돼 있으면 아직 이 서버에 배포되지 않은 기능이다 |
-| 실패 2 | 도구 오류 `Unknown brand` · `Several brands are named` | 브랜드를 찾지 못했다(또는 같은 이름이 여럿이다). 필요하면 `get_brand_list`로 이름을 보여 주고, 그 이름 그대로 다시 요청하게 한다 |
+| 실패 2 | 도구 오류 `Unknown brand` | 브랜드를 찾지 못했다. **멈추지 않고** `get_brand_list`로 가장 비슷한 이름을 찾아 맞는지 묻는다(플러그인 루트 `shared/references/mcp-tools.md` 공통 규칙). 확인되면 그 이름을 2의 `brand_name`과 3의 `--brand`에 넣어 2부터 다시 한다 |
+| 실패 2-1 | 도구 오류 `Several brands are named` | 같은 이름의 브랜드가 여럿이라 구분할 수 없다. 서버 메시지를 그대로 전하고 관리자에게 브랜드 이름을 구분해 달라고 요청하게 한다 |
 | 실패 3 | 도구 오류 `MCP service is not enabled for brand` | 이 브랜드는 MCP 사용이 꺼져 있다. 관리자에게 켜 달라고 요청하게 한다 |
 | 실패 4 | 도구 오류 `is not ELT-published yet` | 이 브랜드의 데이터 저장소가 아직 준비되지 않았다 |
 | 실패 5 | 도구 오류 `is not collected for external context` | 외부 데이터(검색량·뉴스·블로그·날씨) 수집 대상이 아닌 브랜드다 |
