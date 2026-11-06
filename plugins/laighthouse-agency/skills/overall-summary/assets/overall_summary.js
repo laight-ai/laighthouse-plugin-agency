@@ -5,8 +5,9 @@
  * - Campaign History: 빌더가 변경 이력 원본으로 만든 줄(REPORT.history)을 날짜순 표로 그린다(필터와 무관).
  * - 모든 표: 묶음 이름 옆 ▼/▶ 접기 + 제목 줄 '펼침 [미디어][…][전체]' 단계 접기, 오른쪽 목차(바로가기·맨 위로).
  * - 디멘전 설정·지표 설정(선택·순서)과 캠페인명은 localStorage에 남긴다.
- * - Gross/Net: 광고비 실적은 항상 Net이다. 예산에 수수료가 있으면(rep.fee) 머리말의 기준 토글로 전체를 바꾼다 —
- *   Gross = 빌더가 환산한 광고비 열(cols.cost_g) + 예산(budgets), Net = 광고비 원값(cols.cost) + Net 예산(budgets_net). Comment도 기준별로 받는다.
+ * - Gross/Net: 수수료가 있으면(rep.fee) 머리말의 기준 토글로 전체를 바꾼다 — 빌더가 두 기준을 모두 넣는다:
+ *   Gross = 광고비 열 cols.cost_g + 예산 budgets, Net = 광고비 열 cols.cost + 예산 budgets_net. Comment도 기준별로 받는다.
+ *   처음 보기는 rep.fee.default(서버가 알려 준 브랜드 기준, 옛 서버는 없음 → 첫 옵션 Gross), 고른 기준은 브라우저에 남는다.
  * 모양은 report_kit.css + 템플릿 <style>만 정한다(인라인 style 없음).
  * 전역: window.OverallSummary = { mount(report) }
  */
@@ -171,7 +172,7 @@
     let basis = null;
     if (rep.fee) {
       try { basis = localStorage.getItem(LS_BASIS); } catch (e) { /* 저장 불가 환경 */ }
-      if (!rep.fee.options.some(o => o.key === basis)) basis = rep.fee.options[0].key;
+      if (!rep.fee.options.some(o => o.key === basis)) basis = rep.fee.default || rep.fee.options[0].key;
     }
     const basisLabel = () => (basis === 'net' ? 'Net' : 'Gross');
     const basisEl = document.querySelector('[data-h="basis"]');

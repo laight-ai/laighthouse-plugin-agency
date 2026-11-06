@@ -726,7 +726,12 @@ def merged_envelope(obj):
                 if p in seen:
                     raise SystemExit(f"분할 응답의 기간이 겹친다({p}) — 겹치지 않게 나눠 다시 받는다.")
             seen |= {period_of(r) for r in e.get("rows") or []}
+        if len({e.get("fee_basis") for e in envs}) > 1:
+            raise SystemExit("분할 응답마다 광고비 수수료 기준(fee_basis)이 다르다 — 같은 서버에서 한 번에 다시 받는다.")
     out = dict(envs[0])
+    if any("fees" in e for e in envs):   # 조각마다 그 기간이 걸친 달의 수수료만 온다 — 모두 모은다
+        out["fees"] = list({json.dumps(f, sort_keys=True, ensure_ascii=False): f
+                            for e in envs for f in e.get("fees") or []}.values())
     metrics, units = metrics_units(*envs)
     out.update(metrics=metrics, metric_units=units, rows=[r for e in envs for r in (e.get("rows") or [])])
     out["row_count"] = len(out["rows"])

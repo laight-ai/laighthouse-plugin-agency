@@ -28,8 +28,11 @@ MCP 응답 봉투 원문을 섹션별로 그대로 받아, 공용 킷(`shared/as
 }
 - s3(월별 광고 성과)은 s1 봉투, s5(매체 성과 비교)는 s4 봉투에서 만든다 — 따로 넘기지 않는다.
 - 키가 없거나 null인 섹션은 "데이터 준비 중"으로 렌더링된다.
-- 광고비 실적은 항상 Net이다. 기준 달 예산에 수수료가 있으면(목표 원문의 cost ≠ cost_net) Gross/Net 두 벌을 만들어
-  머리말 토글로 바꾼다(기본 Gross — 광고비·CPM·CPC·CPV는 기준 달 수수료 비율로 환산, 수수료는 달마다 같다고 본다).
+- Gross / Net(규칙은 shared/assets/fees.py): 수수료가 있으면 Gross/Net 두 벌을 만들어 머리말 토글로 바꾼다.
+  · 서버가 fee_basis를 주면: 광고비·예산은 그 기준(브랜드 설정)으로 오고 그 기준이 기본 보기다. 다른 보기는 행의 매체·달 수수료
+    (봉투 fees, 목표 원문 셋째 표)로 환산한다 — s4·s6(달 × 매체)는 행마다, s1(달 합계, 매체 없음)은 s4의 그 달 실효 배수.
+  · 옛 서버(fee_basis 없음): 광고비 실적은 Net, 기준 달 예산에 수수료가 있으면(목표 원문의 cost ≠ cost_net) 기본 Gross —
+    광고비·CPM·CPC·CPV는 기준 달 수수료 비율로 환산(수수료는 달마다 같다고 본다).
 - 출력(stdout): {"out", "bytes", "sections": {"s1".."s6": "ok"|"placeholder"}}
 """
 import io
@@ -63,7 +66,8 @@ def shift(y, m, back):
 
 
 def compute(payload, check_dims=True, basis=None):
-    """basis: None(수수료 없음 — 원값) · "gross"(광고비를 Gross로 환산) · "net"(예산을 Net으로). has_fee(payload)로 고른다."""
+    """basis = 보기: None(수수료 없음 — 원값) · "gross" · "net". fee_view(payload)로 고른다.
+    서버가 fee_basis를 주면 그 기준과 다른 보기만 실적·예산을 환산하고, 옛 서버면 "gross" = 광고비를 Gross로, "net" = 예산을 Net으로."""
     y, m = map(int, str(payload["month"])[:7].split("-"))
     months = [shift(y, m, 5 - i) for i in range(6)]
     keys6 = [f"{a:04d}-{b:02d}" for a, b in months]
@@ -86,13 +90,24 @@ def compute(payload, check_dims=True, basis=None):
                         ("매체 ↔ 표(s4·s6)", kit.check_rollup(e4, ["media"], e6, ["media"], keys))])
     tp = (sec("s1") or {}).get("target_progress")
     olds = {str(x): raw for x, raw in ((sec("s6") or {}).get("targets") or {}).items()}   # 예전 입력(매체마다 부른 원문)
-    if basis == "gross":   # 광고비 실적(Net) → Gross. 위 단계는 아래 단계를 환산한 실효 비율로(표끼리 숫자가 맞게):
+    served = fees.served_basis([e1, e4, e6], [tp, *olds.values()])
+    if served:   # 서버 기준 그대로가 기본 보기 — 다른 보기만 실적·예산을 행의 매체·달 수수료로 환산
+        if basis and basis != served:
+            table = fees.fee_table([e1, e4, e6], [tp, *olds.values()])
+            g4 = fees.convert_envelope(e4, table, served, basis, keys)   # 달 × 매체: 그 달 수수료
+            e6 = fees.convert_envelope(e6, table, served, basis, keys)
+            # s1은 매체가 없다 — s4(같은 6개월)의 그 달 실효 배수
+            e1 = fees.convert_envelope(e1, table, served, basis, keys, eff=fees.eff_factors([(e4, g4, kit.period_of)], keys))
+            e4 = g4
+            tp = fees.convert_target_text(tp, table, served, basis)
+            olds = {x: fees.convert_target_text(raw, table, served, basis) for x, raw in olds.items()}
+    elif basis == "gross":   # 옛 서버 — 광고비 실적(Net) → Gross. 위 단계는 아래 단계를 환산한 실효 비율로(표끼리 숫자가 맞게):
         fz = fees.parse_fees(tp)   # s6(캠페인) → s4(매체, 달마다) → s1(전체, 달마다)
         g6 = fees.gross_envelope(e6, fz, keys)
         g4 = fees.gross_envelope(e4, fz, keys, eff=fees.eff_factors([(e6, g6, kit.period_of)], keys))
         e1 = fees.gross_envelope(e1, fz, keys, eff=fees.eff_factors([(e4, g4, kit.period_of)], keys))
         e4, e6 = g4, g6
-    elif basis == "net":   # 예산 = Net
+    elif basis == "net":   # 옛 서버 — 예산 = Net
         tp = fees.net_target_text(tp)
         olds = {x: fees.net_target_text(raw) for x, raw in olds.items()}
     i1 = kit.index_rows(e1, [])
@@ -204,16 +219,27 @@ def compute(payload, check_dims=True, basis=None):
     return sections, rep, report, ctx
 
 
-def has_fee(payload):
-    """기준 달 예산에 수수료가 있으면(cost ≠ cost_net) Gross/Net 두 보기를 만든다 — 광고비 실적은 항상 Net."""
-    return not payload.get("skeleton") and fees.report_has_fee((payload.get("s1") or {}).get("target_progress"))
+def fee_view(payload):
+    """(기본 보기, 서버 기준, 수수료 표). 기본 보기 None = 수수료 없음(토글 없이 원값).
+    서버가 fee_basis를 주면 그 기준이 기본이고 수수료 표(봉투 fees·목표 원문 셋째 표)에 무엇이 있을 때 두 보기를 만든다.
+    옛 서버면 기준 달 예산에 수수료가 있을 때(cost ≠ cost_net) 기본 Gross — 광고비 실적은 Net."""
+    if payload.get("skeleton"):
+        return None, None, {}
+    envs = [kit.section_envelope(payload.get(k)) for k in ("s1", "s4", "s6")]
+    tp = (payload.get("s1") or {}).get("target_progress")
+    texts = [tp, *((payload.get("s6") or {}).get("targets") or {}).values()]
+    served = fees.served_basis(envs, texts)
+    if served:
+        table = fees.fee_table(envs, texts)
+        return (served if table else None), served, table
+    return ("gross" if fees.report_has_fee(tp) else None), None, {}
 
 
 def digest(payload):
     """Executive Summary 작성 근거 — 당월·전월 값과 변화(전체, 매체 + 광고비 비중·월 예산·소진율, 매체-캠페인·광고그룹).
     세부 단위는 광고비 상위 + 전월 대비 광고비 변동 상위(kit.digest_levels). 화면 표와 같은 규칙의 숫자다."""
-    fee = has_fee(payload)
-    _, _, _, c = compute(payload, check_dims=False, basis="gross" if fee else None)   # 수수료가 있으면 Gross(보고서 기본 보기)
+    view, served, table = fee_view(payload)
+    _, _, _, c = compute(payload, check_dims=False, basis=view)   # 보고서 기본 보기의 숫자
     keys, metrics, units, cur_c, M0, M1 = c["keys"], c["metrics"], c["units"], c["currency"], c["M0"], c["M1"]
     cost = keys.get("cost")
     _, fmt, change = kit.digest_fmt(keys, units, cur_c)
@@ -222,7 +248,7 @@ def digest(payload):
         return {"이름": name, "당월": fmt(a), "전월": fmt(b), "전월 대비": change(a, b)}
 
     out = {"당월": M0, "전월": M1,
-           "광고비·예산 기준": fees.BASIS_NOTE[fee]}
+           "광고비·예산 기준": fees.served_digest_note(served, bool(table)) if served else fees.BASIS_NOTE[bool(view)]}
     t0 = c["tot"](M0)
     if t0:
         out["전체"] = row("전체", t0, c["tot"](M1))
@@ -260,13 +286,13 @@ def digest(payload):
 
 def main():
     payload = kit.read_payload()
-    if has_fee(payload):   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 Gross)
-        sections, rep, report, _ = compute(payload, basis="gross")
-        report["basis"] = fees.basis_bundle(sections, compute(payload, check_dims=False, basis="net")[0],
-                                             "* Executive Summary는 Gross 기준 숫자로 작성되었습니다.",
-                                             fees.fee_note((payload.get("s1") or {}).get("target_progress")))
-    else:
-        sections, rep, report, _ = compute(payload)
+    view, served, table = fee_view(payload)
+    sections, rep, report, _ = compute(payload, basis=view)
+    if view:   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 = 서버 기준, 옛 서버는 Gross)
+        alt = compute(payload, check_dims=False, basis=fees.other(view))[0]
+        note = f"* Executive Summary는 {fees.LABEL[view]} 기준 숫자로 작성되었습니다."
+        report["basis"] = (fees.served_bundle(served, sections, alt, note, fees.served_fee_note(table, served)) if served else
+                           fees.basis_bundle(sections, alt, note, fees.fee_note((payload.get("s1") or {}).get("target_progress"))))
     path, size = kit.build_html(ASSETS_DIR, rep, report, payload["out"])
     json.dump({"out": path, "bytes": size,
                "sections": {k: ("ok" if v is not None else "placeholder") for k, v in sections.items()}},

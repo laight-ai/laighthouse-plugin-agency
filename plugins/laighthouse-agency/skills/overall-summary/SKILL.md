@@ -29,11 +29,11 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
   Monthly Summary·월 필터·Mix 월 칸이 생긴다. 기간은 366일까지(get_ad_performance 상한).
 - **차원**: 브랜드가 제공하는 차원만 쓴다(차원 확인 1회). **없는 차원(예: 상품·노출 위치)은 호출에도 넣지 않고, 보고서에도
   조용히 나오지 않는다** — 사용자에게 묻거나 에러로 멈추지 않는다.
-- **예산·목표**: `get_target_progress_v2`의 cost 행 = 예산(**Gross**), cost_net 행 = 예산(**Net**), impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표.
+- **예산·목표**: `get_target_progress_v2`의 cost 행 = 예산(브랜드 기준 `fee_basis`), impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표.
   단위는 전체·매체·캠페인(대시보드 브랜드)까지다. 행이 없는 칸은 빈칸이다(묻지 않는다).
-- **Gross / Net**: 광고비 실적은 항상 **Net**이다. 예산에 수수료가 있으면(같은 범위의 cost ≠ cost_net) Gross·Net 두 보기를 만들어 머리말 토글로 바꾼다(기본 Gross).
-  토글은 Comment·모든 표·Mix(입력값은 기준마다 따로 저장)를 함께 바꾼다. 엑셀은 기준마다 한 파일(같은 이름 = Gross, `_net.xlsx` = Net).
-  수수료가 없으면 토글·Net 파일 없이 예전 그대로다(Gross = Net). 규칙은 `overall-summary-section-2-summary.md`.
+- **Gross / Net**: 광고비·예산은 서버가 알려 주는 브랜드 기준(`fee_basis`)으로 온다. 수수료가 있으면 Gross·Net 두 보기를 만들어 머리말 토글로
+  바꾼다(처음 보기 = 브랜드 기준). 토글은 Comment·모든 표·Mix(입력값은 기준마다 따로 저장)를 함께 바꾼다. 엑셀은 기준마다 한 파일
+  (같은 이름 = Gross, `_net.xlsx` = Net). 수수료가 없으면 토글·Net 파일 없이 서버 값 그대로다(Gross = Net). 규칙은 `overall-summary-section-2-summary.md`.
 - **Comment는 빌더가 규칙으로 쓴다** — 모델이 요약 문장을 쓰지 않는다(`overall-summary-section-1-comment.md`).
 - **Campaign History도 빌더가 규칙으로 만든다** — 변경 이력 원본(`list_campaign_change_raw`)을 모델이 읽지 않는다(`overall-summary-section-4-history.md`).
 - 도구 규칙: `shared/references/mcp-tools.md`, 차원 확인·크기 대응: `shared/references/pivot-table.md`
