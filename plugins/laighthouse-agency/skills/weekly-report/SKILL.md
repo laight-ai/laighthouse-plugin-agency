@@ -21,10 +21,9 @@ MCP 데이터를 받아 **라이트하우스 Weekly 보고서**(HTML 한 파일)
 - **차원**: 브랜드가 제공하는 차원만 쓴다(차원 확인 1회). **없는 차원(예: 상품)은 호출에도 넣지 않고, 보고서에도
   조용히 나오지 않는다** — 사용자에게 묻거나 에러로 멈추지 않는다.
 - **목표**: `get_target_progress_v2`에 행이 있는 지표만 목표 대비 카드가 된다. 목표가 없는 지표는 전월 동기간 대비 카드로 조용히 바뀐다.
-- **Gross / Net**: 광고비·예산은 서버가 알려 주는 브랜드 기준(`fee_basis`)으로 온다. 수수료가 있으면 Gross·Net 두 보기를 만들어
-  머리말 토글로 바꾼다(처음 보기 = 브랜드 기준). 다른 기준의 보기는 광고비·예산·CPM·CPC·CPV를 매체·달마다 등록된 수수료로 환산한다
-  (규칙은 `shared/assets/fees.py`). `digest`는 처음 보기의 숫자이고 `광고비·예산 기준` 항목이 그 기준을 적는다 — Weekly Summary의 광고비·예산
-  숫자는 그 기준으로 쓴다. `fee_basis`가 없는 옛 서버면 처음 보기는 Gross다(예전 규칙).
+- **Gross / Net**: 처음 보기는 서버의 브랜드 기준(`fee_basis`)이고, 수수료가 있으면 머리말 토글로 다른 기준 보기도 만든다(환산 규칙·옛 서버 규칙은
+  `shared/references/mcp-tools.md` 2절). `digest`는 처음 보기의 숫자이고 `광고비·예산 기준` 항목이 그 기준을 적는다 — Weekly Summary의 광고비·예산
+  숫자는 그 기준으로 쓴다.
 - 도구 규칙: `shared/references/mcp-tools.md`, 차원 확인·선택 표: `shared/references/pivot-table.md`
   (플러그인 루트 기준 — 이 스킬 폴더에서는 `../../shared/references/`).
 

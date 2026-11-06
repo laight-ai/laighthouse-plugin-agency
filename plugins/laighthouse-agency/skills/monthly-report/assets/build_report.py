@@ -52,6 +52,7 @@ else:
 import report_kit as kit  # noqa: E402
 import fees  # noqa: E402
 import fees_legacy  # noqa: E402
+import fee_views  # noqa: E402
 
 P = kit.PRODUCT_DIM
 S6_DIMS = ("media", "campaign_name")   # 예산 및 목표 달성 결과 표의 Dimension
@@ -224,7 +225,7 @@ def fee_view(payload):
     envs = [kit.section_envelope(payload.get(k)) for k in ("s1", "s4", "s6")]
     tp = (payload.get("s1") or {}).get("target_progress")
     texts = [tp, *((payload.get("s6") or {}).get("targets") or {}).values()]
-    return fees_legacy.view(envs, texts, tp)
+    return fee_views.view(envs, texts, tp)
 
 
 def digest(payload):
@@ -240,7 +241,7 @@ def digest(payload):
         return {"이름": name, "당월": fmt(a), "전월": fmt(b), "전월 대비": change(a, b)}
 
     out = {"당월": M0, "전월": M1,
-           "광고비·예산 기준": fees_legacy.digest_note(view, served, table)}
+           "광고비·예산 기준": fee_views.digest_note(view, served, table)}
     t0 = c["tot"](M0)
     if t0:
         out["전체"] = row("전체", t0, c["tot"](M1))
@@ -282,8 +283,8 @@ def main():
     sections, rep, report, ctx = compute(payload, basis=view)
     if view:   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 = 서버 기준, 옛 서버는 Gross)
         alt = compute(payload, check_dims=False, basis=fees.other(view))[0]
-        report["basis"] = fees_legacy.bundle(view, served, table, sections, alt, "Executive Summary",
-                                             (payload.get("s1") or {}).get("target_progress"), ctx["months"])
+        report["basis"] = fee_views.bundle(view, served, table, sections, alt, "Executive Summary",
+                                          (payload.get("s1") or {}).get("target_progress"), ctx["months"])
     path, size = kit.build_html(ASSETS_DIR, rep, report, payload["out"])
     json.dump({"out": path, "bytes": size,
                "sections": {k: ("ok" if v is not None else "placeholder") for k, v in sections.items()}},

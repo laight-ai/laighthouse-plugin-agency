@@ -95,9 +95,8 @@ HTML과 같은 폴더에 같은 이름의 `.xlsx`가 함께 생긴다(`~/Downloa
   묻지 않고 보고서에서 조용히 빠진다.
 - 예산·목표는 `get_target_progress_v2`(전체·매체·캠페인 단위)에서 읽는다. 목표가 없으면 빈칸이다.
 - 광고비·예산은 서버가 알려 주는 브랜드 기준(`fee_basis` — Net 또는 Gross)으로 온다. 수수료가 있으면 종합·Weekly·Monthly 보고서 머리말에
-  `광고비·예산 기준 [Gross][Net]` 토글이 생긴다 — 처음 보기는 브랜드 기준이고, 다른 기준은 광고비·예산·CPM·CPC·CPV를 매체·달마다 등록된
-  수수료로 환산한다. 수수료가 없으면 토글 없이 서버 값 그대로다. `fee_basis`가 없는 옛 서버는 예전 규칙(실적 Net, Gross = Net × cost ÷ cost_net).
-  규칙은 `shared/assets/fees.py`, 자체 검사는 `python3 tests/test_fees.py`.
+  `광고비·예산 기준 [Gross][Net]` 토글이 생긴다(처음 보기는 브랜드 기준). 환산 규칙과 옛 서버 규칙은 `shared/references/mcp-tools.md` 2절,
+  구현은 `shared/assets/fees.py`, 자체 검사는 `python3 tests/test_fees.py`·`tests/test_fee_builders.py`.
 - 렌더링 부품은 공용 킷 `shared/assets/report_kit.*`와 스킬의 `assets/overall_summary.js`에 있다.
 
 ## 요약 가이드 (비개발자 편집)
