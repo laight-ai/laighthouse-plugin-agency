@@ -32,7 +32,7 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
 - **예산·목표**: `get_target_progress_v2`의 cost 행 = 예산(브랜드 기준 `fee_basis`), impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표.
   단위는 전체·매체·캠페인(대시보드 브랜드)까지다. 행이 없는 칸은 빈칸이다(묻지 않는다).
 - **Gross / Net**: 처음 보기는 서버의 브랜드 기준(`fee_basis`)이고, 수수료가 있으면 머리말 토글로 Gross·Net 보기를 바꾼다(Comment·모든 표·Mix 함께,
-  엑셀은 같은 이름 = Gross·`_net.xlsx` = Net). 환산 규칙은 `../../shared/references/mcp-tools.md` 2절, 종합 리포트 동작은 `overall-summary-section-2-summary.md`.
+  엑셀은 같은 이름 = Gross·`_net.xlsx` = Net). 환산 규칙은 `shared/references/mcp-tools.md` 2절, 종합 리포트 동작은 `overall-summary-section-2-summary.md`.
 - **Comment는 빌더가 규칙으로 쓴다** — 모델이 요약 문장을 쓰지 않는다(`overall-summary-section-1-comment.md`).
 - **Campaign History도 빌더가 규칙으로 만든다** — 변경 이력 원본(`list_campaign_change_raw`)을 모델이 읽지 않는다(`overall-summary-section-4-history.md`).
 - 도구 규칙: `shared/references/mcp-tools.md`, 차원 확인·크기 대응: `shared/references/pivot-table.md`

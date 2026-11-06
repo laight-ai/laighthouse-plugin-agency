@@ -308,24 +308,7 @@ def test_monthly_old_server_net_budget():
     assert close(c["target_all"], 2700)   # 2900 − 매체 수수료(Meta 100 + Google 100)
 
 
-OLD_OVERALL_TP = """month: 2026-10
-as_of_date: 2026-10-05
-media: all
-
-| metric | target | actual | progress_ratio |
-| --- | --- | --- | --- |
-| cost | 2900 | 2300 | 0.79 |
-
-| media | campaign_name | included | metric | target | actual | achievement |
-| --- | --- | --- | --- | --- | --- | --- |
-| Meta | - | - | cost | 1100 | 1100 | 1 |
-| Meta | - | - | cost_net | 1000 | - | - |
-| Meta | A | Y | cost | 660 | 500 | 0.76 |
-| Meta | A | Y | cost_net | 550 | - | - |
-| Google | - | - | cost | 1000 | 800 | 0.8 |
-| Google | C | Y | cost | 600 | 700 | 1 |
-| Google | C | Y | cost_net | 500 | - | - |
-| Naver | - | - | cost | 800 | 400 | 0.5 |"""
+OLD_OVERALL_TP = OLD_MONTH_TP.replace("as_of_date: 2026-10-31", "as_of_date: 2026-10-05")
 
 
 def test_overall_old_server_gross_rows_net_budgets_and_placement():

@@ -288,7 +288,7 @@ def compute(payload, check_dims=True, basis=None):
     }
     ctx = {"E": E, "cur_w": cur_w, "base_w": base_w, "M0": M0, "elapsed": elapsed, "keys": keys, "currency": currency,
            "metrics": metrics, "units": units, "media": media, "fine": fine, "tot": tot(M0) if e1 else {},
-           "targets": targets, "e3": e3}
+           "targets": targets, "e3": e3, "weeks": weeks}
     return sections, rep, ctx
 
 
@@ -346,7 +346,7 @@ def main():
     report = {"currency": payload.get("currency") or "₩", "sections": sections}
     if view:   # Gross/Net 두 벌 — 화면 머리말 토글로 바꾼다(기본 = 서버 기준, 옛 서버는 Gross)
         alt = compute(payload, check_dims=False, basis=fees.other(view))[0]
-        months = sorted(fees.window_months(periods(ctx["E"])[3][0][0], ctx["E"]))
+        months = sorted(fees.window_months(ctx["weeks"][0][0], ctx["E"]))
         report["basis"] = fee_views.bundle(view, served, table, sections, alt, "Weekly Summary",
                                           (payload.get("s1") or {}).get("target_progress"), months)
     path, size = kit.build_html(ASSETS_DIR, rep, report, payload["out"])

@@ -2,7 +2,6 @@
 """광고비·예산 Gross / Net 규칙(shared/assets/fees.py·report_kit.merged_envelope) 자체 검사(표준 라이브러리만). 빌더 연결은 test_fee_builders.py.
 기대값은 손으로 계산한 값이다: 마크업 Gross = Net × (1 + r/100), 커미션 Gross = Net ÷ (1 − r/100). 성공하면 "ok"."""
 
-import json
 import os
 import sys
 from datetime import date
@@ -229,15 +228,11 @@ def test_overall_budgets_and_rows():
     """서버 기준 Gross. Meta 마크업 10%, Google 커미션 20%, Naver 수수료 없음."""
     budgets = budget_targets.parse_budget({"month": "2026-10", "target_progress": OVERALL_TP})
     table = fees.fee_table([], [OVERALL_TP])
-    net = {json.dumps(sorted(b["scope"].items())): b["v"] for b in fees.convert_budgets(budgets, table, "gross", "net",
-                                                                                         budget_targets.derive_targets)}
-
-    def key(**sc):
-        return json.dumps(sorted(sc.items()))
-    assert close(net[key()]["cost"], 3100)   # 1000 + 1600 + 500
-    assert close(net[key(m="Meta")]["cost"], 1000) and close(net[key(m="Meta")]["cpm"], 5000)
-    assert close(net[key(m="Meta")]["imp"], 200)   # 노출 = 예산 ÷ CPM × 1000 — 기준이 바뀌어도 같다
-    assert close(net[key(m="Meta", c="A")]["cost"], 400) and close(net[key(m="Google")]["cost"], 1600)
+    net = by_scope(fees.convert_budgets(budgets, table, "gross", "net", budget_targets.derive_targets))
+    assert close(net[scope()]["cost"], 3100)   # 1000 + 1600 + 500
+    assert close(net[scope(m="Meta")]["cost"], 1000) and close(net[scope(m="Meta")]["cpm"], 5000)
+    assert close(net[scope(m="Meta")]["imp"], 200)   # 노출 = 예산 ÷ CPM × 1000 — 기준이 바뀌어도 같다
+    assert close(net[scope(m="Meta", c="A")]["cost"], 400) and close(net[scope(m="Google")]["cost"], 1600)
     rows = [{"day": date(2026, 10, 1), "m": "Meta", "cost": 1000}, {"day": date(2026, 10, 1), "m": "Google", "cost": 400},
             {"day": date(2026, 10, 1), "m": "Naver", "cost": 400}]
     fees.add_cost_views(rows, table, "net")   # 서버 기준 Net — Gross는 1000 × 1.1, 400 ÷ 0.8, 수수료 없음 그대로
