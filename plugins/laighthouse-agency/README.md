@@ -45,8 +45,9 @@
 MCP 도구 `get_media_mix_job`을 `include_allocation`·`include_diagnostics`로 1회 부르고, 저장 훅이 남긴 응답을
 `assets/build_report.py`가 그대로 HTML에 넣는다. 계산·모양은 전용 킷 `assets/mm_view.js`·`mm_view.css`가 맡고,
 laighthouse-web 결과 화면(`src/pages/marketing/MediaMixResult.tsx`·`src/lib/mediaMix.ts`)을 옮긴 것이다 — 웹 화면이
-바뀌면 함께 고친다. 자체 검사: `python3 tests/test_media_mix_result.py`(node 가 있으면 `mm_view.js` 계산도 웹과 같은지 본다,
-입력은 웹 목 데이터 사본 `tests/fixtures/media_mix/`).
+바뀌면 함께 고친다. 이 스킬(`build_report.py`의 응답 읽기 부분 제외)은 laighthouse-plugin(`laighthouse-analytics-prod`)과
+같은 파일이다 — 고칠 때는 양쪽을 함께 고친다. 자체 검사: `python3 tests/test_media_mix_result.py`(node 가 있으면 `mm_view.js` 계산도
+웹과 같은지 본다, 입력은 웹 목 데이터 사본 `tests/fixtures/media_mix/`).
 
 ### 외부 요인 보고서 (1.9.0~)
 
