@@ -1,6 +1,7 @@
 # MCP 도구 라우팅 규칙 (laighthouse 서버 — agency 플러그인 공용)
 
-이 플러그인의 스킬이 쓰는 도구는 `get_ad_performance`·`get_target_progress_v2`·`list_campaign_change_raw`·`get_external_context`(필요하면 `get_brand_list`)뿐이다.
+이 플러그인의 스킬이 쓰는 도구는 `get_ad_performance`·`get_target_progress_v2`·`list_campaign_change_raw`·`get_external_context`(필요하면 `get_brand_list`)와
+`media-mix-result` 스킬의 미디어믹스 도구 셋(`list_media_mix_metrics`·`create_media_mix_job`·`get_media_mix_job`, 규칙은 그 스킬의 SKILL.md)뿐이다.
 
 ## 1. `get_ad_performance` — 광고 성과 (유일한 성과 조회 도구)
 

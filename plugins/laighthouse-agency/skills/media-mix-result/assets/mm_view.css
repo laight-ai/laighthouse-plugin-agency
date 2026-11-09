@@ -1,0 +1,621 @@
+/* 미디어믹스 결과 보고서 — laighthouse-web 결과 화면(/m/media-mix/{jobId})과 같은 모양을 내는 데 필요한 규칙만 옮겼다.
+   출처: src/styles/tokens.css(토큰) · base.css(기본 · 보조 클래스) · components.css(badge · card · page · table · banner · kpi · dl)
+   · pages/marketing/MediaMix.css(화면 전용), Tailwind preflight 와 화면이 쓰는 유틸리티 클래스.
+   FE 의 @apply 와 중첩 규칙은 평범한 CSS 로 풀었다. 유틸리티가 컴포넌트 규칙을 이기도록 맨 뒤에 둔다(FE 의 레이어 순서). */
+
+/* ---- 토큰(tokens.css) ---- */
+:root {
+  --ink-0: #ffffff;
+  --ink-25: #fafbfc;
+  --ink-50: #f5f6f8;
+  --ink-100: #eef0f3;
+  --ink-150: #e6e8ec;
+  --ink-200: #dcdfe4;
+  --ink-300: #c7ccd3;
+  --ink-400: #9aa3ad;
+  --ink-500: #6b7683;
+  --ink-600: #4f5a66;
+  --ink-700: #38414b;
+  --ink-800: #262c34;
+  --ink-900: #171b21;
+
+  --blue-50: #f2f6ff;
+  --blue-100: #e3ebfd;
+  --blue-200: #c6d7fa;
+  --blue-300: #9fbcf3;
+  --blue-400: #739fe2;
+  --blue-500: #4a7fe0;
+  --blue-600: #2e5bd8;
+  --blue-700: #2449b3;
+
+  --red-50: #fdf1ef;
+  --red-200: #f7bfb4;
+  --red-300: #f49786;
+  --red-400: #ef7a68;
+  --red-500: #dd5a4a;
+  --red-600: #c93b3b;
+  --red-700: #a52f2f;
+
+  --green-50: #eef9f4;
+  --green-200: #b2e7d1;
+  --green-300: #81d0b0;
+  --green-500: #3f8f73;
+  --green-700: #245c4a;
+
+  --amber-50: #fff7ea;
+  --amber-200: #fbdba8;
+  --amber-300: #f5bf79;
+  --amber-500: #d08a2c;
+  --amber-700: #85530f;
+
+  --purple-300: #b7b2f7;
+  --purple-500: #8a80e8;
+
+  --bg-canvas: var(--ink-50);
+  --bg-surface: var(--ink-0);
+  --bg-sunken: var(--ink-100);
+
+  --fg-primary: var(--ink-800);
+  --fg-secondary: var(--ink-600);
+  --fg-tertiary: var(--ink-500);
+
+  --border-subtle: var(--ink-150);
+  --border-default: var(--ink-200);
+
+  --state-info-fg: var(--blue-700);
+  --state-info-bg: var(--blue-50);
+  --state-info-bd: var(--blue-200);
+  --state-success-fg: var(--green-700);
+  --state-success-bg: var(--green-50);
+  --state-success-bd: var(--green-200);
+  --state-warning-fg: var(--amber-700);
+  --state-warning-bg: var(--amber-50);
+  --state-warning-bd: var(--amber-200);
+  --state-danger-fg: var(--red-700);
+  --state-danger-bg: var(--red-50);
+  --state-danger-bd: var(--red-200);
+  --state-muted-fg: var(--ink-600);
+  --state-muted-bg: var(--ink-100);
+  --state-muted-bd: var(--ink-200);
+
+  --font-body:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', Roboto,
+    sans-serif;
+  --font-display: 'Space Grotesk', var(--font-body);
+
+  --fs-xs: 12px;
+  --lh-xs: 18px;
+  --fs-sm: 13px;
+  --lh-sm: 20px;
+  --fs-base: 14px;
+  --lh-base: 22px;
+  --fs-md: 16px;
+  --lh-md: 24px;
+  --fs-2xl: 24px;
+  --lh-2xl: 32px;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-16: 64px;
+
+  --r-xs: 4px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-pill: 999px;
+
+  --sh-xs: 0 1px 2px rgba(23, 27, 33, 0.06);
+  --sh-sm: 0 1px 3px rgba(23, 27, 33, 0.08), 0 1px 2px rgba(23, 27, 33, 0.04);
+
+  --content-max: 1184px;
+  --content-pad: 32px;
+
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+}
+
+/* ---- Tailwind preflight 중 이 화면에 닿는 것 ---- */
+*,
+::before,
+::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0 solid;
+}
+h1,
+h2,
+h3 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+ol,
+ul {
+  list-style: none;
+}
+table {
+  text-indent: 0;
+  border-color: inherit;
+  border-collapse: collapse;
+}
+svg,
+canvas {
+  display: block;
+  vertical-align: middle;
+}
+summary {
+  display: list-item;
+}
+
+/* ---- 요소 기본값(base.css) ---- */
+html {
+  font-family: var(--font-body);
+  color: var(--fg-primary);
+  background: var(--bg-canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings:
+    'tnum' 1,
+    'ss01' 1;
+}
+body {
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+}
+table {
+  border-spacing: 0;
+}
+
+.num {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.t-xs {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+}
+.t-sm {
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+.fg-2 {
+  color: var(--fg-secondary);
+}
+.fg-3 {
+  color: var(--fg-tertiary);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* ---- 배지(components.css) ---- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid var(--border-default);
+  color: var(--fg-secondary);
+  background: var(--bg-surface);
+}
+.badge-dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.badge-info {
+  color: var(--state-info-fg);
+  background: var(--state-info-bg);
+  border-color: var(--state-info-bd);
+}
+.badge-success {
+  color: var(--state-success-fg);
+  background: var(--state-success-bg);
+  border-color: var(--state-success-bd);
+}
+.badge-warning {
+  color: var(--state-warning-fg);
+  background: var(--state-warning-bg);
+  border-color: var(--state-warning-bd);
+}
+.badge-danger {
+  color: var(--state-danger-fg);
+  background: var(--state-danger-bg);
+  border-color: var(--state-danger-bd);
+}
+.badge-muted {
+  color: var(--state-muted-fg);
+  background: var(--state-muted-bg);
+  border-color: var(--state-muted-bd);
+}
+.badge-outline {
+  background: transparent;
+}
+.hint {
+  font-size: var(--fs-xs);
+  color: var(--fg-tertiary);
+  line-height: var(--lh-xs);
+}
+
+/* ---- 카드 · 화면 틀 ---- */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-sm);
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 14px var(--sp-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.card-head h3 {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+}
+.card-body {
+  padding: var(--sp-5);
+}
+.page {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--sp-6) var(--content-pad) var(--sp-16);
+}
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-6);
+  margin-bottom: var(--sp-6);
+}
+.page-head h1 {
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-2xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.015em;
+}
+.section-title {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---- 표 ---- */
+.table-wrap {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-sm);
+  overflow-x: auto;
+}
+.card > .table-wrap {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.card > .table-wrap:last-child {
+  border-end-start-radius: calc(var(--r-lg) - 1px);
+  border-end-end-radius: calc(var(--r-lg) - 1px);
+}
+.data-table {
+  width: 100%;
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+}
+.data-table th {
+  text-align: left;
+  font-weight: var(--fw-semibold);
+  color: var(--ink-600);
+  background: var(--ink-25);
+  border-bottom: 1px solid var(--ink-200);
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-base);
+  padding-block: 10px;
+  padding-inline: 14px;
+}
+.data-table td {
+  border-bottom: 1px solid var(--ink-150);
+  vertical-align: middle;
+  padding-block: 11px;
+  padding-inline: 14px;
+}
+.data-table tbody tr:last-child td {
+  border-bottom-width: 0;
+}
+.data-table tbody tr:hover td {
+  background: var(--ink-25);
+}
+.data-table td.num,
+.data-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.data-table .cell-title {
+  font-weight: var(--fw-semibold);
+  color: var(--ink-800);
+}
+.data-table .cell-sub {
+  color: var(--ink-500);
+  margin-top: 1px;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-base);
+}
+.table-dense th {
+  padding: 8px 12px;
+}
+.table-dense td {
+  padding: 7px 12px;
+}
+
+/* ---- 배너 ---- */
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid;
+  font-size: var(--fs-sm);
+}
+.banner svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 1px;
+}
+.banner .b-title {
+  font-weight: var(--fw-semibold);
+}
+.banner .b-body {
+  color: inherit;
+  opacity: 0.9;
+}
+.banner-warning {
+  background: var(--state-warning-bg);
+  border-color: var(--state-warning-bd);
+  color: var(--state-warning-fg);
+}
+.banner-danger {
+  background: var(--state-danger-bg);
+  border-color: var(--state-danger-bd);
+  color: var(--state-danger-fg);
+}
+.banner-muted {
+  background: var(--state-muted-bg);
+  border-color: var(--state-muted-bd);
+  color: var(--state-muted-fg);
+}
+.banner-info {
+  background: var(--state-info-bg);
+  border-color: var(--state-info-bd);
+  color: var(--state-info-fg);
+}
+
+/* ---- KPI ---- */
+.kpi {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  box-shadow: var(--sh-xs);
+  min-width: 0;
+}
+.kpi .k-label {
+  font-size: var(--fs-xs);
+  color: var(--fg-tertiary);
+  font-weight: var(--fw-semibold);
+}
+.kpi .k-value {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.02em;
+  margin-top: 4px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  gap: 10px;
+}
+.kpi .k-delta {
+  font-size: var(--fs-xs);
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.kpi .k-delta .mtd {
+  color: var(--fg-tertiary);
+}
+
+/* ---- 정의 목록 ---- */
+.dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  font-size: var(--fs-sm);
+  margin-block: 1em;
+}
+.dl dt {
+  color: var(--fg-tertiary);
+}
+.dl dd {
+  margin: 0;
+  color: var(--fg-primary);
+}
+
+/* ---- 회전 표시(대기 · 계산 중) ---- */
+.lock-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--ink-200);
+  border-top-color: var(--blue-500);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- 화면 전용(MediaMix.css) ---- */
+/* 결과 라우트는 wide 라 셸이 본문 최대 폭을 푼다(shell-main.css 의 .content.is-wide .page) */
+.page.pg-media-mix {
+  max-width: none;
+}
+.pg-media-mix .lock-spinner {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+.pg-media-mix .mm-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  flex: none;
+}
+.pg-media-mix .mm-summary th,
+.pg-media-mix .mm-summary td {
+  padding-inline: var(--sp-2);
+  white-space: nowrap;
+}
+.pg-media-mix .mm-summary .mm-group-start {
+  border-left: 1px solid var(--border-subtle);
+}
+.pg-media-mix .mm-summary thead th.mm-group-start {
+  text-align: center;
+}
+.pg-media-mix .mm-summary .mm-total td {
+  font-weight: var(--fw-semibold);
+  background: var(--bg-sunken);
+}
+.pg-media-mix .mm-diag > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.pg-media-mix .mm-diag > summary::-webkit-details-marker {
+  display: none;
+}
+.pg-media-mix .mm-diag-caret {
+  margin-left: auto;
+  color: var(--fg-tertiary);
+  transition: transform var(--dur-fast) var(--ease);
+}
+.pg-media-mix .mm-diag[open] .mm-diag-caret {
+  transform: rotate(180deg);
+}
+.pg-media-mix .mm-diag:not([open]) > summary {
+  border-bottom: 0;
+}
+
+/* ---- 증감(utilities 레이어) ---- */
+.delta-up {
+  color: var(--state-success-fg);
+}
+.delta-down {
+  color: var(--state-danger-fg);
+}
+.delta-flat {
+  color: var(--fg-tertiary);
+}
+
+/* ---- 화면이 쓰는 Tailwind 유틸리티(간격은 --sp 단계) ---- */
+.mb-1 {
+  margin-bottom: var(--sp-1);
+}
+.mb-2 {
+  margin-bottom: var(--sp-2);
+}
+.mb-5 {
+  margin-bottom: var(--sp-5);
+}
+.mt-2 {
+  margin-top: var(--sp-2);
+}
+.px-4 {
+  padding-inline: var(--sp-4);
+}
+.py-3 {
+  padding-block: var(--sp-3);
+}
+.pl-4 {
+  padding-left: var(--sp-4);
+}
+.gap-1 {
+  gap: var(--sp-1);
+}
+.gap-2 {
+  gap: var(--sp-2);
+}
+.gap-3 {
+  gap: var(--sp-3);
+}
+.gap-4 {
+  gap: var(--sp-4);
+}
+.gap-5 {
+  gap: var(--sp-5);
+}
+.list-disc {
+  list-style-type: disc;
+}
+.flex-wrap {
+  flex-wrap: wrap;
+}
+.overflow-x-auto {
+  overflow-x: auto;
+}
+.font-semibold {
+  font-weight: var(--fw-semibold);
+}
+.grid {
+  display: grid;
+}
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+@media (width >= 80rem) {
+  .xl\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

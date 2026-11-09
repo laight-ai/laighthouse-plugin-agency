@@ -20,6 +20,7 @@
 | 스킬 | overall-summary-comment · -total · -tables · -history · -mix | 종합 리포트에서 섹션 하나만 뽑기(Comment / Total·Monthly Summary / Product·Target·Placement·Weekly·Daily 표 / Campaign History / Mix) |
 | 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
 | 스킬 | naver-search · naver-news · naver-blog · weather-impact | 외부 요인 보고서(HTML, 날짜 범위) — 네이버 검색량·뉴스·블로그, 서울 날씨(+광고 클릭) |
+| 스킬 | media-mix-result | 월간 미디어믹스 결과 보고서(HTML) — 라이트하우스 웹 결과 화면과 같은 모양, 전용 킷(`assets/mm_view.*`) |
 | 스킬 | skill-catalog | 라이트하우스 스킬 목록(이름·명령어·설명·요청 예시)을 채팅에 표로 보여 준다 — "스킬 목록", "어떤 스킬 있어" |
 
 ## 사용법
@@ -35,6 +36,17 @@
 > "breezm 데일리 보고서" → `daily-report` (기준일 기본: 어제)
 > "breezm 주간 보고서" → `weekly-report` (기준일 = 데이터 마지막 날, 기본: 어제)
 > "breezm 9월 월간 보고서" → `monthly-report` (대상 월 기본: 지난달)
+
+### 미디어믹스 결과 (1.12.0~)
+
+> "다라세제 미디어믹스 결과 보여줘, job id …" → `media-mix-result` (이미 끝난 계산)
+> "다라세제 3월 실적으로 4월 예산 7천만 원 미디어믹스 돌려줘" → `media-mix-result` (조건을 확인받고 새로 실행 → 끝나면 보고서)
+
+MCP 도구 `get_media_mix_job`을 `include_allocation`·`include_diagnostics`로 1회 부르고, 저장 훅이 남긴 응답을
+`assets/build_report.py`가 그대로 HTML에 넣는다. 계산·모양은 전용 킷 `assets/mm_view.js`·`mm_view.css`가 맡고,
+laighthouse-web 결과 화면(`src/pages/marketing/MediaMixResult.tsx`·`src/lib/mediaMix.ts`)을 옮긴 것이다 — 웹 화면이
+바뀌면 함께 고친다. 자체 검사: `python3 tests/test_media_mix_result.py`(node 가 있으면 `mm_view.js` 계산도 웹과 같은지 본다,
+입력은 웹 목 데이터 사본 `tests/fixtures/media_mix/`).
 
 ### 외부 요인 보고서 (1.9.0~)
 
