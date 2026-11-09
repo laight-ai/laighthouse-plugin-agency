@@ -109,6 +109,15 @@ def test_a_tool_error_is_passed_on():
     assert picked is None and problem == {"error": "Media-mix job not found."}, problem
 
 
+def test_a_tool_error_after_a_running_poll_is_passed_on():
+    # 가장 최근 호출이 에러면 그 전에 받은 진행 중 상태는 지금 상태가 아니다
+    running = dict(polled(fixture()), status="running", finished_at=None)
+    picked, as_of, problem = with_records(
+        [({}, json.dumps(running)), ({}, "Upstream timeout.\nmore")], lambda: build_report.pick_job(BRAND, JOB_ID)
+    )
+    assert picked is None and problem == {"error": "Upstream timeout."}, problem
+
+
 def test_no_saved_responses_is_a_note():
     before = saved.ROOT
     try:

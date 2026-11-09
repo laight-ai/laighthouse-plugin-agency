@@ -108,7 +108,8 @@ def pick_job(brand, job_id):
     """저장된 응답 중 이 job 의 것을 골라 (job, 받은 시각, 문제)로 돌려준다.
 
     가장 최근 응답이 대기·계산 중이면 그것이 지금 상태다. 끝난(succeeded) job 이면 결과가 더 바뀌지 않으므로, 배분 행·진단을 켜고
-    받은 응답을 더 오래된 것까지 찾는다(그 뒤에 기본 인자로 한 번 더 부른 응답이 있어도 된다). 없으면 그 호출을 다시 보내라고 한다."""
+    받은 응답을 더 오래된 것까지 찾는다(그 뒤에 기본 인자로 한 번 더 부른 응답이 있어도 된다). 없으면 그 호출을 다시 보내라고 한다.
+    가장 최근 응답이 도구 에러면 그보다 오래된 대기·계산 중 상태를 쓰지 않고 그 에러를 돌려준다."""
     recs = saved.load_records(brand)
     if not recs:
         return None, None, {"note": saved.no_records_note()}
@@ -119,7 +120,9 @@ def pick_job(brand, job_id):
         text = saved.response_text(rec)
         job = parse_job(text)
         if job is None:
-            error = error or {"error": str(text).strip().split("\n", 1)[0][:300]}
+            if newest:
+                error = {"error": str(text).strip().split("\n", 1)[0][:300]}
+            newest = False
             continue
         if job["status"] != "succeeded":
             if newest:
@@ -128,8 +131,6 @@ def pick_job(brand, job_id):
         if is_complete(job):
             return job, rec.get("saved_at"), None
         newest = False
-    if not newest:
-        return None, None, {"missing": call_text(brand, job_id)}
     return None, None, error or {"missing": call_text(brand, job_id)}
 
 
