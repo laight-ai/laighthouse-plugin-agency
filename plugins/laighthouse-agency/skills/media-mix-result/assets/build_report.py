@@ -77,6 +77,12 @@ def is_complete(job):
     return job["status"] != "succeeded" or ("allocation" in job and "diagnostics" in job)
 
 
+def is_current(job):
+    """요청이 제안받을 달(target_month)로 오는 지금 API 의 응답인지. 그 전 응답(start_date·cost_basis)은 비용이 Gross 였을
+    수 있어 날짜만 메워 그리면 틀린다 — 그리지 않고 다시 받는다. 서버가 저장된 요청을 새 모양으로 바꿔 두었다."""
+    return "target_month" in job["request"]
+
+
 def proposal_month(job):
     """요청의 제안받을 달(YYYY-MM)."""
     return str(job["request"]["target_month"])
@@ -108,11 +114,12 @@ def pick_job(brand, job_id):
 
     가장 최근 응답이 대기·계산 중이면 그것이 지금 상태다. 끝난(succeeded) job 이면 결과가 더 바뀌지 않으므로, 배분 행·진단을 켜고
     받은 응답을 더 오래된 것까지 찾는다(그 뒤에 기본 인자로 한 번 더 부른 응답이 있어도 된다). 없으면 그 호출을 다시 보내라고 한다.
-    가장 최근 응답이 도구 에러면 그보다 오래된 대기·계산 중 상태를 쓰지 않고 그 에러를 돌려준다."""
+    가장 최근 응답이 도구 에러면 그보다 오래된 대기·계산 중 상태를 쓰지 않고 그 에러를 돌려준다.
+    이전 API 형식의 응답(is_current 가 아님)은 건너뛰고, 쓸 응답이 그것뿐이면 다시 받으라고(outdated) 한다."""
     recs = saved.load_records(brand)
     if not recs:
         return None, None, {"note": saved.no_records_note()}
-    error, newest = None, True
+    error, newest, outdated = None, True, False
     for rec in reversed(recs):
         if rec["_tool"] != TOOL or (rec.get("tool_input") or {}).get("job_id") != job_id:
             continue
@@ -123,6 +130,9 @@ def pick_job(brand, job_id):
                 error = {"error": str(text).strip().split("\n", 1)[0][:300]}
             newest = False
             continue
+        if not is_current(job):
+            outdated, newest = True, False
+            continue
         if job["status"] != "succeeded":
             if newest:
                 return job, rec.get("saved_at"), None
@@ -130,7 +140,7 @@ def pick_job(brand, job_id):
         if is_complete(job):
             return job, rec.get("saved_at"), None
         newest = False
-    return None, None, error or {"missing": call_text(brand, job_id)}
+    return None, None, error or {("outdated" if outdated else "missing"): call_text(brand, job_id)}
 
 
 def main(argv=None):
@@ -148,6 +158,9 @@ def main(argv=None):
         job = parse_job(text)
         if job is None:
             saved.emit({"error": text.strip().split("\n", 1)[0][:300]})
+            return
+        if not is_current(job):
+            saved.emit({"outdated": call_text(args.brand, job.get("id"))})
             return
         if not is_complete(job):
             saved.emit({"missing": call_text(args.brand, job.get("id"))})
