@@ -2,7 +2,7 @@
 name: media-mix-result
 description: >
   월간 미디어믹스(M/M Optimizer) 결과 보고서 스킬. "미디어믹스 결과", "미디어믹스 돌려줘", "다음 달 예산 배분 제안",
-  "media mix 결과 보여줘", "M/M Optimizer" 요청 시 사용. 기준 달 실적으로 다음 달 매체별 예산 배분을 계산하는 job 을
+  "media mix 결과 보여줘", "M/M Optimizer" 요청 시 사용. 제안받을 달의 매체별 예산 배분을 전월(기준 달) 실적으로 계산하는 job 을
   새로 실행하거나(조건 확인 후) 이미 끝난 job 의 결과를 받아, 라이트하우스 웹 결과 화면과 같은 모양의 HTML 보고서
   (요약 수치 · 매체별 요약 표 · 구분별 일별 매체 배분 차트 · 진단)로 렌더링한다.
 metadata:
@@ -44,14 +44,13 @@ metadata:
 
    | 조건 | 인자 | 기본값 |
    |---|---|---|
-   | 기준 달(실적을 볼 달, 한 달 안) | `start_date`·`end_date` (그 달 1일~말일) | 없음 — 묻는다. 다 끝난 달만 된다 |
+   | 제안받을 달(예산을 배분할 달) | `target_month` (`YYYY-MM`). 그 전월(기준 달) 실적으로 계산한다 — 전월 데이터가 다 들어온 뒤에 돌려야 정확하다 | 없음 — 묻는다 |
    | 비용 지표 · 성과 지표 | `cost_metric`·`revenue_metric` (1번 후보 중 서로 다른 둘) | 없음 — 묻는다 |
-   | 다음 달 목표 예산(원, VAT 제외 Net) | `target_budget` | 없음 — 묻는다 |
+   | 제안받을 달의 예산(원, VAT 제외 Net) | `target_budget` | 없음 — 묻는다 |
    | 마트 비용이 VAT 포함인지 | `cost_includes_vat` | **없음 — 반드시 묻는다** |
    | 학습 방식 | `learning_strategy` aggressive · neutral · conservative | neutral |
    | 요일 학습 | `learning_dow` even · weight(더 느림) | even |
    | 고정비 매체(배분하지 않고 기준 달 일평균 비용으로 둠) | `fixed_media` | 없음(빈 목록) |
-   | 결과 비용 기준 | `cost_basis` net · gross | net |
 3. 확인받으면 `create_media_mix_job(...)` 1회 → `id`. `created: false` 면 같은 조건의 job 이 이미 돌고 있어 그 job 을 받은 것이다(사용자에게 알린다).
    `status: "failed"` 와 `error` 가 오면 큐에 넣지 못한 것이다 — 사유를 전하고 멈춘다.
 4. **끝날 때까지 기다린다**: `get_media_mix_job(brand_name, job_id)`(기본 인자 — 배분 행 없이 상태만)를 부르고, `status` 가
