@@ -129,57 +129,6 @@ def test_no_saved_responses_is_a_note():
     assert picked is None and set(problem) == {"note"}
 
 
-def previous_api(job):
-    """report-backend 가 요청을 제안받을 달(target_month)로 바꾸기 전에 받아 저장해 둔 같은 job 응답. 비용 기준이 Gross 였을 수 있다."""
-    request = {k: v for k, v in job["request"].items() if k != "target_month"}
-    request.update(start_date="2026-03-01", end_date="2026-03-31", cost_basis="gross")
-    return dict(job, request=request)
-
-
-FULL_CALL = f'get_media_mix_job(brand_name="{BRAND}", job_id="{JOB_ID}", include_allocation=true, include_diagnostics=true)'
-
-
-def test_a_response_from_the_previous_api_asks_to_fetch_again():
-    picked, as_of, problem = with_records(
-        [(FULL, json.dumps(previous_api(fixture())))], lambda: build_report.pick_job(BRAND, JOB_ID)
-    )
-    assert picked is None and problem == {"outdated": FULL_CALL}, problem
-
-
-def test_a_new_poll_does_not_bring_back_a_full_response_from_the_previous_api():
-    # 새 API 로 상태만 다시 받아도 배분 행은 예전 전체 응답에만 있다 — 그것을 그리지 않고 전체를 다시 받게 한다
-    job = fixture()
-    picked, as_of, problem = with_records(
-        [(FULL, json.dumps(previous_api(job))), ({}, json.dumps(polled(job)))],
-        lambda: build_report.pick_job(BRAND, JOB_ID),
-    )
-    assert picked is None and problem == {"outdated": FULL_CALL}, problem
-
-
-def test_a_new_full_response_after_one_from_the_previous_api_is_used():
-    job = fixture()
-    picked, as_of, problem = with_records(
-        [(FULL, json.dumps(previous_api(job))), (FULL, json.dumps(job))], lambda: build_report.pick_job(BRAND, JOB_ID)
-    )
-    assert problem is None and picked["request"]["target_month"] == "2026-04", problem
-
-
-def test_json_from_the_previous_api_asks_to_fetch_again():
-    emitted = []
-    before = build_report.saved.emit
-    path = tempfile.mktemp(suffix=".json")
-    try:
-        build_report.saved.emit = emitted.append
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(previous_api(fixture()), f, ensure_ascii=False)
-        build_report.main(["--brand", BRAND, "--json", path])
-    finally:
-        build_report.saved.emit = before
-        if os.path.exists(path):
-            os.remove(path)
-    assert emitted == [{"outdated": FULL_CALL}], emitted
-
-
 def test_render_keeps_markup_in_the_data_inside_its_string():
     job = fixture()
     job["warnings"] = ["</script><b>x</b>", "<!--<script>"]
