@@ -28,9 +28,9 @@ laighthouse-owned-media/
 
 | 도구 | 내용 |
 |---|---|
-| `get_owned_media_insights(brand_name, media, start_date, end_date)` | 자사 매체의 일별 오가닉 지표. 브랜드가 게시한 지표를 하루 한 값씩(팔로워 총수 같은 누적값은 보통 원자료 스트림에서 봄) |
+| `get_owned_media_insights(brand_name, media, start_date, end_date)` | 자사 매체(TikTok, YouTube)의 일별 오가닉 지표. 브랜드가 게시한 지표를 하루 한 값씩(팔로워·구독자 총수 같은 누적값은 원자료 스트림에서 봄) |
 | `get_brand_list()` | 브랜드 이름 확인(이름이 정확히 맞지 않을 때) |
-| `get_owned_media_raw(brand_name, media, stream, start_date, end_date, offset, limit)` | 수집 원자료 스트림을 수집한 그대로(모든 열). 프로필, 시간대별 활동, 오디언스 분포, 게시물별 누적 지표 |
+| `get_owned_media_raw(brand_name, media, stream, start_date, end_date, offset, limit)` | 수집 원자료 스트림을 수집한 그대로(모든 열). 프로필, 시간대별 활동, 오디언스 분포, 유입 경로·기기·지역, 게시물·영상별 지표 |
 
 ## 매체 추가
 

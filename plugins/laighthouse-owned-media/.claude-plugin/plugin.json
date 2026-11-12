@@ -1,6 +1,6 @@
 {
   "name": "laighthouse-owned-media",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "라이트하우스 자사 매체(소셜 미디어 오가닉) 데이터를 MCP로 조회해 채팅에 표로 보여 주는 플러그인(현재 dev 환경).",
   "author": {
     "name": "LaightAI"
@@ -10,6 +10,7 @@
     "organic",
     "social-media",
     "tiktok",
+    "youtube",
     "laighthouse"
   ]
 }
