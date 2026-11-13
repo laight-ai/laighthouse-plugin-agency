@@ -12,11 +12,11 @@ metadata:
 ## 역할
 
 종합 리포트(`overall-summary`)에서 **월·미디어 필터와 Product · Target · Placement · Weekly · Daily 표만** 뽑아 HTML 한 파일과 By Media·By Date·Raw 시트만 담은 엑셀(.xlsx)을 만든다.
-스크립트·규칙·데이터 처리 원칙은 `overall-summary`와 같다 — **`../overall-summary/SKILL.md`를 먼저 읽고 그대로 따른다.**
-이 문서는 거기서 달라지는 점만 적는다. 스크립트는 `../overall-summary/assets/`에 있다(이 스킬 폴더 기준).
+스크립트·규칙·데이터 처리 원칙은 `overall-summary`와 같다 — **`references/overall-summary.md`를 먼저 읽고 그대로 따른다.**
+이 문서는 거기서 달라지는 점만 적는다. 스크립트는 `assets/`, 섹션 규칙은 `references/`에 있다(이 스킬 폴더 기준 — `overall-summary`의 사본이다).
 
 - 파라미터(브랜드명·기준일 E = 데이터 마지막 날, 기본 어제·오늘 이후 불가·시작일 S)와 기간 계산(S 기본 = E의 전월 1일, 366일까지)은 `overall-summary`와 같다.
-- 섹션 규칙: `../overall-summary/overall-summary-section-3-tables.md`
+- 섹션 규칙: `references/overall-summary-section-3-tables.md`
 
 ## 실행 순서 (`overall-summary` 「실행 순서」에서 달라지는 점)
 
@@ -29,7 +29,7 @@ metadata:
    - 변경 이력(`list_campaign_change_raw`)과 이름 호출은 부르지 않는다(표에 쓰지 않는다).
 4. 빌드 (1회) — `--part tables`(사용자가 특정 표만 원하면 `--tables`에 쉼표로: `product`·`target`·`place`·`weekly`·`daily`, 없으면 다섯 표 모두)를 붙인다:
    ```
-   python3 ../overall-summary/assets/prepare.py --brand <브랜드> --target-date <E> [--start-date <S>] --part tables [--tables product,daily] --build <<'PYEOF'
+   python3 assets/prepare.py --brand <브랜드> --target-date <E> [--start-date <S>] --part tables [--tables product,daily] --build <<'PYEOF'
    <차원 확인 에러 메시지 원문>
    PYEOF
    ```

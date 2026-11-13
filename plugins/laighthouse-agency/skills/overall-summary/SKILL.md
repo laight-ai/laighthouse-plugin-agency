@@ -36,7 +36,7 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
 - **Comment는 빌더가 규칙으로 쓴다** — 모델이 요약 문장을 쓰지 않는다(`overall-summary-section-1-comment.md`).
 - **Campaign History도 빌더가 규칙으로 만든다** — 변경 이력 원본(`list_campaign_change_raw`)을 모델이 읽지 않는다(`overall-summary-section-4-history.md`).
 - 도구 규칙: `shared/references/mcp-tools.md`, 차원 확인·크기 대응: `shared/references/pivot-table.md`
-  (플러그인 루트 기준 — 이 스킬 폴더에서는 `../../shared/references/`).
+  (이 스킬 폴더 기준 — 플러그인 루트 `shared/`의 사본이다).
 
 ## 데이터 처리 원칙 (절대 지침)
 

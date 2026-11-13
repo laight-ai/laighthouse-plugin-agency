@@ -135,6 +135,15 @@ Daily·Weekly·Monthly 요약 문단을 **무엇을 어떻게 쓸지**는 스킬
 
 가이드에는 문구·작성 규칙만 둔다. 근거 데이터(`digest`)·빌더 입력 형식·실행 순서는 섹션 문서와 SKILL.md(개발자 담당)가 정한다.
 
+## 스킬 폴더 사본 (Cowork)
+
+Claude 데스크톱 Cowork는 스킬 폴더를 하나씩 따로 올린다(`/mnt/skills/plugins/laighthouse-agency:<스킬>`). 플러그인 루트의
+`shared/`와 옆 스킬 폴더는 함께 올라가지 않으므로, 스킬마다 필요한 공용 파일을 `skills/<스킬>/shared/`에 복사해 둔다
+(overall-summary-* 하위 스킬은 overall-summary의 `assets/`·문서도 `assets/`·`references/`로 넣는다). 원본은 플러그인 루트의
+`shared/`와 `skills/overall-summary/`이고 사본은 손으로 고치지 않는다 — 원본을 고친 뒤 `python3 scripts/bundle_skills.py`를 실행해
+사본까지 같은 커밋에 넣는다. 스킬 문서는 스킬 폴더 밖(`../`)을 가리키지 않는다. 검사: `python3 tests/test_skill_bundles.py`
+(사본이 원본과 같은지, 스킬 폴더만 따로 떼어 내도 스크립트가 공용 파일을 찾는지).
+
 ## MCP 서버
 
 - **이름**: laighthouse

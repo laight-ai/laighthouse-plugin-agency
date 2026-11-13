@@ -53,7 +53,7 @@ metadata:
 | 번호 | 언제 | 안내 |
 |---|---|---|
 | 실패 1 | `get_external_context` 도구가 없다 | 외부 맥락 도구를 쓸 수 없다. `/mcp`에서 laighthouse 서버 연결·로그인을 확인하고, 연결돼 있으면 아직 이 서버에 배포되지 않은 기능이다 |
-| 실패 2 | 도구 오류 `Unknown brand` | 브랜드를 찾지 못했다. **멈추지 않고** `get_brand_list`로 가장 비슷한 이름을 찾아 맞는지 묻는다(플러그인 루트 `shared/references/mcp-tools.md` 공통 규칙). 확인되면 그 이름을 2의 `brand_name`과 3의 `--brand`에 넣어 2부터 다시 한다 |
+| 실패 2 | 도구 오류 `Unknown brand` | 브랜드를 찾지 못했다. **멈추지 않고** `get_brand_list`로 가장 비슷한 이름을 찾아 맞는지 묻는다(`shared/references/mcp-tools.md` 공통 규칙). 확인되면 그 이름을 2의 `brand_name`과 3의 `--brand`에 넣어 2부터 다시 한다 |
 | 실패 2-1 | 도구 오류 `Several brands are named` | 같은 이름의 브랜드가 여럿이라 구분할 수 없다. 서버 메시지를 그대로 전하고 관리자에게 브랜드 이름을 구분해 달라고 요청하게 한다 |
 | 실패 3 | 도구 오류 `MCP service is not enabled for brand` | 이 브랜드는 MCP 사용이 꺼져 있다. 관리자에게 켜 달라고 요청하게 한다 |
 | 실패 4 | 도구 오류 `is not ELT-published yet` | 이 브랜드의 데이터 저장소가 아직 준비되지 않았다 |
