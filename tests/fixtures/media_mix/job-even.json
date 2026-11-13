@@ -1,0 +1,3435 @@
+{
+  "id": "00000002-mock-4000-8000-000000000002",
+  "status": "succeeded",
+  "request": {
+    "start_date": "2026-03-01",
+    "end_date": "2026-03-31",
+    "cost_metric": "광고비",
+    "revenue_metric": "매출",
+    "learning_strategy": "neutral",
+    "learning_dow": "even",
+    "target_budget": 70000000,
+    "fixed_media": ["BRS"],
+    "cost_includes_vat": false,
+    "cost_basis": "net"
+  },
+  "created_by": "00000000-0000-0000-0000-000000000001",
+  "created_at": "2026-11-05T01:10:00Z",
+  "started_at": "2026-11-05T01:10:03Z",
+  "finished_at": "2026-11-05T01:10:10.410000Z",
+  "error": null,
+  "cost_unit": "₩",
+  "revenue_unit": "₩",
+  "warnings": ["BRS: GP 하이퍼파라미터가 탐색 경계에 붙어 결과 신뢰도가 낮습니다."],
+  "diagnostics": {
+    "windows": {
+      "A": ["2026-03-01", "2026-03-31"],
+      "M1": ["2026-02-01", "2026-03-03"],
+      "M2": ["2026-01-01", "2026-01-31"],
+      "M3": ["2025-12-01", "2025-12-31"],
+      "PY+1": ["2025-04-01", "2025-05-01"]
+    },
+    "media": {
+      "BRS": {
+        "n_samples": 152,
+        "pinned": [
+          {
+            "name": "k2__length_scale",
+            "direction": "upper",
+            "value": 4971000.000000003,
+            "bound": 4971000.000000003
+          }
+        ],
+        "retry_log": [
+          "시도 1: k2__length_scale(upper 1.988e+05→9.942e+05) 넓혀서 재학습 → 값이 유의미하게 이동",
+          "시도 2: k2__length_scale(upper 9.942e+05→4.971e+06) 넓혀서 재학습 → 값이 유의미하게 이동"
+        ],
+        "dow": {
+          "ratio": 0.00021151073985744559,
+          "significant": false,
+          "best_day": "월",
+          "worst_day": "토",
+          "best_vs_worst_pct": 0.6253646411444688
+        }
+      },
+      "NVGFA_ADVOOST": {
+        "n_samples": 121,
+        "pinned": [],
+        "retry_log": ["시도 1: k2__length_scale(upper 2.281e+05→1.141e+06) 넓혀서 재학습 → 값이 유의미하게 이동"],
+        "dow": {
+          "ratio": 0.008784218362482873,
+          "significant": false,
+          "best_day": "일",
+          "worst_day": "월",
+          "best_vs_worst_pct": 5.162235697409441
+        }
+      },
+      "NVGFA_DISPLAY": {
+        "n_samples": 152,
+        "pinned": [],
+        "retry_log": ["시도 1: k2__length_scale(upper 4.336e+05→2.168e+06) 넓혀서 재학습 → 값이 유의미하게 이동"],
+        "dow": {
+          "ratio": 1.454900008428145e-7,
+          "significant": false,
+          "best_day": "월",
+          "worst_day": "일",
+          "best_vs_worst_pct": 3.914156711122806e-5
+        }
+      },
+      "NVSHOP": {
+        "n_samples": 152,
+        "pinned": [],
+        "retry_log": ["시도 1: k2__length_scale(upper 3.390e+06→1.695e+07) 넓혀서 재학습 → 값이 유의미하게 이동"],
+        "dow": {
+          "ratio": 0.011853259898894077,
+          "significant": false,
+          "best_day": "토",
+          "worst_day": "월",
+          "best_vs_worst_pct": 25.807491516179443
+        }
+      },
+      "PLINK": {
+        "n_samples": 152,
+        "pinned": [],
+        "retry_log": ["시도 1: k2__length_scale(upper 1.994e+05→9.972e+05) 넓혀서 재학습 → 값이 유의미하게 이동"],
+        "dow": {
+          "ratio": 0.0033712300625539904,
+          "significant": false,
+          "best_day": "토",
+          "worst_day": "화",
+          "best_vs_worst_pct": 8.076093394376773
+        }
+      }
+    },
+    "notes": [
+      "🔧 NVGFA_ADVOOST: 초안 기반 m_max=192,400 vs 학습범위 캡=280,775 (X_train_max=255,250) → 최종 m_max=192,400",
+      "🔧 NVGFA_DISPLAY: 초안 기반 m_max=231,379 vs 학습범위 캡=348,953 (X_train_max=317,230) → 최종 m_max=231,379",
+      "🔧 NVSHOP: 초안 기반 m_max=2,410,880 vs 학습범위 캡=3,295,468 (X_train_max=2,995,880) → 최종 m_max=2,410,880",
+      "🔧 PLINK: 초안 기반 m_max=114,976 vs 학습범위 캡=186,956 (X_train_max=169,960) → 최종 m_max=114,976",
+      "🔧 기준선(초안을 탐색범위 안으로 clip한 지점의 GP 예측): 총매출≈25,288,981, 평균ROAS≈10.68 → threshold(80%): 매출≥20,231,185, ROAS≥8.54"
+    ],
+    "best_alpha_weights": null,
+    "max_revenue": null,
+    "runtime_seconds": {
+      "draft_seconds": 0.021,
+      "gp_seconds": 4.541,
+      "bo_seconds": 2.848,
+      "total_seconds": 7.41
+    }
+  },
+  "summary": [
+    {
+      "kind": "current",
+      "media": "*",
+      "cost": 95713320.0,
+      "revenue": 928468030.0,
+      "roas": 9.700510127535019
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "cost": 14527900.0,
+      "revenue": 179673840.0,
+      "roas": 12.367502529615429
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "cost": 5928690.0,
+      "revenue": 74625820.0,
+      "roas": 12.587235966124052
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "cost": 6985330.0,
+      "revenue": 19924990.0,
+      "roas": 2.852404968698687
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "cost": 64424670.0,
+      "revenue": 569193190.0,
+      "roas": 8.8350191006023
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "cost": 3846730.0,
+      "revenue": 85050190.0,
+      "roas": 22.10973736134327
+    },
+    {
+      "kind": "draft",
+      "media": "*",
+      "cost": 69999996.0,
+      "revenue": 508974328.0,
+      "roas": 7.271062244060699
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "cost": 14059230.0,
+      "revenue": 0.0,
+      "roas": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "cost": 4093746.0,
+      "revenue": 49712966.0,
+      "roas": 12.143637147981336
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "cost": 4447850.0,
+      "revenue": 12777632.0,
+      "roas": 2.872765943096103
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "cost": 44910870.0,
+      "revenue": 388802688.0,
+      "roas": 8.657206774217467
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "cost": 2488300.0,
+      "revenue": 57681042.0,
+      "roas": 23.18090342804324
+    },
+    {
+      "kind": "optimized",
+      "media": "*",
+      "cost": 67780990.99045472,
+      "revenue": 735893129.9190687,
+      "roas": 10.856924916053545
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "cost": 14059244.474571891,
+      "revenue": 171517229.5917785,
+      "roas": 12.199605028704877
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "cost": 4379750.506384897,
+      "revenue": 60743379.0458753,
+      "roas": 13.869141394543425
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "cost": 4685406.236263124,
+      "revenue": 14780085.888833394,
+      "roas": 3.154494006184904
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "cost": 41732887.74760351,
+      "revenue": 415914631.0072278,
+      "roas": 9.966111943238614
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "cost": 2923702.0256313104,
+      "revenue": 72937804.38535388,
+      "roas": 24.947071810303424
+    }
+  ],
+  "allocation": [
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-01",
+      "cost": 465090.0,
+      "revenue": 6414360.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-02",
+      "cost": 466300.0,
+      "revenue": 6040360.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-03",
+      "cost": 515430.0,
+      "revenue": 5321800.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-04",
+      "cost": 450250.0,
+      "revenue": 5889400.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-05",
+      "cost": 437290.0,
+      "revenue": 4309280.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-06",
+      "cost": 434320.0,
+      "revenue": 5112290.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-07",
+      "cost": 479900.0,
+      "revenue": 6282450.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-08",
+      "cost": 440740.0,
+      "revenue": 5701900.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-09",
+      "cost": 485970.0,
+      "revenue": 6446650.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-10",
+      "cost": 473010.0,
+      "revenue": 5599620.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-11",
+      "cost": 516750.0,
+      "revenue": 6368620.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-12",
+      "cost": 438560.0,
+      "revenue": 5785120.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-13",
+      "cost": 420570.0,
+      "revenue": 4457050.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-14",
+      "cost": 478730.0,
+      "revenue": 6100720.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-15",
+      "cost": 450200.0,
+      "revenue": 5993600.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-16",
+      "cost": 460430.0,
+      "revenue": 5934350.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-17",
+      "cost": 460770.0,
+      "revenue": 5773790.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-18",
+      "cost": 512560.0,
+      "revenue": 5264750.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-19",
+      "cost": 490500.0,
+      "revenue": 5655270.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-20",
+      "cost": 459280.0,
+      "revenue": 5740560.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-21",
+      "cost": 434930.0,
+      "revenue": 5338280.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-22",
+      "cost": 512180.0,
+      "revenue": 6704470.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-23",
+      "cost": 434540.0,
+      "revenue": 6755290.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-24",
+      "cost": 434250.0,
+      "revenue": 5946870.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-25",
+      "cost": 519450.0,
+      "revenue": 5981760.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-26",
+      "cost": 481850.0,
+      "revenue": 5967250.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-27",
+      "cost": 429990.0,
+      "revenue": 5640120.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-28",
+      "cost": 517560.0,
+      "revenue": 5544370.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-29",
+      "cost": 432740.0,
+      "revenue": 5002500.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-30",
+      "cost": 473870.0,
+      "revenue": 6098450.0
+    },
+    {
+      "kind": "current",
+      "media": "BRS",
+      "date": "2026-03-31",
+      "cost": 519890.0,
+      "revenue": 6502540.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-01",
+      "cost": 162820.0,
+      "revenue": 2401210.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-02",
+      "cost": 174500.0,
+      "revenue": 2209680.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-03",
+      "cost": 254810.0,
+      "revenue": 2523130.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-04",
+      "cost": 170860.0,
+      "revenue": 2483950.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-05",
+      "cost": 141870.0,
+      "revenue": 1913140.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-06",
+      "cost": 195900.0,
+      "revenue": 2781570.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-07",
+      "cost": 169610.0,
+      "revenue": 2195590.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-08",
+      "cost": 158460.0,
+      "revenue": 1895730.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-09",
+      "cost": 142120.0,
+      "revenue": 2552460.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-10",
+      "cost": 251900.0,
+      "revenue": 3028210.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-11",
+      "cost": 238440.0,
+      "revenue": 2854410.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-12",
+      "cost": 149900.0,
+      "revenue": 1796330.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-13",
+      "cost": 161560.0,
+      "revenue": 2060390.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-14",
+      "cost": 161290.0,
+      "revenue": 2273420.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-15",
+      "cost": 178610.0,
+      "revenue": 2434690.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-16",
+      "cost": 229030.0,
+      "revenue": 2691110.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-17",
+      "cost": 255050.0,
+      "revenue": 2490180.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-18",
+      "cost": 217900.0,
+      "revenue": 2412350.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-19",
+      "cost": 210330.0,
+      "revenue": 2119100.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-20",
+      "cost": 166020.0,
+      "revenue": 2410760.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-21",
+      "cost": 229380.0,
+      "revenue": 2391160.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-22",
+      "cost": 189420.0,
+      "revenue": 2877050.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-23",
+      "cost": 245490.0,
+      "revenue": 2647990.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-24",
+      "cost": 191830.0,
+      "revenue": 2492500.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-25",
+      "cost": 194480.0,
+      "revenue": 2402960.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-26",
+      "cost": 174990.0,
+      "revenue": 2613440.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-27",
+      "cost": 167910.0,
+      "revenue": 1842160.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-28",
+      "cost": 169080.0,
+      "revenue": 1753030.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-29",
+      "cost": 150010.0,
+      "revenue": 2306410.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-30",
+      "cost": 194710.0,
+      "revenue": 2958680.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-03-31",
+      "cost": 230410.0,
+      "revenue": 2813030.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-01",
+      "cost": 285770.0,
+      "revenue": 653340.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-02",
+      "cost": 247710.0,
+      "revenue": 748820.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-03",
+      "cost": 214040.0,
+      "revenue": 609510.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-04",
+      "cost": 153560.0,
+      "revenue": 417580.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-05",
+      "cost": 110710.0,
+      "revenue": 356550.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-06",
+      "cost": 287290.0,
+      "revenue": 802940.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-07",
+      "cost": 293890.0,
+      "revenue": 862730.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-08",
+      "cost": 171330.0,
+      "revenue": 515380.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-09",
+      "cost": 196290.0,
+      "revenue": 531720.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-10",
+      "cost": 307920.0,
+      "revenue": 951040.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-11",
+      "cost": 209170.0,
+      "revenue": 654930.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-12",
+      "cost": 183490.0,
+      "revenue": 593020.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-13",
+      "cost": 206780.0,
+      "revenue": 640600.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-14",
+      "cost": 197100.0,
+      "revenue": 556250.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-15",
+      "cost": 297180.0,
+      "revenue": 813340.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-16",
+      "cost": 312110.0,
+      "revenue": 913430.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-17",
+      "cost": 214530.0,
+      "revenue": 548770.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-18",
+      "cost": 186730.0,
+      "revenue": 512650.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-19",
+      "cost": 146580.0,
+      "revenue": 511060.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-20",
+      "cost": 294770.0,
+      "revenue": 924540.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-21",
+      "cost": 152170.0,
+      "revenue": 475160.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-22",
+      "cost": 106690.0,
+      "revenue": 336650.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-23",
+      "cost": 289480.0,
+      "revenue": 790320.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-24",
+      "cost": 299230.0,
+      "revenue": 810600.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-25",
+      "cost": 108480.0,
+      "revenue": 386920.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-26",
+      "cost": 272550.0,
+      "revenue": 629530.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-27",
+      "cost": 214930.0,
+      "revenue": 581310.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-28",
+      "cost": 210140.0,
+      "revenue": 610830.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-29",
+      "cost": 294260.0,
+      "revenue": 823160.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-30",
+      "cost": 253430.0,
+      "revenue": 642750.0
+    },
+    {
+      "kind": "current",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-03-31",
+      "cost": 267020.0,
+      "revenue": 719560.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-01",
+      "cost": 1551970.0,
+      "revenue": 14780440.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-02",
+      "cost": 2171450.0,
+      "revenue": 17259780.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-03",
+      "cost": 1761580.0,
+      "revenue": 18748860.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-04",
+      "cost": 1504820.0,
+      "revenue": 15389850.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-05",
+      "cost": 2995880.0,
+      "revenue": 22880830.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-06",
+      "cost": 1825280.0,
+      "revenue": 16574970.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-07",
+      "cost": 2136820.0,
+      "revenue": 19939680.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-08",
+      "cost": 2778530.0,
+      "revenue": 19442780.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-09",
+      "cost": 1965550.0,
+      "revenue": 19029150.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-10",
+      "cost": 1744840.0,
+      "revenue": 20240880.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-11",
+      "cost": 1378720.0,
+      "revenue": 12970310.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-12",
+      "cost": 2440530.0,
+      "revenue": 17532440.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-13",
+      "cost": 2764520.0,
+      "revenue": 23243780.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-14",
+      "cost": 2267740.0,
+      "revenue": 21819010.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-15",
+      "cost": 2618410.0,
+      "revenue": 19642810.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-16",
+      "cost": 2046010.0,
+      "revenue": 16248960.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-17",
+      "cost": 2013070.0,
+      "revenue": 18517840.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-18",
+      "cost": 1652730.0,
+      "revenue": 14882470.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-19",
+      "cost": 2502940.0,
+      "revenue": 21775570.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-20",
+      "cost": 2472850.0,
+      "revenue": 20055150.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-21",
+      "cost": 1686580.0,
+      "revenue": 16949520.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-22",
+      "cost": 2943670.0,
+      "revenue": 25355370.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-23",
+      "cost": 1659840.0,
+      "revenue": 13641850.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-24",
+      "cost": 1952560.0,
+      "revenue": 17838060.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-25",
+      "cost": 2830480.0,
+      "revenue": 26342390.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-26",
+      "cost": 2025000.0,
+      "revenue": 19567510.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-27",
+      "cost": 1484400.0,
+      "revenue": 15471810.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-28",
+      "cost": 2118350.0,
+      "revenue": 19857130.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-29",
+      "cost": 1622930.0,
+      "revenue": 16071780.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-30",
+      "cost": 1975130.0,
+      "revenue": 14277340.0
+    },
+    {
+      "kind": "current",
+      "media": "NVSHOP",
+      "date": "2026-03-31",
+      "cost": 1531490.0,
+      "revenue": 12844870.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-01",
+      "cost": 111870.0,
+      "revenue": 2712460.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-02",
+      "cost": 138720.0,
+      "revenue": 3693360.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-03",
+      "cost": 75200.0,
+      "revenue": 1772250.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-04",
+      "cost": 161910.0,
+      "revenue": 2594290.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-05",
+      "cost": 114850.0,
+      "revenue": 2810750.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-06",
+      "cost": 143380.0,
+      "revenue": 2632170.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-07",
+      "cost": 72010.0,
+      "revenue": 1975710.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-08",
+      "cost": 97130.0,
+      "revenue": 2331670.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-09",
+      "cost": 139430.0,
+      "revenue": 2826040.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-10",
+      "cost": 143940.0,
+      "revenue": 3071640.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-11",
+      "cost": 148870.0,
+      "revenue": 3181000.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-12",
+      "cost": 165310.0,
+      "revenue": 2832760.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-13",
+      "cost": 94200.0,
+      "revenue": 2223900.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-14",
+      "cost": 145250.0,
+      "revenue": 3051900.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-15",
+      "cost": 125190.0,
+      "revenue": 2992090.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-16",
+      "cost": 99090.0,
+      "revenue": 2628400.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-17",
+      "cost": 165210.0,
+      "revenue": 3852400.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-18",
+      "cost": 127430.0,
+      "revenue": 2675800.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-19",
+      "cost": 163650.0,
+      "revenue": 3240440.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-20",
+      "cost": 116830.0,
+      "revenue": 2807310.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-21",
+      "cost": 107610.0,
+      "revenue": 2548570.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-22",
+      "cost": 166900.0,
+      "revenue": 2735720.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-23",
+      "cost": 110940.0,
+      "revenue": 2601460.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-24",
+      "cost": 159680.0,
+      "revenue": 3337090.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-25",
+      "cost": 132040.0,
+      "revenue": 3409430.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-26",
+      "cost": 124070.0,
+      "revenue": 2531430.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-27",
+      "cost": 81980.0,
+      "revenue": 1931360.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-28",
+      "cost": 70240.0,
+      "revenue": 1849350.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-29",
+      "cost": 94550.0,
+      "revenue": 2548100.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-30",
+      "cost": 143220.0,
+      "revenue": 3101380.0
+    },
+    {
+      "kind": "current",
+      "media": "PLINK",
+      "date": "2026-03-31",
+      "cost": 106030.0,
+      "revenue": 2549960.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-01",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-02",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-03",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-04",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-05",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-06",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-07",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-08",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-09",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-10",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-11",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-12",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-13",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-14",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-15",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-16",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-17",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-18",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-19",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-20",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-21",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-22",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-23",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-24",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-25",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-26",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-27",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-28",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-29",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "BRS",
+      "date": "2026-04-30",
+      "cost": 468641.0,
+      "revenue": 0.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-01",
+      "cost": 133350.0,
+      "revenue": 1687463.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-02",
+      "cost": 126998.0,
+      "revenue": 1691846.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-03",
+      "cost": 150184.0,
+      "revenue": 1929203.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-04",
+      "cost": 141842.0,
+      "revenue": 1739476.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-05",
+      "cost": 122182.0,
+      "revenue": 1665498.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-06",
+      "cost": 124568.0,
+      "revenue": 1494351.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-07",
+      "cost": 151843.0,
+      "revenue": 1788344.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-08",
+      "cost": 160333.0,
+      "revenue": 1646639.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-09",
+      "cost": 116823.0,
+      "revenue": 1452732.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-10",
+      "cost": 117713.0,
+      "revenue": 1458601.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-11",
+      "cost": 129764.0,
+      "revenue": 1471048.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-12",
+      "cost": 132207.0,
+      "revenue": 1675812.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-13",
+      "cost": 114903.0,
+      "revenue": 1459285.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-14",
+      "cost": 154439.0,
+      "revenue": 1668668.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-15",
+      "cost": 146496.0,
+      "revenue": 1729511.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-16",
+      "cost": 141100.0,
+      "revenue": 1605587.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-17",
+      "cost": 126861.0,
+      "revenue": 1729924.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-18",
+      "cost": 154463.0,
+      "revenue": 1740414.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-19",
+      "cost": 122511.0,
+      "revenue": 1792513.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-20",
+      "cost": 159006.0,
+      "revenue": 1825189.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-21",
+      "cost": 144175.0,
+      "revenue": 1623326.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-22",
+      "cost": 136432.0,
+      "revenue": 1581262.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-23",
+      "cost": 143767.0,
+      "revenue": 1751597.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-24",
+      "cost": 136296.0,
+      "revenue": 1589312.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-25",
+      "cost": 142060.0,
+      "revenue": 1641347.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-26",
+      "cost": 129635.0,
+      "revenue": 1780059.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-27",
+      "cost": 155093.0,
+      "revenue": 1829022.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-28",
+      "cost": 122504.0,
+      "revenue": 1640829.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-29",
+      "cost": 125203.0,
+      "revenue": 1512624.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-30",
+      "cost": 130995.0,
+      "revenue": 1511484.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-01",
+      "cost": 141295.0,
+      "revenue": 414023.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-02",
+      "cost": 124750.0,
+      "revenue": 360015.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-03",
+      "cost": 150344.0,
+      "revenue": 429545.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-04",
+      "cost": 121537.0,
+      "revenue": 384012.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-05",
+      "cost": 177665.0,
+      "revenue": 502939.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-06",
+      "cost": 191376.0,
+      "revenue": 486926.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-07",
+      "cost": 124996.0,
+      "revenue": 392988.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-08",
+      "cost": 176304.0,
+      "revenue": 468766.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-09",
+      "cost": 123873.0,
+      "revenue": 399107.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-10",
+      "cost": 135417.0,
+      "revenue": 400912.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-11",
+      "cost": 144726.0,
+      "revenue": 412797.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-12",
+      "cost": 143467.0,
+      "revenue": 415115.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-13",
+      "cost": 149529.0,
+      "revenue": 444294.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-14",
+      "cost": 153611.0,
+      "revenue": 446449.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-15",
+      "cost": 124214.0,
+      "revenue": 397992.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-16",
+      "cost": 129468.0,
+      "revenue": 380134.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-17",
+      "cost": 155338.0,
+      "revenue": 433149.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-18",
+      "cost": 158377.0,
+      "revenue": 433585.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-19",
+      "cost": 135317.0,
+      "revenue": 402151.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-20",
+      "cost": 161362.0,
+      "revenue": 468172.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-21",
+      "cost": 158663.0,
+      "revenue": 418174.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-22",
+      "cost": 118209.0,
+      "revenue": 366886.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-23",
+      "cost": 155676.0,
+      "revenue": 427333.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-24",
+      "cost": 170143.0,
+      "revenue": 439935.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-25",
+      "cost": 145004.0,
+      "revenue": 436900.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-26",
+      "cost": 135804.0,
+      "revenue": 413393.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-27",
+      "cost": 179125.0,
+      "revenue": 481472.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-28",
+      "cost": 154006.0,
+      "revenue": 441321.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-29",
+      "cost": 115438.0,
+      "revenue": 334622.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-30",
+      "cost": 192816.0,
+      "revenue": 544525.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-01",
+      "cost": 1547109.0,
+      "revenue": 12648175.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-02",
+      "cost": 1672529.0,
+      "revenue": 14590278.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-03",
+      "cost": 1555093.0,
+      "revenue": 12595146.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-04",
+      "cost": 1532382.0,
+      "revenue": 15254003.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-05",
+      "cost": 1386186.0,
+      "revenue": 11532749.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-06",
+      "cost": 1535197.0,
+      "revenue": 12772434.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-07",
+      "cost": 1650781.0,
+      "revenue": 13609891.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-08",
+      "cost": 1523386.0,
+      "revenue": 13491047.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-09",
+      "cost": 1539914.0,
+      "revenue": 12434220.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-10",
+      "cost": 1377988.0,
+      "revenue": 14027058.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-11",
+      "cost": 1487822.0,
+      "revenue": 16233030.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-12",
+      "cost": 1705952.0,
+      "revenue": 12953985.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-13",
+      "cost": 1363927.0,
+      "revenue": 11577486.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-14",
+      "cost": 1453057.0,
+      "revenue": 13860188.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-15",
+      "cost": 1184902.0,
+      "revenue": 10660983.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-16",
+      "cost": 1536917.0,
+      "revenue": 13405031.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-17",
+      "cost": 1430377.0,
+      "revenue": 11948138.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-18",
+      "cost": 1295009.0,
+      "revenue": 13754380.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-19",
+      "cost": 1675602.0,
+      "revenue": 14728655.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-20",
+      "cost": 1287728.0,
+      "revenue": 11705339.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-21",
+      "cost": 1460600.0,
+      "revenue": 13880340.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-22",
+      "cost": 1530180.0,
+      "revenue": 12481075.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-23",
+      "cost": 1311013.0,
+      "revenue": 12833497.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-24",
+      "cost": 1074961.0,
+      "revenue": 10219688.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-25",
+      "cost": 1426219.0,
+      "revenue": 15594095.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-26",
+      "cost": 1632998.0,
+      "revenue": 13606206.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-27",
+      "cost": 1632851.0,
+      "revenue": 12360442.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-28",
+      "cost": 1433917.0,
+      "revenue": 12732241.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-29",
+      "cost": 1657206.0,
+      "revenue": 11484292.0
+    },
+    {
+      "kind": "draft",
+      "media": "NVSHOP",
+      "date": "2026-04-30",
+      "cost": 2009067.0,
+      "revenue": 9828596.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-01",
+      "cost": 77463.0,
+      "revenue": 1641647.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-02",
+      "cost": 82165.0,
+      "revenue": 1849754.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-03",
+      "cost": 91578.0,
+      "revenue": 2172629.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-04",
+      "cost": 86948.0,
+      "revenue": 2013790.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-05",
+      "cost": 84722.0,
+      "revenue": 1808147.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-06",
+      "cost": 84454.0,
+      "revenue": 2083036.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-07",
+      "cost": 75270.0,
+      "revenue": 1732934.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-08",
+      "cost": 92991.0,
+      "revenue": 2046494.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-09",
+      "cost": 82353.0,
+      "revenue": 1809354.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-10",
+      "cost": 75377.0,
+      "revenue": 1795612.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-11",
+      "cost": 83197.0,
+      "revenue": 2086185.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-12",
+      "cost": 71814.0,
+      "revenue": 1665694.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-13",
+      "cost": 82645.0,
+      "revenue": 1982623.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-14",
+      "cost": 89254.0,
+      "revenue": 1778038.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-15",
+      "cost": 78008.0,
+      "revenue": 1735071.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-16",
+      "cost": 84413.0,
+      "revenue": 2049222.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-17",
+      "cost": 73047.0,
+      "revenue": 1869814.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-18",
+      "cost": 90384.0,
+      "revenue": 2374776.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-19",
+      "cost": 84222.0,
+      "revenue": 1912240.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-20",
+      "cost": 79795.0,
+      "revenue": 1811945.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-21",
+      "cost": 95363.0,
+      "revenue": 2048474.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-22",
+      "cost": 71713.0,
+      "revenue": 1818641.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-23",
+      "cost": 82396.0,
+      "revenue": 1947305.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-24",
+      "cost": 75740.0,
+      "revenue": 1823574.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-25",
+      "cost": 81315.0,
+      "revenue": 2075419.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-26",
+      "cost": 93679.0,
+      "revenue": 2035663.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-27",
+      "cost": 75396.0,
+      "revenue": 1786711.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-28",
+      "cost": 93035.0,
+      "revenue": 2020423.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-29",
+      "cost": 95813.0,
+      "revenue": 1995783.0
+    },
+    {
+      "kind": "draft",
+      "media": "PLINK",
+      "date": "2026-04-30",
+      "cost": 73750.0,
+      "revenue": 1910044.0
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-01",
+      "cost": 468641.025142489,
+      "revenue": 5717236.057640409
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-02",
+      "cost": 468641.37015132327,
+      "revenue": 5717239.775773987
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-03",
+      "cost": 468641.4873580802,
+      "revenue": 5717241.038901768
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-04",
+      "cost": 468641.5310064852,
+      "revenue": 5717241.509297259
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-05",
+      "cost": 468641.336168292,
+      "revenue": 5717239.409541323
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-06",
+      "cost": 468641.0025610449,
+      "revenue": 5717235.814281702
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-07",
+      "cost": 468641.25144955143,
+      "revenue": 5717238.496534136
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-08",
+      "cost": 468641.3919256218,
+      "revenue": 5717240.010433667
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-09",
+      "cost": 468641.30193276145,
+      "revenue": 5717239.0405875705
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-10",
+      "cost": 468641.42085766606,
+      "revenue": 5717240.322232352
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-11",
+      "cost": 468641.8414441021,
+      "revenue": 5717244.854858158
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-12",
+      "cost": 468641.4866590109,
+      "revenue": 5717241.031368212
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-13",
+      "cost": 468641.59282815084,
+      "revenue": 5717242.175544083
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-14",
+      "cost": 468641.14962724503,
+      "revenue": 5717237.399202833
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-15",
+      "cost": 468641.7484638691,
+      "revenue": 5717243.852817774
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-16",
+      "cost": 468641.5683801407,
+      "revenue": 5717241.9120699605
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-17",
+      "cost": 468641.3596880073,
+      "revenue": 5717239.663011633
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-18",
+      "cost": 468641.5252031479,
+      "revenue": 5717241.4467550665
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-19",
+      "cost": 468641.8587949453,
+      "revenue": 5717245.04184662
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-20",
+      "cost": 468641.9017575085,
+      "revenue": 5717245.504850755
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-21",
+      "cost": 468641.17701367475,
+      "revenue": 5717237.6943444675
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-22",
+      "cost": 468641.47358591855,
+      "revenue": 5717240.890480327
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-23",
+      "cost": 468641.5283153914,
+      "revenue": 5717241.480295455
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-24",
+      "cost": 468641.74972629733,
+      "revenue": 5717243.866422936
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-25",
+      "cost": 468641.4169639414,
+      "revenue": 5717240.280269799
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-26",
+      "cost": 468641.3383637406,
+      "revenue": 5717239.433201433
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-27",
+      "cost": 468641.5190221695,
+      "revenue": 5717241.380143114
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-28",
+      "cost": 468641.9814249864,
+      "revenue": 5717246.36342056
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-29",
+      "cost": 468641.7324148528,
+      "revenue": 5717243.679858796
+    },
+    {
+      "kind": "optimized",
+      "media": "BRS",
+      "date": "2026-04-30",
+      "cost": 468641.4063414708,
+      "revenue": 5717240.165792364
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-01",
+      "cost": 160871.47737026252,
+      "revenue": 2174979.07918184
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-02",
+      "cost": 189171.32378496454,
+      "revenue": 2314271.2059556018
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-03",
+      "cost": 163685.4460710277,
+      "revenue": 2192593.0325110876
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-04",
+      "cost": 129009.93985564588,
+      "revenue": 1905959.842355382
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-05",
+      "cost": 126718.97246810273,
+      "revenue": 1881831.0824322663
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-06",
+      "cost": 134199.7761843251,
+      "revenue": 1958380.005995436
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-07",
+      "cost": 149158.21868396373,
+      "revenue": 2090668.8838105442
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-08",
+      "cost": 176239.9802629712,
+      "revenue": 2257658.819045538
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-09",
+      "cost": 147853.1240946969,
+      "revenue": 2080269.456944631
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-10",
+      "cost": 107610.3343277947,
+      "revenue": 1659314.8051113198
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-11",
+      "cost": 165677.66374151883,
+      "revenue": 2204336.4781702226
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-12",
+      "cost": 146016.8756455304,
+      "revenue": 2065279.3620263755
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-13",
+      "cost": 106156.76138581848,
+      "revenue": 1640973.815697159
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-14",
+      "cost": 127299.81806871034,
+      "revenue": 1888004.411921827
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-15",
+      "cost": 189860.25603854627,
+      "revenue": 2317517.3755491273
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-16",
+      "cost": 117809.66938071857,
+      "revenue": 1782596.6111538208
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-17",
+      "cost": 182347.44596657055,
+      "revenue": 2283922.1579200444
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-18",
+      "cost": 149852.4451907996,
+      "revenue": 2096117.6050465328
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-19",
+      "cost": 116663.5299344835,
+      "revenue": 1769236.935730939
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-20",
+      "cost": 134652.67559090574,
+      "revenue": 1962802.5554559487
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-21",
+      "cost": 108192.87763320039,
+      "revenue": 1666613.4641489824
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-22",
+      "cost": 109447.81513577727,
+      "revenue": 1682234.3732118167
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-23",
+      "cost": 131257.5761149071,
+      "revenue": 1929050.3936358918
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-24",
+      "cost": 184871.8042956448,
+      "revenue": 2294785.7094841
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-25",
+      "cost": 128684.4691684152,
+      "revenue": 1902568.067405196
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-26",
+      "cost": 155600.82192276846,
+      "revenue": 2139065.048243816
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-27",
+      "cost": 182157.47234385053,
+      "revenue": 2283114.759301202
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-28",
+      "cost": 163497.19501575836,
+      "revenue": 2191451.9478529226
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-29",
+      "cost": 162749.06619511367,
+      "revenue": 2186863.7730020513
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_ADVOOST",
+      "date": "2026-04-30",
+      "cost": 132435.6745121045,
+      "revenue": 1940917.9875736833
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-01",
+      "cost": 207485.80346721297,
+      "revenue": 601821.9302686523
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-02",
+      "cost": 157034.95717541387,
+      "revenue": 497718.56772442994
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-03",
+      "cost": 139681.1980648253,
+      "revenue": 459148.36039961956
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-04",
+      "cost": 121233.77542813383,
+      "revenue": 414471.5033780328
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-05",
+      "cost": 206589.5331036167,
+      "revenue": 600106.2816136464
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-06",
+      "cost": 136499.30840162167,
+      "revenue": 451787.0134990954
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-07",
+      "cost": 160253.62809950093,
+      "revenue": 504693.16057716584
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-08",
+      "cost": 226093.63497781174,
+      "revenue": 637188.68457125
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-09",
+      "cost": 108843.98187584784,
+      "revenue": 381380.74999589793
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-10",
+      "cost": 186566.01521306744,
+      "revenue": 560342.0949171791
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-11",
+      "cost": 223651.91384138612,
+      "revenue": 632525.1171104397
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-12",
+      "cost": 179056.7195568334,
+      "revenue": 544758.5983718201
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-13",
+      "cost": 187951.31689248214,
+      "revenue": 563180.417251929
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-14",
+      "cost": 160881.49416045359,
+      "revenue": 506049.2726432795
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-15",
+      "cost": 138785.66869302726,
+      "revenue": 457088.8603201866
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-16",
+      "cost": 144805.488436437,
+      "revenue": 470768.62915093044
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-17",
+      "cost": 124164.26893099285,
+      "revenue": 421919.4526927012
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-18",
+      "cost": 126633.42457340173,
+      "revenue": 428084.82484013325
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-19",
+      "cost": 139859.3810060581,
+      "revenue": 459557.0365465344
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-20",
+      "cost": 143131.88063284455,
+      "revenue": 467001.9103204704
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-21",
+      "cost": 150080.295839194,
+      "revenue": 482496.1671734287
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-22",
+      "cost": 173943.92126631996,
+      "revenue": 533986.1225218516
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-23",
+      "cost": 122577.35182495862,
+      "revenue": 417904.0677694169
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-24",
+      "cost": 124490.75601999722,
+      "revenue": 422740.39299413963
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-25",
+      "cost": 149891.61719615644,
+      "revenue": 482079.82370017585
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-26",
+      "cost": 143620.84272927212,
+      "revenue": 468105.04192022834
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-27",
+      "cost": 220085.1578348603,
+      "revenue": 625733.9429142189
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-28",
+      "cost": 128144.48102640062,
+      "revenue": 431809.4560981597
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-29",
+      "cost": 119671.24444410279,
+      "revenue": 410441.1396141203
+    },
+    {
+      "kind": "optimized",
+      "media": "NVGFA_DISPLAY",
+      "date": "2026-04-30",
+      "cost": 133697.17555088995,
+      "revenue": 445197.26793426083
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-01",
+      "cost": 1417837.4511647765,
+      "revenue": 14126518.093914686
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-02",
+      "cost": 1555397.180060899,
+      "revenue": 15201962.739149228
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-03",
+      "cost": 1393192.2346831323,
+      "revenue": 13926739.29319533
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-04",
+      "cost": 1384856.4188043904,
+      "revenue": 13858697.030516893
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-05",
+      "cost": 1338602.4120865911,
+      "revenue": 13476932.344624128
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-06",
+      "cost": 1502825.3866678663,
+      "revenue": 14799022.75073302
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-07",
+      "cost": 1534130.9406404882,
+      "revenue": 15040173.2778019
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-08",
+      "cost": 1203646.3449686407,
+      "revenue": 12324201.805718236
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-09",
+      "cost": 1423249.350767905,
+      "revenue": 14170106.252636727
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-10",
+      "cost": 1219398.9277552795,
+      "revenue": 12461644.117399024
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-11",
+      "cost": 1283326.9635872399,
+      "revenue": 13011646.833252272
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-12",
+      "cost": 1592650.5491586109,
+      "revenue": 15481437.906918803
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-13",
+      "cost": 1283517.0038755648,
+      "revenue": 13013263.009167662
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-14",
+      "cost": 1406338.7426992347,
+      "revenue": 14033567.973212324
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-15",
+      "cost": 1037224.1919994304,
+      "revenue": 10827656.708667366
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-16",
+      "cost": 1447799.1875090315,
+      "revenue": 14366543.797654437
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-17",
+      "cost": 1326224.3567763804,
+      "revenue": 13373583.05982012
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-18",
+      "cost": 1309900.6247464055,
+      "revenue": 13236540.664640691
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-19",
+      "cost": 1654281.9002025528,
+      "revenue": 15932885.07407364
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-20",
+      "cost": 1271349.6975708776,
+      "revenue": 12909560.518002871
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-21",
+      "cost": 1472762.2226429004,
+      "revenue": 14564093.98960644
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-22",
+      "cost": 1484252.9137900798,
+      "revenue": 14654274.96980331
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-23",
+      "cost": 1232644.7596453796,
+      "revenue": 12576633.352999631
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-24",
+      "cost": 1026685.8262648705,
+      "revenue": 10730237.245916959
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-25",
+      "cost": 1403073.0781462844,
+      "revenue": 14007086.50284021
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-26",
+      "cost": 1591746.8613374853,
+      "revenue": 15474717.612312708
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-27",
+      "cost": 1496023.4636572376,
+      "revenue": 14746156.118588038
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-28",
+      "cost": 1287943.9831770174,
+      "revenue": 13050879.825141901
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-29",
+      "cost": 1353108.1445864849,
+      "revenue": 13597415.607524324
+    },
+    {
+      "kind": "optimized",
+      "media": "NVSHOP",
+      "date": "2026-04-30",
+      "cost": 1798896.6286304672,
+      "revenue": 16940452.5313948
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-01",
+      "cost": 98865.08513201521,
+      "revenue": 2478843.692815881
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-02",
+      "cost": 75065.54424282443,
+      "revenue": 1964440.1085379552
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-03",
+      "cost": 107299.36632082443,
+      "revenue": 2635177.463120533
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-04",
+      "cost": 114830.11112293358,
+      "revenue": 2760729.0846793125
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-05",
+      "cost": 98778.38560341792,
+      "revenue": 2477150.8468842283
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-06",
+      "cost": 103182.0550546621,
+      "revenue": 2560939.525829618
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-07",
+      "cost": 113992.35306698558,
+      "revenue": 2747400.710757764
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-08",
+      "cost": 102262.58058874485,
+      "revenue": 2543818.0973976646
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-09",
+      "cost": 91134.73254218018,
+      "revenue": 2321689.436389561
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-10",
+      "cost": 114303.0307460239,
+      "revenue": 2752361.865334692
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-11",
+      "cost": 108631.70022751624,
+      "revenue": 2658343.992795042
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-12",
+      "cost": 76450.7793100032,
+      "revenue": 1996497.6739524598
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-13",
+      "cost": 109549.72237393436,
+      "revenue": 2674063.5706696385
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-14",
+      "cost": 108468.68985782274,
+      "revenue": 2655532.0655770577
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-15",
+      "cost": 105293.18167138248,
+      "revenue": 2599502.876692821
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-16",
+      "cost": 102297.45429329155,
+      "revenue": 2544471.078649934
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-17",
+      "cost": 106914.58314690989,
+      "revenue": 2628408.7533295495
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-18",
+      "cost": 111534.16783898267,
+      "revenue": 2707377.2641084925
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-19",
+      "cost": 105008.00516333681,
+      "revenue": 2594354.7838718365
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-20",
+      "cost": 80663.19913799716,
+      "revenue": 2092664.2464238366
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-21",
+      "cost": 89086.28642865931,
+      "revenue": 2278175.6749977916
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-22",
+      "cost": 66124.89598471457,
+      "revenue": 1752703.1128942966
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-23",
+      "cost": 102385.81276342794,
+      "revenue": 2546124.244249859
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-24",
+      "cost": 95968.19537622397,
+      "revenue": 2421380.613956874
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-25",
+      "cost": 90557.29148359169,
+      "revenue": 2309494.077823898
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-26",
+      "cost": 66361.8016105366,
+      "revenue": 1758417.6245396691
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-27",
+      "cost": 92669.49757012865,
+      "revenue": 2353820.277259412
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-28",
+      "cost": 114044.2960347888,
+      "revenue": 2748231.690332233
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-29",
+      "cost": 103568.08538211285,
+      "revenue": 2568069.0133615225
+    },
+    {
+      "kind": "optimized",
+      "media": "PLINK",
+      "date": "2026-04-30",
+      "cost": 68411.13555533729,
+      "revenue": 1807620.9181204485
+    }
+  ]
+}
