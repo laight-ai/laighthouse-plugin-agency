@@ -1,6 +1,6 @@
 # section-6: 예산 및 목표 달성 결과 (목표 달성 표)
 
-Dimension·지표 메뉴·검색·페이지 규칙은 `shared/references/pivot-table.md`(이 스킬 폴더에서는 `../../shared/references/`)가 단일 소스다.
+Dimension·지표 메뉴·검색·페이지 규칙은 `shared/references/pivot-table.md`가 단일 소스다.
 
 ## MCP 호출
 

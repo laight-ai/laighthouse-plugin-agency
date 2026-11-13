@@ -25,7 +25,7 @@ MCP 데이터를 받아 **라이트하우스 Weekly 보고서**(HTML 한 파일)
   `shared/references/mcp-tools.md` 2절). `digest`는 처음 보기의 숫자이고 `광고비·예산 기준` 항목이 그 기준을 적는다 — Weekly Summary의 광고비·예산
   숫자는 그 기준으로 쓴다.
 - 도구 규칙: `shared/references/mcp-tools.md`, 차원 확인·선택 표: `shared/references/pivot-table.md`
-  (플러그인 루트 기준 — 이 스킬 폴더에서는 `../../shared/references/`).
+  (이 스킬 폴더 기준 — 플러그인 루트 `shared/`의 사본이다).
 
 ## 데이터 처리 원칙 (절대 지침)
 
