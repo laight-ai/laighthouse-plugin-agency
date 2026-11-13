@@ -2,8 +2,8 @@
 name: media-mix-result
 description: >
   월간 미디어믹스(M/M Optimizer) 결과 보고서 스킬. "미디어믹스 결과", "미디어믹스 돌려줘", "다음 달 예산 배분 제안",
-  "media mix 결과 보여줘", "M/M Optimizer" 요청 시 사용. 기준 달 실적으로 다음 달 매체별 예산 배분을 계산하는 job 을
-  새로 실행하거나(조건 확인 후) 이미 끝난 job 의 결과를 받아, 라이트하우스 웹 결과 화면과 같은 모양의 HTML 보고서
+  "media mix 결과 보여줘", "M/M Optimizer" 요청 시 사용. 제안받을 달의 매체별 예산 배분을 전월(기준 달) 실적으로 계산하는 job 을
+  새로 실행하거나(조건 확인 후) 내가 실행한 job 목록에서 골라 결과를 받아, 라이트하우스 웹 결과 화면과 같은 모양의 HTML 보고서
   (요약 수치 · 매체별 요약 표 · 구분별 일별 매체 배분 차트 · 진단)로 렌더링한다.
 metadata:
   version: "1.0.0"
@@ -32,7 +32,7 @@ metadata:
 
 | 경우 | 사용자가 주는 것 |
 |---|---|
-| 이미 있는 결과 보기 | 브랜드 이름 + job id(웹 결과 화면 주소 `/m/media-mix/{jobId}`의 끝부분). MCP 에는 job 목록 도구가 없다 — id 를 모르면 웹의 실행 기록에서 찾아 달라고 하거나 새로 실행한다 |
+| 이미 있는 결과 보기 | 브랜드 이름. job 은 B-0 에서 내가 실행한 job 목록을 보여 주고 고르게 한다(job id 를 받았으면 그대로 쓴다) |
 | 새로 실행 | 브랜드 이름 + 아래 「새로 실행할 때 확인할 조건」 |
 
 ## 실행 순서
@@ -44,25 +44,39 @@ metadata:
 
    | 조건 | 인자 | 기본값 |
    |---|---|---|
-   | 기준 달(실적을 볼 달, 한 달 안) | `start_date`·`end_date` (그 달 1일~말일) | 없음 — 묻는다. 다 끝난 달만 된다 |
+   | 제안받을 달(예산을 배분할 달) | `target_month` (`YYYY-MM`). 그 전월(기준 달) 실적으로 계산한다 — 전월 데이터가 다 들어온 뒤에 돌려야 정확하다 | 없음 — 묻는다 |
    | 비용 지표 · 성과 지표 | `cost_metric`·`revenue_metric` (1번 후보 중 서로 다른 둘) | 없음 — 묻는다 |
-   | 다음 달 목표 예산(원, VAT 제외 Net) | `target_budget` | 없음 — 묻는다 |
+   | 제안받을 달의 예산(원, VAT 제외 Net) | `target_budget` | 없음 — 묻는다 |
    | 마트 비용이 VAT 포함인지 | `cost_includes_vat` | **없음 — 반드시 묻는다** |
    | 학습 방식 | `learning_strategy` aggressive · neutral · conservative | neutral |
    | 요일 학습 | `learning_dow` even · weight(더 느림) | even |
    | 고정비 매체(배분하지 않고 기준 달 일평균 비용으로 둠) | `fixed_media` | 없음(빈 목록) |
-   | 결과 비용 기준 | `cost_basis` net · gross | net |
-3. 확인받으면 `create_media_mix_job(...)` 1회 → `id`. `created: false` 면 같은 조건의 job 이 이미 돌고 있어 그 job 을 받은 것이다(사용자에게 알린다).
+3. 확인받으면 `create_media_mix_job(...)` 1회 → `id`. `created: false` 면 내가 같은 조건으로 이미 돌리고 있는 job 을 받은 것이다(사용자에게 알린다).
    `status: "failed"` 와 `error` 가 오면 큐에 넣지 못한 것이다 — 사유를 전하고 멈춘다.
 4. **끝날 때까지 기다린다**: `get_media_mix_job(brand_name, job_id)`(기본 인자 — 배분 행 없이 상태만)를 부르고, `status` 가
    `pending`·`running` 이면 `python3 -c "import time; time.sleep(20)"` 로 기다렸다가 다시 부른다. 보통 1~수 분, 요일 학습(weight)은 더 걸린다.
-   10분이 넘도록 끝나지 않으면 사용자에게 알리고 job id 를 남긴 채 멈춘다(나중에 B 로 결과를 볼 수 있다).
+   10분이 넘도록 끝나지 않으면 사용자에게 알리고 멈춘다(나중에 B 에서 목록으로 골라 결과를 볼 수 있다).
 5. `succeeded`·`failed`·`canceled` 가 되면 B-1 부터 한다.
 
 ### B. 결과 보고서 만들기
 
-0. 사용자가 job id 만 준 경우(A 를 거치지 않은 경우) 먼저 `get_media_mix_job(brand_name, job_id)`(기본 인자)로 상태를 본다.
-   `pending`·`running` 이면 A-4 대로 끝날 때까지 기다린다. 10분이 넘으면 그 상태로 1번부터 해서 진행 중 보고서를 낸다.
+0. A 를 거치지 않은 경우(이미 있는 결과 보기) 결과를 볼 job 을 정한다.
+   - 사용자가 job id 를 줬으면 그대로 쓴다.
+   - 도구 목록에 `list_media_mix_jobs` 가 없으면(이 조직에는 아직 열리지 않은 도구다) 부르지 말고 job id 를 직접 달라고 한다.
+     이 대화에서 A 로 실행한 job 이면 그 id 를 쓴다.
+   - 아니면 `list_media_mix_jobs(brand_name)` 1회. 이 브랜드에서 **내가 실행한** job 이 최신순으로 온다(최대 50개, 결과 행 없음).
+     다른 사람이 실행한 job 은 목록에 없고 열어 볼 수도 없다.
+   - 최근 10개를 아래 표로 번호를 매겨 보여 주고 사용자가 하나를 고르게 한다. 찾는 job 이 없다고 하면 나머지를 마저 보여 준다.
+     50개보다 오래된 job 은 목록에 없으니 job id 를 직접 달라고 한다. 사용자가 이미 달 · 예산 등을 말했으면 맞는 행을 짚어 확인만 받는다.
+     고르기 전에는 다음으로 넘어가지 않는다. 목록이 비었으면 이 브랜드에서 실행한 미디어믹스가 없다고 알리고 A(새로 실행)를 제안한다.
+
+     | 번호 | 제안받을 달 | 예산(원) | 비용 · 성과 지표 | 상태 | 실행 시각(KST) |
+     |---|---|---|---|---|---|
+     | 1 | `request.target_month` | `request.target_budget`(천 단위 쉼표) | `request.cost_metric` · `request.revenue_metric` | `status` → `succeeded` 완료 · `running` 계산 중 · `pending` 대기 · `failed` 실패 · `canceled` 취소 | `created_at`(UTC)에 9시간을 더해 `MM-DD HH:mm`. 더해서 24시를 넘으면 날짜도 하루 넘긴다 |
+
+   - 상태를 본다. 목록에서 고른 job 이 완료 · 실패 · 취소면 바로 1번으로 간다. job id 를 직접 받았거나 고른 job 이 대기 · 계산 중이면
+     `get_media_mix_job(brand_name, job_id)`(기본 인자)로 상태를 본다. 에러(없는 job · 다른 사람의 job · 권한 등)가 오면 원문을 전하고 멈춘다.
+     `pending`·`running` 이면 A-4 대로 끝날 때까지 기다린다. 10분이 넘으면 그 상태로 1번부터 해서 진행 중 보고서를 낸다.
 1. `get_media_mix_job(brand_name, job_id, include_allocation=true, include_diagnostics=true)` **1회**. 저장 훅이 응답을 남기므로 배분 행 · 진단은 읽거나 옮기지 않는다.
 2. 빌드:
    ```
@@ -95,6 +109,6 @@ B-1 응답 원문을 **한 글자도 바꾸지 않고** Write 로 파일(예: `j
 빌더 출력의 `status` 가 `pending`·`running` 이면(10분을 기다려도 끝나지 않은 job) 이 형식 대신 아래를 쓴다 — 결과 수치는 아직 없으니 하이라이트를 쓰지 않는다.
 
 ```
-{브랜드명} 미디어믹스 계산이 아직 끝나지 않았습니다(job {job id}). 진행 상태 보고서를 만들었고, 나중에 같은 job id 로 결과를 다시 요청해 주세요.
+{브랜드명} 미디어믹스 계산이 아직 끝나지 않았습니다({제안 달} 제안). 진행 상태 보고서를 만들었고, 나중에 결과를 다시 요청하면 목록에서 이 계산을 고를 수 있습니다.
 — by LaightAI
 ```
