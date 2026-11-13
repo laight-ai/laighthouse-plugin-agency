@@ -60,17 +60,20 @@ metadata:
 
 ### B. 결과 보고서 만들기
 
-0. A 를 거치지 않은 경우(이미 있는 결과 보기) 결과를 볼 job 을 고른다. 사용자가 job id 를 줬으면 그대로 쓴다.
+0. A 를 거치지 않은 경우(이미 있는 결과 보기) 결과를 볼 job 을 정한다.
+   - 사용자가 job id 를 줬으면 그대로 쓴다.
    - 아니면 `list_media_mix_jobs(brand_name)` 1회. 이 브랜드에서 **내가 실행한** job 이 최신순으로 온다(최대 50개, 결과 행 없음).
      다른 사람이 실행한 job 은 목록에 없고 열어 볼 수도 없다.
-   - 아래 표로 번호를 매겨 보여 주고 사용자가 하나를 고르게 한다. 사용자가 이미 달 · 예산 등을 말했으면 맞는 행을 짚어 확인만 받는다.
+   - 최근 10개를 아래 표로 번호를 매겨 보여 주고 사용자가 하나를 고르게 한다. 찾는 job 이 없다고 하면 나머지를 마저 보여 준다.
+     50개보다 오래된 job 은 목록에 없으니 job id 를 직접 달라고 한다. 사용자가 이미 달 · 예산 등을 말했으면 맞는 행을 짚어 확인만 받는다.
      고르기 전에는 다음으로 넘어가지 않는다. 목록이 비었으면 이 브랜드에서 실행한 미디어믹스가 없다고 알리고 A(새로 실행)를 제안한다.
 
      | 번호 | 제안받을 달 | 예산(원) | 비용 · 성과 지표 | 상태 | 실행 시각(KST) |
      |---|---|---|---|---|---|
-     | 1 | `request.target_month` | `request.target_budget`(천 단위 쉼표) | `request.cost_metric` · `request.revenue_metric` | `status`: 완료 · 계산 중 · 대기 · 실패 · 취소 | `created_at`(UTC)에 9시간을 더해 `MM-DD HH:mm` |
+     | 1 | `request.target_month` | `request.target_budget`(천 단위 쉼표) | `request.cost_metric` · `request.revenue_metric` | `status` → `succeeded` 완료 · `running` 계산 중 · `pending` 대기 · `failed` 실패 · `canceled` 취소 | `created_at`(UTC)에 9시간을 더해 `MM-DD HH:mm`. 더해서 24시를 넘으면 날짜도 하루 넘긴다 |
 
-   - 고른 job 을 `get_media_mix_job(brand_name, job_id)`(기본 인자)로 상태를 본다.
+   - 상태를 본다. 목록에서 고른 job 이 완료 · 실패 · 취소면 바로 1번으로 간다. job id 를 직접 받았거나 고른 job 이 대기 · 계산 중이면
+     `get_media_mix_job(brand_name, job_id)`(기본 인자)로 상태를 본다. 에러(없는 job · 다른 사람의 job · 권한 등)가 오면 원문을 전하고 멈춘다.
      `pending`·`running` 이면 A-4 대로 끝날 때까지 기다린다. 10분이 넘으면 그 상태로 1번부터 해서 진행 중 보고서를 낸다.
 1. `get_media_mix_job(brand_name, job_id, include_allocation=true, include_diagnostics=true)` **1회**. 저장 훅이 응답을 남기므로 배분 행 · 진단은 읽거나 옮기지 않는다.
 2. 빌드:
