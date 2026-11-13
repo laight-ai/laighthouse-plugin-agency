@@ -20,15 +20,16 @@
   var ym = function (d) {
     return d.getFullYear() + '-' + pad2(d.getMonth() + 1)
   }
-  function nextMonth(month) {
+  function prevMonth(month) {
     var p = month.split('-').map(Number)
-    return ym(new Date(p[0], p[1], 1))
+    return ym(new Date(p[0], p[1] - 2, 1))
+  }
+  /* 요청은 제안받을 달(target_month)이고, 기준 달은 그 전월이다 */
+  var proposalMonth = function (req) {
+    return req.target_month
   }
   var baseMonth = function (req) {
-    return req.start_date.slice(0, 7)
-  }
-  var proposalMonth = function (req) {
-    return nextMonth(baseMonth(req))
+    return prevMonth(req.target_month)
   }
   /* 'YYYY-MM' → 2026년 3월 */
   function monthText(month) {
@@ -324,7 +325,7 @@
 
   var api = {
     KINDS: KINDS,
-    nextMonth: nextMonth,
+    prevMonth: prevMonth,
     monthText: monthText,
     summaryTable: summaryTable,
     changeRate: changeRate,
@@ -465,7 +466,6 @@
     var table = summaryTable(job.summary || [])
     var fixed = new Set(job.request.fixed_media || [])
     var diagnostics = readDiagnostics(job.diagnostics)
-    var gross = job.request.cost_basis === 'gross'
     var o = outcome(job)
     var metric = job.request.revenue_metric
     var warnings = job.warnings || []
@@ -484,7 +484,7 @@
     out += kpis(job, table, o)
     out +=
       '<section class="card"><div class="card-head"><h2>매체별 요약</h2><span class="fg-3 t-xs">' +
-      (gross ? '비용은 Gross 기준입니다.' : '비용은 VAT 제외 Net 기준입니다.') +
+      '비용은 VAT 제외 Net 기준입니다.' +
       '</span></div>' +
       summaryTableView(table, fixed, o)
     if (fixed.size)
@@ -508,8 +508,7 @@
     var opt = table.total('optimized')
     var cur = table.total('current')
     var target = job.request.target_budget
-    /* 목표 예산은 Net 이다 — Gross 결과와는 견주지 않는다 */
-    var ofTarget = opt && job.request.cost_basis !== 'gross' ? (opt.cost / target) * 100 : null
+    var ofTarget = opt ? (opt.cost / target) * 100 : null
     var roasChange = changeRate(o.effValue(opt && opt.roas), o.effValue(cur && cur.roas))
     var roasDir = roasChange == null ? 'flat' : resolveChangeDirection(Number(roasChange.toFixed(1)))
     var kpi = function (label, value, delta) {

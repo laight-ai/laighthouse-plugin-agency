@@ -184,8 +184,8 @@ def test_view_calculations_match_the_web_screen():
     d = node_eval(f"v.readDiagnostics({json.dumps(diag)})")
     assert d["dowWeights"] == [1.08, None, None, None, None, None, 1.14]
     assert d["media"] == [{"media": "A", "samples": 30, "pinned": 2, "dow": None}]
-    # 기준 달 다음 달 — 12월이면 해가 바뀐다
-    assert node_eval("[v.nextMonth('2026-03'), v.nextMonth('2026-12')]") == ["2026-04", "2027-01"]
+    # 제안받을 달의 전월(기준 달) — 1월이면 해가 바뀐다
+    assert node_eval("[v.prevMonth('2026-04'), v.prevMonth('2027-01')]") == ["2026-03", "2026-12"]
 
 
 if __name__ == "__main__":

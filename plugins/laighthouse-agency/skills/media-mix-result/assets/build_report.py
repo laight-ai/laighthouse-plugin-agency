@@ -22,7 +22,6 @@ import os
 import re
 import sys
 import time
-from datetime import date
 from html import escape
 
 ASSETS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -79,8 +78,8 @@ def is_complete(job):
 
 
 def proposal_month(job):
-    y, m = (int(x) for x in str(job["request"]["start_date"])[:7].split("-"))
-    return date(y + m // 12, m % 12 + 1, 1).strftime("%Y-%m")
+    """요청의 제안받을 달(YYYY-MM)."""
+    return str(job["request"]["target_month"])
 
 
 def default_out(brand, job):
