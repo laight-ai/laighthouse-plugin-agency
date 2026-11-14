@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """media-mix-result 스킬 자체 검사(표준 라이브러리 + node). 성공하면 "ok".
 
-- build_report.py: 저장 훅이 남긴 get_media_mix_job 응답 중 무엇을 고르는지(진단이 있는 응답, 없으면 다시 부를 호출,
+- build_report.py: 저장 훅이 남긴 get_media_mix_job 응답 중 무엇을 고르는지(끝난 응답, 없으면 부를 호출,
   도구 에러), 그리고 응답을 <script> 안에 안전하게 넣는지.
 - mm_view.js: 웹 결과 화면(laighthouse-web src/lib/mediaMix.ts)과 같은 계산인지 — 기대값은 손으로 계산한 값이다.
 """
@@ -37,11 +37,6 @@ def polled(job):
     return {k: v for k, v in job.items() if k not in ("allocation", "diagnostics")}
 
 
-def full(job):
-    """include_diagnostics 만 켜고 받은 같은 job 응답 — 배분 행은 없다."""
-    return {k: v for k, v in job.items() if k != "allocation"}
-
-
 def with_records(records, fn):
     """records = [(tool_input 추가 인자, 응답 본문 str)] 를 오래된 순으로 저장 훅 폴더에 남기고 fn() 결과를 돌려준다."""
     before = saved.ROOT
@@ -62,32 +57,28 @@ def with_records(records, fn):
         shutil.rmtree(root, ignore_errors=True)
 
 
-FULL = {"include_diagnostics": True}
+def test_a_finished_job_polled_with_default_arguments_is_enough():
+    job = polled(fixture())
+    picked, as_of, problem = with_records([({}, json.dumps(job))], lambda: build_report.pick_job(BRAND, JOB_ID))
+    assert problem is None and picked == job, problem
 
 
-def test_picks_the_response_with_diagnostics_over_an_earlier_poll():
-    job = fixture()
+def test_keeps_a_finished_response_when_a_tool_error_came_after_it():
+    # 끝난 job 은 결과가 더 바뀌지 않는다 — 뒤의 호출이 에러여도 받아 둔 결과로 보고서를 만든다
+    job = polled(fixture())
     picked, as_of, problem = with_records(
-        [({}, json.dumps(polled(job))), (FULL, json.dumps(full(job)))], lambda: build_report.pick_job(BRAND, JOB_ID)
+        [({}, json.dumps(job)), ({}, "Upstream timeout.\nmore")], lambda: build_report.pick_job(BRAND, JOB_ID)
     )
-    assert problem is None and picked["diagnostics"] == job["diagnostics"], problem
+    assert problem is None and picked == job, problem
 
 
-def test_keeps_the_full_response_when_a_poll_came_after_it():
-    # 끝난 job 이라 결과가 더 바뀌지 않는다 — 뒤에 기본 인자로 다시 받았다고 진단을 또 받게 하지 않는다
-    job = fixture()
+def test_no_response_for_the_job_asks_for_the_call():
+    other = "00000003-mock-4000-8000-000000000003"
     picked, as_of, problem = with_records(
-        [(FULL, json.dumps(full(job))), ({}, json.dumps(polled(job)))], lambda: build_report.pick_job(BRAND, JOB_ID)
+        [({}, json.dumps(polled(fixture())))], lambda: build_report.pick_job(BRAND, other)
     )
-    assert problem is None and "diagnostics" in picked, problem
-
-
-def test_a_finished_job_polled_without_diagnostics_asks_for_the_full_call():
-    job = fixture()
-    picked, as_of, problem = with_records([({}, json.dumps(polled(job)))], lambda: build_report.pick_job(BRAND, JOB_ID))
     assert picked is None
-    assert problem == {"missing": f'get_media_mix_job(brand_name="{BRAND}", job_id="{JOB_ID}", '
-                                  "include_diagnostics=true)"}, problem
+    assert problem == {"missing": f'get_media_mix_job(brand_name="{BRAND}", job_id="{other}")'}, problem
 
 
 def test_a_running_job_is_reported_as_of_when_it_was_received():
@@ -104,12 +95,12 @@ def test_an_older_running_poll_does_not_hide_that_the_job_finished():
     picked, as_of, problem = with_records(
         [({}, json.dumps(running)), ({}, json.dumps(polled(job)))], lambda: build_report.pick_job(BRAND, JOB_ID)
     )
-    assert picked is None and set(problem) == {"missing"}, problem
+    assert problem is None and picked["status"] == "succeeded", problem
 
 
 def test_a_tool_error_is_passed_on():
     picked, as_of, problem = with_records(
-        [(FULL, "Media-mix job not found.\nmore")], lambda: build_report.pick_job(BRAND, JOB_ID)
+        [({}, "Media-mix job not found.\nmore")], lambda: build_report.pick_job(BRAND, JOB_ID)
     )
     assert picked is None and problem == {"error": "Media-mix job not found."}, problem
 

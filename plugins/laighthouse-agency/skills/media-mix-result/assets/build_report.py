@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """미디어믹스 결과 보고서 조립기 — 미리 검증된 asset 스크립트.
 
-저장 훅이 남긴 `get_media_mix_job` 응답(include_diagnostics 를 켠 호출)을 그대로
+저장 훅이 남긴 `get_media_mix_job` 응답을 그대로
 `assets/report-template.html`에 넣고, 그리기 코드(`mm_view.js`)·모양(`mm_view.css`)을 인라인해 HTML 한 파일을
 만든다. 계산과 그리기는 모두 mm_view.js 가 한다(laighthouse-web 결과 화면과 같은 계산) — 이 스크립트는 숫자를 만지지 않는다.
 
@@ -12,7 +12,7 @@
 
 출력(stdout, JSON 한 줄):
   성공  {"out": 절대경로, "bytes": 크기, "status": job 상태}
-  다시 호출 필요  {"missing": "<보낼 호출>"} — 저장된 응답이 없거나, 끝난 job 인데 진단이 빠진 응답뿐이다
+  다시 호출 필요  {"missing": "<보낼 호출>"} — 이 job 의 저장된 응답이 없다
   응답이 job 이 아님  {"error": "<응답 첫 줄>"} — 도구 에러(권한·없는 job 등)를 그대로 옮긴다
   저장 훅 없음  {"note": ...} — SKILL.md 「저장 훅이 없을 때」대로 --json 으로 다시 부른다
 """
@@ -42,8 +42,7 @@ TOOL = "get_media_mix_job"
 
 
 def call_text(brand, job_id):
-    return (f'get_media_mix_job(brand_name="{brand}", job_id="{job_id}", '
-            "include_diagnostics=true)")
+    return f'get_media_mix_job(brand_name="{brand}", job_id="{job_id}")'
 
 
 def read_first(dirs, names):
@@ -70,11 +69,6 @@ def parse_job(text):
     except (TypeError, ValueError):
         return None
     return job if isinstance(job, dict) and "status" in job and isinstance(job.get("request"), dict) else None
-
-
-def is_complete(job):
-    """끝난 job 이면 진단이 함께 와야 결과 화면과 같은 보고서가 된다. 끝나지 않았으면 상태만으로 충분하다."""
-    return job["status"] != "succeeded" or "diagnostics" in job
 
 
 def proposal_month(job):
@@ -105,8 +99,8 @@ def render(job, brand, as_of):
 def pick_job(brand, job_id):
     """저장된 응답 중 이 job 의 것을 골라 (job, 받은 시각, 문제)로 돌려준다.
 
-    가장 최근 응답이 대기·계산 중이면 그것이 지금 상태다. 끝난(succeeded) job 이면 결과가 더 바뀌지 않으므로, 진단을 켜고
-    받은 응답을 더 오래된 것까지 찾는다(그 뒤에 기본 인자로 한 번 더 부른 응답이 있어도 된다). 없으면 그 호출을 다시 보내라고 한다.
+    가장 최근 응답이 대기·계산 중이면 그것이 지금 상태다. 끝난(succeeded) job 은 결과가 더 바뀌지 않으므로 더 오래된 응답이어도
+    쓴다. 이 job 의 응답이 하나도 없으면 그 호출을 보내라고 한다.
     가장 최근 응답이 도구 에러면 그보다 오래된 대기·계산 중 상태를 쓰지 않고 그 에러를 돌려준다."""
     recs = saved.load_records(brand)
     if not recs:
@@ -122,13 +116,9 @@ def pick_job(brand, job_id):
                 error = {"error": str(text).strip().split("\n", 1)[0][:300]}
             newest = False
             continue
-        if job["status"] != "succeeded":
-            if newest:
-                return job, rec.get("saved_at"), None
-            continue   # 끝나기 전에 받은 지난 상태다
-        if is_complete(job):
+        if newest or job["status"] == "succeeded":
             return job, rec.get("saved_at"), None
-        newest = False
+        # 에러가 난 호출보다 먼저 받은 대기·계산 중 상태는 지금 상태가 아니다
     return None, None, error or {"missing": call_text(brand, job_id)}
 
 
@@ -147,9 +137,6 @@ def main(argv=None):
         job = parse_job(text)
         if job is None:
             saved.emit({"error": text.strip().split("\n", 1)[0][:300]})
-            return
-        if not is_complete(job):
-            saved.emit({"missing": call_text(args.brand, job.get("id"))})
             return
         as_of = os.path.getmtime(args.json)   # 응답을 파일로 저장한 시각
     else:
