@@ -173,11 +173,8 @@
           return numOr(weights[String(i)])
         }),
       maxRevenue: numOr(raw.max_revenue),
-      runtime: {
-        gp: numOr(rt.gp_seconds),
-        bo: numOr(rt.bo_seconds),
-        total: numOr(rt.total_seconds),
-      },
+      /* 계산에 걸린 전체 시간(초). 단계별 시간은 보이지 않는다 */
+      runtime: { total: numOr(rt.total_seconds) },
     }
   }
 
@@ -616,15 +613,7 @@
         '</dd>'
     out +=
       '<dt>계산 시간</dt><dd class="num">' +
-      esc(
-        '전체 ' +
-          sec(d.runtime.total) +
-          ' (학습 ' +
-          sec(d.runtime.gp) +
-          ' · 배분 ' +
-          sec(d.runtime.bo) +
-          ')',
-      ) +
+      esc(sec(d.runtime.total)) +
       '</dd>'
     if (d.notes.length)
       out +=

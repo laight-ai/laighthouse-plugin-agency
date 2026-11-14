@@ -42,7 +42,7 @@
 > "다라세제 미디어믹스 결과 보여줘" → `media-mix-result` (내가 실행한 job 목록에서 골라 결과를 본다)
 > "다라세제 3월 실적으로 4월 예산 7천만 원 미디어믹스 돌려줘" → `media-mix-result` (조건을 확인받고 새로 실행 → 끝나면 보고서)
 
-MCP 도구 `get_media_mix_job`을 `include_allocation`·`include_diagnostics`로 1회 부르고, 저장 훅이 남긴 응답을
+MCP 도구 `get_media_mix_job`을 `include_diagnostics`로 1회 부르고, 저장 훅이 남긴 응답을
 `assets/build_report.py`가 그대로 HTML에 넣는다. 계산·모양은 전용 킷 `assets/mm_view.js`·`mm_view.css`가 맡고,
 laighthouse-web 결과 화면(`src/pages/marketing/MediaMixResult.tsx`·`src/lib/mediaMix.ts`)을 옮긴 것이다 — 웹 화면이
 바뀌면 함께 고친다. 이 스킬(`build_report.py`의 응답 읽기 부분 제외)은 laighthouse-plugin(`laighthouse-analytics-prod`)과
