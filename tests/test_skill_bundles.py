@@ -39,7 +39,6 @@ def inside(path):
 scripts = sorted(n for n in os.listdir(assets) if n.endswith(".py")) if os.path.isdir(assets) else []
 sources = {n: open(os.path.join(assets, n), encoding="utf-8").read() for n in scripts}
 # 1) 공용 킷을 찾는 진입 스크립트를 실행한다(--help, 빈 stdin). 찾지 못하면 SystemExit(문구)로 끝난다.
-results = {}
 sys.stdout = sys.stderr = open(os.devnull, "w")
 for n in scripts:
     if '"shared", "assets"' not in sources[n]:
@@ -48,7 +47,7 @@ for n in scripts:
     sys.argv = [path, "--help"]
     sys.path.insert(0, assets)
     try:
-        results[n] = runpy.run_path(path, run_name="cowork_probe")
+        runpy.run_path(path, run_name="cowork_probe")
     except SystemExit as e:
         if isinstance(e.code, str):
             problems.append(f"{n}: {e.code}")
@@ -101,10 +100,6 @@ if kit:
 page = sys.modules.get("page")
 if page:
     read("Chart.js(external_context)", lambda: open(os.path.join(page.HERE, "chart.umd.min.js")).close())
-for n, g in results.items():
-    if "SHARED_DIRS" in g and "read_first" in g:   # media-mix-result
-        read(f"{n} Chart.js", lambda: g["read_first"]([g["ASSETS_DIR"], *g["SHARED_DIRS"]],
-                                                       ["chart.umd.min.txt", "chart.umd.min.js"]))
 sys.__stdout__.write(json.dumps(problems, ensure_ascii=False))
 '''
 
@@ -245,14 +240,13 @@ def test_media_mix_result_renders_from_a_response_file_when_mounted_alone():
         assert code == 0, stdout + err
         with open(out, encoding="utf-8") as f:
             html = f.read()
-        assert "__CHART_JS__" not in html and "Chart.js v" in html, "Chart.js가 인라인되지 않았다"
+        assert "function summaryTable" in html and "__MM_VIEW_JS__" not in html, "그리기 코드가 인라인되지 않았다"
 
 
 def test_a_missing_copy_is_caught_when_mounted_alone():
     """위 검사가 실제로 잡는지: 사본 하나를 지우면 그 스킬이 실패한다."""
     cases = [
         ("media-mix-result", "shared/assets/saved_responses.py"),      # 공용 킷 찾기
-        ("media-mix-result", "shared/assets/chart.umd.min.js"),         # 렌더링 때 읽는 파일
         ("daily-report", "shared/assets/report_kit.css"),
         ("weekly-report", "shared/assets/fee_views.py"),                # 진입 스크립트가 import 하는 모듈
         ("naver-search", "shared/assets/external_context/page.py"),

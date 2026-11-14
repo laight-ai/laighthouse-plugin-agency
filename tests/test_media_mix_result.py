@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """media-mix-result 스킬 자체 검사(표준 라이브러리 + node). 성공하면 "ok".
 
-- build_report.py: 저장 훅이 남긴 get_media_mix_job 응답 중 무엇을 고르는지(배분 행 · 진단이 있는 응답, 없으면 다시 부를 호출,
+- build_report.py: 저장 훅이 남긴 get_media_mix_job 응답 중 무엇을 고르는지(진단이 있는 응답, 없으면 다시 부를 호출,
   도구 에러), 그리고 응답을 <script> 안에 안전하게 넣는지.
 - mm_view.js: 웹 결과 화면(laighthouse-web src/lib/mediaMix.ts)과 같은 계산인지 — 기대값은 손으로 계산한 값이다.
 """
@@ -37,6 +37,11 @@ def polled(job):
     return {k: v for k, v in job.items() if k not in ("allocation", "diagnostics")}
 
 
+def full(job):
+    """include_diagnostics 만 켜고 받은 같은 job 응답 — 배분 행은 없다."""
+    return {k: v for k, v in job.items() if k != "allocation"}
+
+
 def with_records(records, fn):
     """records = [(tool_input 추가 인자, 응답 본문 str)] 를 오래된 순으로 저장 훅 폴더에 남기고 fn() 결과를 돌려준다."""
     before = saved.ROOT
@@ -57,32 +62,32 @@ def with_records(records, fn):
         shutil.rmtree(root, ignore_errors=True)
 
 
-FULL = {"include_allocation": True, "include_diagnostics": True}
+FULL = {"include_diagnostics": True}
 
 
-def test_picks_the_response_with_allocation_and_diagnostics_over_an_earlier_poll():
+def test_picks_the_response_with_diagnostics_over_an_earlier_poll():
     job = fixture()
     picked, as_of, problem = with_records(
-        [({}, json.dumps(polled(job))), (FULL, json.dumps(job))], lambda: build_report.pick_job(BRAND, JOB_ID)
+        [({}, json.dumps(polled(job))), (FULL, json.dumps(full(job)))], lambda: build_report.pick_job(BRAND, JOB_ID)
     )
-    assert problem is None and len(picked["allocation"]) == len(job["allocation"]), problem
+    assert problem is None and picked["diagnostics"] == job["diagnostics"], problem
 
 
 def test_keeps_the_full_response_when_a_poll_came_after_it():
-    # 끝난 job 이라 결과가 더 바뀌지 않는다 — 뒤에 기본 인자로 다시 받았다고 수백 행을 또 받게 하지 않는다
+    # 끝난 job 이라 결과가 더 바뀌지 않는다 — 뒤에 기본 인자로 다시 받았다고 진단을 또 받게 하지 않는다
     job = fixture()
     picked, as_of, problem = with_records(
-        [(FULL, json.dumps(job)), ({}, json.dumps(polled(job)))], lambda: build_report.pick_job(BRAND, JOB_ID)
+        [(FULL, json.dumps(full(job))), ({}, json.dumps(polled(job)))], lambda: build_report.pick_job(BRAND, JOB_ID)
     )
     assert problem is None and "diagnostics" in picked, problem
 
 
-def test_a_finished_job_polled_without_the_rows_asks_for_the_full_call():
+def test_a_finished_job_polled_without_diagnostics_asks_for_the_full_call():
     job = fixture()
     picked, as_of, problem = with_records([({}, json.dumps(polled(job)))], lambda: build_report.pick_job(BRAND, JOB_ID))
     assert picked is None
     assert problem == {"missing": f'get_media_mix_job(brand_name="{BRAND}", job_id="{JOB_ID}", '
-                                  "include_allocation=true, include_diagnostics=true)"}, problem
+                                  "include_diagnostics=true)"}, problem
 
 
 def test_a_running_job_is_reported_as_of_when_it_was_received():
@@ -134,11 +139,11 @@ def test_render_keeps_markup_in_the_data_inside_its_string():
     job["warnings"] = ["</script><b>x</b>", "<!--<script>"]
     html = build_report.render(job, "A&lt;B", 1_700_000_000.5)
     # 템플릿의 <script> 셋만 닫히고, 데이터의 < 는 모두 \u003c 로 들어간다(<!--<script 가 블록을 삼키지 못한다)
-    assert html.count("</script>") == 3, html.count("</script>")
+    assert html.count("</script>") == 2, html.count("</script>")
     assert "\\u003c/script>\\u003cb>x\\u003c/b>" in html and "\\u003c!--\\u003cscript>" in html
     assert "<title>A&amp;lt;B 미디어믹스 2026-04 예산 제안</title>" in html
     assert "window.__MM_AS_OF__ = 1700000000500" in html
-    for slot in ("__TITLE__", "__MM_VIEW_CSS__", "__CHART_JS__", "__MM_JOB_JSON__", "__MM_AS_OF_MS__", "__MM_VIEW_JS__"):
+    for slot in ("__TITLE__", "__MM_VIEW_CSS__", "__MM_JOB_JSON__", "__MM_AS_OF_MS__", "__MM_VIEW_JS__"):
         assert slot not in html, slot
 
 
@@ -171,14 +176,8 @@ def test_view_calculations_match_the_web_screen():
         "1,234회", "₩1,235", "–"]
     # 증감률: (110 − 100) ÷ 100 = 10%, 기준 0 이면 없음
     assert node_eval("[v.changeRate(110, 100), v.changeRate(1, 0)]") == [10, None]
-    # 세 구분의 일별 합계 중 가장 큰 값: draft 4/1 = 10 + 20 = 30, current 3/1 = 50
-    rows = [{"kind": "draft", "media": "A", "date": "2026-04-01", "cost": 10, "revenue": 0},
-            {"kind": "draft", "media": "B", "date": "2026-04-01", "cost": 20, "revenue": 0},
-            {"kind": "current", "media": "A", "date": "2026-03-01", "cost": 50, "revenue": 0}]
-    assert node_eval(f"v.dailyMax({json.dumps(rows)}, 'cost')") == 50
-    # 매체 B 는 draft 4/1 에만 있다 — 그날 행이 없는 매체는 0
-    assert node_eval(f"v.dailyStack({json.dumps(rows)}, 'draft', 'cost', ['A', 'B', 'C']).series") == [
-        {"media": "A", "values": [10]}, {"media": "B", "values": [20]}, {"media": "C", "values": [0]}]
+    # 초안(draft)은 보이지 않는다 — 현재와 제안만 견준다
+    assert node_eval("v.KINDS") == ["current", "optimized"]
     # 요일 가중치는 0 = 월 … 6 = 일, 빠진 요일은 null
     diag = {"best_alpha_weights": {"0": 1.08, "6": 1.14}, "media": {"A": {"n_samples": 30, "pinned": [{}, {}]}}}
     d = node_eval(f"v.readDiagnostics({json.dumps(diag)})")

@@ -1,16 +1,17 @@
 /* 미디어믹스 결과 보고서 — laighthouse-web 결과 화면(src/pages/marketing/MediaMixResult.tsx)을 그대로 옮긴 것.
    계산(요약 표 · 증감 · 성과 표기 · 진단 읽기)은 src/lib/mediaMix.ts 와 같고, 문구는 ko 메시지 그대로다.
-   요약 수치 → 매체별 표 → 구분별 일별 매체 누적 막대 → 진단(접힘) 순서. 같은 매체를 현재(기준 달 실적) → 초안(최적화 전)
-   → 제안(최적화) 순서로 나란히 비교하는 것이 핵심이다.
+   요약 수치 → 매체별 표 → 진단(접힘) 순서. 같은 매체를 현재(기준 달 실적) → 제안(최적화) 순서로 나란히 비교하는 것이 핵심이다.
+   응답의 초안(draft) 행은 보이지 않는다.
 
-   입력: window.__MM_JOB__ = get_media_mix_job(include_allocation=true, include_diagnostics=true) 응답 그대로,
+   입력: window.__MM_JOB__ = get_media_mix_job(include_diagnostics=true) 응답 그대로,
    window.__MM_AS_OF__ = 그 응답을 받은 시각(epoch ms).
-   Chart.js 4(UMD, window.Chart)는 템플릿이 먼저 인라인한다. node 에서는 계산 함수만 module.exports 로 내보낸다. */
+   node 에서는 계산 함수만 module.exports 로 내보낸다. */
 ;(function (root) {
   'use strict'
 
   /* ---------- 계산(lib/mediaMix.ts) ---------- */
-  var KINDS = ['current', 'draft', 'optimized']
+  /* 보이는 구분 — 응답에는 초안(draft) 행도 있지만 현재와 제안만 견준다 */
+  var KINDS = ['current', 'optimized']
   var isActive = function (s) {
     return s === 'pending' || s === 'running'
   }
@@ -38,7 +39,7 @@
   }
 
   /* summary 는 구분 × 매체 합계, media '*' 가 그 구분의 전체 합계다.
-     매체 순서 — 제안(optimized) 비용이 큰 순, 같으면 이름순. 차트 범례 · 색도 이 순서를 따른다 */
+     매체 순서 — 제안(optimized) 비용이 큰 순, 같으면 이름순. 매체 색도 이 순서를 따른다 */
   function summaryTable(rows) {
     var byKey = new Map(
       rows.map(function (r) {
@@ -79,47 +80,6 @@
   /* 증감률(%) — 기준이 0 이거나 없으면 null */
   var changeRate = function (to, from) {
     return to == null || from == null || from === 0 ? null : ((to - from) / Math.abs(from)) * 100
-  }
-
-  /* 한 구분의 일별 매체 누적 막대 — media 순서대로 쌓고, 그날 행이 없는 매체는 0 */
-  function dailyStack(rows, kind, metric, media) {
-    var mine = rows.filter(function (r) {
-      return r.kind === kind
-    })
-    var dates = Array.from(
-      new Set(
-        mine.map(function (r) {
-          return r.date
-        }),
-      ),
-    ).sort()
-    var at = new Map(
-      mine.map(function (r) {
-        return [r.media + '\u0000' + r.date, r[metric]]
-      }),
-    )
-    return {
-      dates: dates,
-      series: media.map(function (m) {
-        return {
-          media: m,
-          values: dates.map(function (d) {
-            var v = at.get(m + '\u0000' + d)
-            return v == null ? 0 : v
-          }),
-        }
-      }),
-    }
-  }
-
-  /* 세 구분의 일별 합계 중 가장 큰 값 — 세 차트의 y축을 같은 눈금으로 맞춘다 */
-  function dailyMax(rows, metric) {
-    var sum = new Map()
-    rows.forEach(function (r) {
-      var k = r.kind + '\u0000' + r.date
-      sum.set(k, (sum.get(k) || 0) + r[metric])
-    })
-    return Math.max.apply(null, [0].concat(Array.from(sum.values())))
   }
 
   var won = function (v) {
@@ -214,7 +174,6 @@
         }),
       maxRevenue: numOr(raw.max_revenue),
       runtime: {
-        draft: numOr(rt.draft_seconds),
         gp: numOr(rt.gp_seconds),
         bo: numOr(rt.bo_seconds),
         total: numOr(rt.total_seconds),
@@ -262,9 +221,9 @@
   }
 
   /* ---------- 문구(ko) ---------- */
-  var KIND_LABEL = { current: '현재(실적)', draft: '초안(최적화 전)', optimized: '제안(최적화)' }
-  /* optimized 매출은 실적이 아니라 GP 예측치, draft 매출은 과거 패턴의 추정치다 */
-  var REVENUE_LABEL = { current: '매출', draft: '추정 매출', optimized: '예상 매출' }
+  var KIND_LABEL = { current: '현재(실적)', optimized: '제안(최적화)' }
+  /* optimized 매출은 실적이 아니라 GP 예측치다 */
+  var REVENUE_LABEL = { current: '매출', optimized: '예상 매출' }
   var STATUS = {
     pending: { label: '대기 중', badge: 'badge-info' },
     running: { label: '계산 중', badge: 'badge-info' },
@@ -289,9 +248,7 @@
           ? REVENUE_LABEL[k]
           : k === 'current'
             ? metric
-            : k === 'draft'
-              ? '추정 ' + metric
-              : '예상 ' + metric
+            : '예상 ' + metric
       },
       eff: kind === 'money' ? 'ROAS' : kind === 'count' ? metric + '당 비용' : metric + ' ÷ 비용',
       value: function (v) {
@@ -306,7 +263,7 @@
     }
   }
 
-  /* 매체 색 — 매체 순서(제안 비용이 큰 순)대로 토큰 팔레트를 돌려 쓴다. 표 · 범례 · 차트가 같은 색이다 */
+  /* 매체 색 — 매체 순서(제안 비용이 큰 순)대로 토큰 팔레트를 돌려 쓴다 */
   var PALETTE = [
     '--blue-500',
     '--green-500',
@@ -329,8 +286,6 @@
     monthText: monthText,
     summaryTable: summaryTable,
     changeRate: changeRate,
-    dailyStack: dailyStack,
-    dailyMax: dailyMax,
     won: won,
     roasText: roasText,
     outcomeKind: outcomeKind,
@@ -372,25 +327,6 @@
       '</svg>'
     )
   }
-  var token = function (name) {
-    return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-  }
-  /* 차트 영역 배경(FE components/ui/Chart 의 chartBackground) */
-  var chartBackground = {
-    id: 'customBackground',
-    beforeDraw: function (chart) {
-      var ctx = chart.ctx
-      var a = chart.chartArea
-      if (!a) return
-      ctx.save()
-      ctx.fillStyle = token('--ink-50')
-      ctx.fillRect(a.left, a.top, a.width, a.height)
-      ctx.restore()
-    },
-  }
-
-  var charts = [] // 그린 뒤 붙일 차트 — { id, config }
-
   function statusBadge(status) {
     var s = STATUS[status] || { label: status, badge: 'badge-muted' }
     return '<span class="badge badge-dot ' + s.badge + '">' + esc(s.label) + '</span>'
@@ -467,7 +403,6 @@
     var fixed = new Set(job.request.fixed_media || [])
     var diagnostics = readDiagnostics(job.diagnostics)
     var o = outcome(job)
-    var metric = job.request.revenue_metric
     var warnings = job.warnings || []
     var out = '<div class="stack gap-5">'
     if (warnings.length)
@@ -486,18 +421,8 @@
       '<section class="card"><div class="card-head"><h2>매체별 요약</h2><span class="fg-3 t-xs">' +
       '비용은 VAT 제외 Net 기준입니다.' +
       '</span></div>' +
-      summaryTableView(table, fixed, o)
-    if (fixed.size)
-      out +=
-        '<p class="hint px-4 py-3">' +
-        (o.kind === 'money'
-          ? '고정비 매체는 기준 달 일평균 비용으로 고정하고, 초안 매출은 계산하지 않아 0으로 나옵니다.'
-          : '고정비 매체는 기준 달 일평균 비용으로 고정하고, 초안의 ' +
-            esc(metric) +
-            ' 값은 계산하지 않아 0으로 나옵니다.') +
-        '</p>'
-    out += '</section>'
-    out += dailyCharts(job.allocation || [], table, fixed, o)
+      summaryTableView(table, fixed, o) +
+      '</section>'
     if (diagnostics) out += diagnosticsView(diagnostics, o)
     return out + '</div>'
   }
@@ -619,114 +544,6 @@
     )
   }
 
-  /* 구분마다 비용 · 매출 일별 매체 누적 막대 두 장. 세 구분의 y축 눈금을 같게 맞춰 눈으로 비교한다 */
-  function dailyCharts(rows, table, fixed, o) {
-    var costMax = dailyMax(rows, 'cost')
-    var revenueMax = dailyMax(rows, 'revenue')
-    var legend = table.media
-      .map(function (m, i) {
-        return (
-          '<li class="row gap-1"><span class="mm-dot" style="background:var(' +
-          colorVar(i) +
-          ')"></span>' +
-          esc(m) +
-          (fixed.has(m) ? ' (고정)' : '') +
-          '</li>'
-        )
-      })
-      .join('')
-    var cards = KINDS.map(function (kind) {
-      var total = table.total(kind)
-      return (
-        '<section class="card"><div class="card-head"><h3>' +
-        esc(KIND_LABEL[kind]) +
-        '</h3><span class="fg-3 t-xs num">' +
-        esc(o.eff + ' ' + o.effText(total && total.roas)) +
-        '</span></div><div class="card-body stack gap-4">' +
-        stackChart('비용 ' + won(total && total.cost), rows, kind, 'cost', table.media, costMax, won) +
-        stackChart(o.label(kind) + ' ' + o.value(total && total.revenue), rows, kind, 'revenue', table.media, revenueMax, o.value) +
-        '</div></section>'
-      )
-    }).join('')
-    return (
-      '<section class="stack gap-3"><div class="row-between"><h2 class="section-title">일별 매체 배분</h2>' +
-      '<ul class="row gap-4 flex-wrap t-xs fg-2" aria-label="매체 범례">' +
-      legend +
-      '</ul></div><div class="grid grid-cols-1 xl:grid-cols-3 gap-4">' +
-      cards +
-      '</div></section>'
-    )
-  }
-
-  function stackChart(title, rows, kind, metric, media, max, format) {
-    var id = 'mm-chart-' + charts.length
-    var stack = dailyStack(rows, kind, metric, media)
-    charts.push({ id: id, stack: stack, max: max, format: format })
-    return (
-      '<div><div class="t-xs fg-2 num mb-1" style="font-weight:600">' +
-      esc(title) +
-      '</div><div style="height:200px;position:relative"><canvas id="' +
-      id +
-      '"></canvas></div></div>'
-    )
-  }
-
-  function mountCharts() {
-    var Chart = root.Chart
-    if (!Chart) return
-    Chart.defaults.font.family = token('--font-body')
-    Chart.defaults.color = token('--fg-secondary')
-    var compact = new Intl.NumberFormat('ko', { notation: 'compact', maximumFractionDigits: 1 })
-    charts.forEach(function (c) {
-      var canvas = document.getElementById(c.id)
-      if (!canvas) return
-      new Chart(canvas, {
-        type: 'bar',
-        data: {
-          labels: c.stack.dates.map(function (d) {
-            return d.slice(8)
-          }),
-          datasets: c.stack.series.map(function (s, i) {
-            return { label: s.media, data: s.values, backgroundColor: token(colorVar(i)), borderRadius: 1 }
-          }),
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          scales: {
-            x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 6 } },
-            y: {
-              stacked: true,
-              beginAtZero: true,
-              suggestedMax: c.max,
-              ticks: {
-                callback: function (v) {
-                  return compact.format(Number(v))
-                },
-              },
-              grid: { color: token('--border-subtle') },
-            },
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                title: function (items) {
-                  return c.stack.dates[items[0].dataIndex] || ''
-                },
-                label: function (ctx) {
-                  return ctx.dataset.label + ': ' + c.format(ctx.parsed.y || 0)
-                },
-              },
-            },
-          },
-        },
-        plugins: [chartBackground],
-      })
-    })
-  }
-
   /* 진단 — 분석용이라 접어 둔다. 요일 효과가 유의하지 않은 매체는 차이를 참고용으로만 보여 준다 */
   function diagnosticsView(d, o) {
     var sec = function (v) {
@@ -814,9 +631,7 @@
       esc(
         '전체 ' +
           sec(d.runtime.total) +
-          ' (초안 ' +
-          sec(d.runtime.draft) +
-          ' · 학습 ' +
+          ' (학습 ' +
           sec(d.runtime.gp) +
           ' · 배분 ' +
           sec(d.runtime.bo) +
@@ -838,7 +653,6 @@
   function render(job) {
     var app = document.getElementById('app')
     app.innerHTML = jobView(job)
-    mountCharts()
   }
 
   render(root.__MM_JOB__)
