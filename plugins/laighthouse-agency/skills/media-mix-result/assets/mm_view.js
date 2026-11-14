@@ -1,6 +1,6 @@
 /* 미디어믹스 결과 보고서 — laighthouse-web 결과 화면(src/pages/marketing/MediaMixResult.tsx)을 그대로 옮긴 것.
-   계산(요약 표 · 증감 · 성과 표기 · 진단 읽기)은 src/lib/mediaMix.ts 와 같고, 문구는 ko 메시지 그대로다.
-   요약 수치 → 매체별 표 → 진단(접힘) 순서. 같은 매체를 현재(기준 달 실적) → 제안(최적화) 순서로 나란히 비교하는 것이 핵심이다.
+   계산(요약 표 · 증감 · 성과 표기)은 src/lib/mediaMix.ts 와 같고, 문구는 ko 메시지 그대로다.
+   요약 수치 → 매체별 표 순서. 같은 매체를 현재(기준 달 실적) → 제안(최적화) 순서로 나란히 비교하는 것이 핵심이다.
 
    입력: window.__MM_JOB__ = get_media_mix_job(include_diagnostics=true) 응답 그대로,
    window.__MM_AS_OF__ = 그 응답을 받은 시각(epoch ms).
@@ -121,50 +121,6 @@
       : v.toLocaleString('ko-KR', { minimumSignificantDigits: 3, maximumSignificantDigits: 3 })
   }
 
-  /* 진단(diagnostics) — BE 가 dict 로 준다. 모양이 다른 값은 빼고 읽는다 */
-  var obj = function (v) {
-    return v && typeof v === 'object' && !Array.isArray(v) ? v : {}
-  }
-  var numOr = function (v) {
-    return typeof v === 'number' && isFinite(v) ? v : null
-  }
-  function readDiagnostics(raw) {
-    if (!raw) return null
-    var windows = []
-    Object.keys(obj(raw.windows)).forEach(function (label) {
-      var w = raw.windows[label]
-      if (Array.isArray(w) && typeof w[0] === 'string' && typeof w[1] === 'string')
-        windows.push({ label: label, start: w[0], end: w[1] })
-    })
-    var media = Object.keys(obj(raw.media)).map(function (name) {
-      var m = obj(raw.media[name])
-      return {
-        media: name,
-        pinned: Array.isArray(m.pinned) ? m.pinned.length : 0,
-      }
-    })
-    var weights = raw.best_alpha_weights == null ? null : obj(raw.best_alpha_weights)
-    var rt = obj(raw.runtime_seconds)
-    return {
-      windows: windows,
-      media: media,
-      notes: Array.isArray(raw.notes)
-        ? raw.notes.filter(function (n) {
-            return typeof n === 'string'
-          })
-        : [],
-      /* weight 모드의 요일별 예산 가중치 — 0 = 월요일 … 6 = 일요일. even 이면 null */
-      dowWeights:
-        weights &&
-        [0, 1, 2, 3, 4, 5, 6].map(function (i) {
-          return numOr(weights[String(i)])
-        }),
-      maxRevenue: numOr(raw.max_revenue),
-      /* 계산에 걸린 전체 시간(초). 단계별 시간은 보이지 않는다 */
-      runtime: { total: numOr(rt.total_seconds) },
-    }
-  }
-
   /* ---------- 증감 표기(report/table.tsx) — 지표와 관계없이 오르면 초록 · 내리면 빨강 ---------- */
   var CHANGE_MARK = { up: '▲', down: '▼', flat: '' }
   var CHANGE_CLASS = { up: 'delta-up', down: 'delta-down', flat: 'delta-flat' }
@@ -215,8 +171,6 @@
     failed: { label: '실패', badge: 'badge-danger' },
     canceled: { label: '취소됨', badge: 'badge-muted' },
   }
-  var WINDOW_LABEL = { A: '기준 달', M1: '1개월 전', M2: '2개월 전', M3: '3개월 전', 'PY+1': '작년 제안 달' }
-  var WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일']
 
   /* 성과 지표 표기 — 금액(money)이면 매출 · ROAS, 아니면 지표 이름과 성과당 비용(count) 또는 성과 ÷ 비용(unknown) */
   function outcome(job) {
@@ -274,7 +228,6 @@
     outcomeText: outcomeText,
     efficiency: efficiency,
     efficiencyText: efficiencyText,
-    readDiagnostics: readDiagnostics,
     resolveChangeDirection: resolveChangeDirection,
     markChange: markChange,
     durationText: durationText,
@@ -297,7 +250,6 @@
     alert:
       '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
-    'chevron-down': '<path d="m6 9 6 6 6-6"/>',
   }
   function icon(name, cls) {
     return (
@@ -375,7 +327,6 @@
 
   function result(job) {
     var table = summaryTable(job.summary || [])
-    var diagnostics = readDiagnostics(job.diagnostics)
     var o = outcome(job)
     var out = '<div class="stack gap-5">'
     out += kpis(job, table, o)
@@ -385,7 +336,6 @@
       '</span></div>' +
       summaryTableView(table, o) +
       '</section>'
-    if (diagnostics) out += diagnosticsView(diagnostics, o)
     return out + '</div>'
   }
 
@@ -502,84 +452,6 @@
       total +
       '</tbody></table></div>'
     )
-  }
-
-  /* 진단 — 분석용이라 접어 둔다 */
-  function diagnosticsView(d, o) {
-    var sec = function (v) {
-      return v == null ? '–' : durationText(Math.round(v))
-    }
-    var out =
-      '<details class="card mm-diag"><summary class="card-head"><h2>진단</h2>' +
-      '<span class="fg-3 t-xs">학습 기간 · 모델 상태 · 계산 시간</span>' +
-      icon('chevron-down', 'mm-diag-caret') +
-      '</summary><div class="card-body stack gap-5">'
-    if (d.windows.length)
-      out +=
-        '<div><h3 class="t-sm mb-2" style="font-weight:600">학습에 쓴 기간</h3><dl class="dl">' +
-        d.windows
-          .map(function (w) {
-            return (
-              '<dt>' +
-              esc(WINDOW_LABEL[w.label] || w.label) +
-              '</dt><dd class="num">' +
-              esc(w.start) +
-              ' ~ ' +
-              esc(w.end) +
-              '</dd>'
-            )
-          })
-          .join('') +
-        '</dl></div>'
-    if (d.media.length)
-      out +=
-        '<div class="table-wrap overflow-x-auto"><table class="data-table table-dense"><thead><tr><th>매체</th>' +
-        '<th>모델 상태</th></tr></thead><tbody>' +
-        d.media
-          .map(function (m) {
-            return (
-              '<tr><td class="cell-title">' +
-              esc(m.media) +
-              '</td><td>' +
-              (m.pinned > 0
-                ? '<span class="badge badge-warning">경계값 ' + m.pinned + '개 · 신뢰도 낮음</span>'
-                : '<span class="fg-3">정상</span>') +
-              '</td></tr>'
-            )
-          })
-          .join('') +
-        '</tbody></table></div>'
-    out += '<dl class="dl">'
-    if (d.dowWeights)
-      out +=
-        '<dt>요일별 예산 가중치</dt><dd class="num">' +
-        d.dowWeights
-          .map(function (w, i) {
-            return WEEKDAYS[i] + ' ' + (w == null ? '–' : w.toFixed(2))
-          })
-          .join(' · ') +
-        '</dd>'
-    if (d.maxRevenue != null)
-      out +=
-        '<dt>' +
-        (o.kind === 'money' ? '가중치 기준 예상 총매출' : '가중치 기준 ' + esc(o.label('optimized')) + ' 합계') +
-        '</dt><dd class="num">' +
-        esc(o.value(d.maxRevenue)) +
-        '</dd>'
-    out +=
-      '<dt>계산 시간</dt><dd class="num">' +
-      esc(sec(d.runtime.total)) +
-      '</dd>'
-    if (d.notes.length)
-      out +=
-        '<dt>배분 메모</dt><dd><ul class="stack gap-1">' +
-        d.notes
-          .map(function (n) {
-            return '<li>' + esc(n) + '</li>'
-          })
-          .join('') +
-        '</ul></dd>'
-    return out + '</dl></div></details>'
   }
 
   function render(job) {

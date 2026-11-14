@@ -178,11 +178,6 @@ def test_view_calculations_match_the_web_screen():
     assert node_eval("[v.changeRate(110, 100), v.changeRate(1, 0)]") == [10, None]
     # 초안(draft)은 보이지 않는다 — 현재와 제안만 견준다
     assert node_eval("v.KINDS") == ["current", "optimized"]
-    # 요일 가중치는 0 = 월 … 6 = 일, 빠진 요일은 null
-    diag = {"best_alpha_weights": {"0": 1.08, "6": 1.14}, "media": {"A": {"n_samples": 30, "pinned": [{}, {}]}}}
-    d = node_eval(f"v.readDiagnostics({json.dumps(diag)})")
-    assert d["dowWeights"] == [1.08, None, None, None, None, None, 1.14]
-    assert d["media"] == [{"media": "A", "pinned": 2}]
     # 제안받을 달의 전월(기준 달) — 1월이면 해가 바뀐다
     assert node_eval("[v.prevMonth('2026-04'), v.prevMonth('2027-01')]") == ["2026-03", "2026-12"]
 

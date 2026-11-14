@@ -240,11 +240,6 @@ table {
   background: var(--state-success-bg);
   border-color: var(--state-success-bd);
 }
-.badge-warning {
-  color: var(--state-warning-fg);
-  background: var(--state-warning-bg);
-  border-color: var(--state-warning-bd);
-}
 .badge-danger {
   color: var(--state-danger-fg);
   background: var(--state-danger-bg);
@@ -502,24 +497,6 @@ table {
   font-weight: var(--fw-semibold);
   background: var(--bg-sunken);
 }
-.pg-media-mix .mm-diag > summary {
-  cursor: pointer;
-  list-style: none;
-}
-.pg-media-mix .mm-diag > summary::-webkit-details-marker {
-  display: none;
-}
-.pg-media-mix .mm-diag-caret {
-  margin-left: auto;
-  color: var(--fg-tertiary);
-  transition: transform var(--dur-fast) var(--ease);
-}
-.pg-media-mix .mm-diag[open] .mm-diag-caret {
-  transform: rotate(180deg);
-}
-.pg-media-mix .mm-diag:not([open]) > summary {
-  border-bottom: 0;
-}
 
 /* ---- 증감(utilities 레이어) ---- */
 .delta-up {
@@ -533,17 +510,11 @@ table {
 }
 
 /* ---- 화면이 쓰는 Tailwind 유틸리티(간격은 --sp 단계) ---- */
-.mb-2 {
-  margin-bottom: var(--sp-2);
-}
 .mb-5 {
   margin-bottom: var(--sp-5);
 }
 .mt-2 {
   margin-top: var(--sp-2);
-}
-.gap-1 {
-  gap: var(--sp-1);
 }
 .gap-2 {
   gap: var(--sp-2);
