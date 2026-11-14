@@ -182,7 +182,7 @@ def test_view_calculations_match_the_web_screen():
     diag = {"best_alpha_weights": {"0": 1.08, "6": 1.14}, "media": {"A": {"n_samples": 30, "pinned": [{}, {}]}}}
     d = node_eval(f"v.readDiagnostics({json.dumps(diag)})")
     assert d["dowWeights"] == [1.08, None, None, None, None, None, 1.14]
-    assert d["media"] == [{"media": "A", "samples": 30, "pinned": 2, "dow": None}]
+    assert d["media"] == [{"media": "A", "pinned": 2}]
     # 제안받을 달의 전월(기준 달) — 1월이면 해가 바뀐다
     assert node_eval("[v.prevMonth('2026-04'), v.prevMonth('2027-01')]") == ["2026-03", "2026-12"]
 

@@ -385,11 +385,6 @@ table {
   color: inherit;
   opacity: 0.9;
 }
-.banner-warning {
-  background: var(--state-warning-bg);
-  border-color: var(--state-warning-bd);
-  color: var(--state-warning-fg);
-}
 .banner-danger {
   background: var(--state-danger-bg);
   border-color: var(--state-danger-bd);
@@ -547,9 +542,6 @@ table {
 .mt-2 {
   margin-top: var(--sp-2);
 }
-.pl-4 {
-  padding-left: var(--sp-4);
-}
 .gap-1 {
   gap: var(--sp-1);
 }
@@ -561,12 +553,6 @@ table {
 }
 .gap-5 {
   gap: var(--sp-5);
-}
-.list-disc {
-  list-style-type: disc;
-}
-.flex-wrap {
-  flex-wrap: wrap;
 }
 .overflow-x-auto {
   overflow-x: auto;

@@ -128,9 +128,6 @@
   var numOr = function (v) {
     return typeof v === 'number' && isFinite(v) ? v : null
   }
-  var strOr = function (v) {
-    return typeof v === 'string' ? v : null
-  }
   function readDiagnostics(raw) {
     if (!raw) return null
     var windows = []
@@ -141,18 +138,9 @@
     })
     var media = Object.keys(obj(raw.media)).map(function (name) {
       var m = obj(raw.media[name])
-      var dow = m.dow == null ? null : obj(m.dow)
       return {
         media: name,
-        samples: numOr(m.n_samples),
         pinned: Array.isArray(m.pinned) ? m.pinned.length : 0,
-        dow: dow && {
-          ratio: numOr(dow.ratio),
-          significant: typeof dow.significant === 'boolean' ? dow.significant : null,
-          bestDay: strOr(dow.best_day),
-          worstDay: strOr(dow.worst_day),
-          bestVsWorstPct: numOr(dow.best_vs_worst_pct),
-        },
       }
     })
     var weights = raw.best_alpha_weights == null ? null : obj(raw.best_alpha_weights)
@@ -389,19 +377,7 @@
     var table = summaryTable(job.summary || [])
     var diagnostics = readDiagnostics(job.diagnostics)
     var o = outcome(job)
-    var warnings = job.warnings || []
     var out = '<div class="stack gap-5">'
-    if (warnings.length)
-      out +=
-        '<div class="banner banner-warning">' +
-        icon('alert') +
-        '<div class="t-sm"><span class="b-title">확인할 내용</span><ul class="b-body t-xs mt-2 list-disc pl-4 stack gap-1">' +
-        warnings
-          .map(function (w) {
-            return '<li>' + esc(w) + '</li>'
-          })
-          .join('') +
-        '</ul></div></div>'
     out += kpis(job, table, o)
     out +=
       '<section class="card"><div class="card-head"><h2>매체별 요약</h2><span class="fg-3 t-xs">' +
@@ -528,14 +504,14 @@
     )
   }
 
-  /* 진단 — 분석용이라 접어 둔다. 요일 효과가 유의하지 않은 매체는 차이를 참고용으로만 보여 준다 */
+  /* 진단 — 분석용이라 접어 둔다 */
   function diagnosticsView(d, o) {
     var sec = function (v) {
       return v == null ? '–' : durationText(Math.round(v))
     }
     var out =
       '<details class="card mm-diag"><summary class="card-head"><h2>진단</h2>' +
-      '<span class="fg-3 t-xs">학습 기간 · 표본 · 요일 효과 · 계산 시간</span>' +
+      '<span class="fg-3 t-xs">학습 기간 · 모델 상태 · 계산 시간</span>' +
       icon('chevron-down', 'mm-diag-caret') +
       '</summary><div class="card-body stack gap-5">'
     if (d.windows.length)
@@ -558,36 +534,16 @@
     if (d.media.length)
       out +=
         '<div class="table-wrap overflow-x-auto"><table class="data-table table-dense"><thead><tr><th>매체</th>' +
-        '<th class="num">학습 일수</th><th>모델 상태</th><th>요일 효과</th></tr></thead><tbody>' +
+        '<th>모델 상태</th></tr></thead><tbody>' +
         d.media
           .map(function (m) {
-            var dow = m.dow
-            var effect = ''
-            if (!dow) effect = '<span class="fg-3">–</span>'
-            else {
-              var parts = []
-              if (dow.bestDay && dow.worstDay && dow.bestVsWorstPct != null)
-                parts.push(
-                  '<span>' +
-                    esc(dow.bestDay + '요일이 ' + dow.worstDay + '요일보다 약 ' + dow.bestVsWorstPct.toFixed(1) + '% 높음') +
-                    '</span>',
-                )
-              if (dow.ratio != null)
-                parts.push('<span class="fg-3">요일 효과 비중 ' + (dow.ratio * 100).toFixed(1) + '%</span>')
-              if (dow.significant === false) parts.push('<span class="badge">유의하지 않음 · 참고용</span>')
-              effect = '<span class="row gap-2 flex-wrap">' + parts.join('') + '</span>'
-            }
             return (
               '<tr><td class="cell-title">' +
               esc(m.media) +
-              '</td><td class="num">' +
-              (m.samples == null ? '–' : m.samples) +
               '</td><td>' +
               (m.pinned > 0
                 ? '<span class="badge badge-warning">경계값 ' + m.pinned + '개 · 신뢰도 낮음</span>'
                 : '<span class="fg-3">정상</span>') +
-              '</td><td class="t-sm">' +
-              effect +
               '</td></tr>'
             )
           })
