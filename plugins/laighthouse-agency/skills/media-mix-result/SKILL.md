@@ -40,21 +40,17 @@ metadata:
 ### A. 새로 실행할 때
 
 1. `list_media_mix_metrics(brand_name)` — 비용 · 성과 지표 후보(`{name, unit}`)를 받는다. 에러(권한 · 미디어믹스 꺼짐 · 마트 없음)는 그대로 전한다.
-2. **조건을 사용자에게 한 번에 확인받는다** — 말하지 않은 값은 추측하지 않고 묻는다(기본값이 있는 것은 기본값을 보여 주고 확인).
+2. **조건을 사용자에게 한 번에 확인받는다** — 말하지 않은 값은 추측하지 않고 묻는다. 학습 방식 · VAT 처리 등 나머지는 서버가 기본값으로 정하므로 묻지 않는다.
 
-   | 조건 | 인자 | 기본값 |
-   |---|---|---|
-   | 제안받을 달(예산을 배분할 달) | `target_month` (`YYYY-MM`). 그 전월(기준 달) 실적으로 계산한다 — 전월 데이터가 다 들어온 뒤에 돌려야 정확하다 | 없음 — 묻는다 |
-   | 비용 지표 · 성과 지표 | `cost_metric`·`revenue_metric` (1번 후보 중 서로 다른 둘) | 없음 — 묻는다 |
-   | 제안받을 달의 예산(원, VAT 제외 Net) | `target_budget` | 없음 — 묻는다 |
-   | 마트 비용이 VAT 포함인지 | `cost_includes_vat` | **없음 — 반드시 묻는다** |
-   | 학습 방식 | `learning_strategy` aggressive · neutral · conservative | neutral |
-   | 요일 학습 | `learning_dow` even · weight(더 느림) | even |
-   | 고정비 매체(배분하지 않고 기준 달 일평균 비용으로 둠) | `fixed_media` | 없음(빈 목록) |
+   | 조건 | 인자 |
+   |---|---|
+   | 제안받을 달(예산을 배분할 달) | `target_month` (`YYYY-MM`). 그 전월(기준 달) 실적으로 계산한다 — 전월 데이터가 다 들어온 뒤에 돌려야 정확하다 |
+   | 비용 지표 · 성과 지표 | `cost_metric`·`revenue_metric` (1번 후보 중 서로 다른 둘) |
+   | 제안받을 달의 예산(원, VAT 제외 Net) | `target_budget` |
 3. 확인받으면 `create_media_mix_job(...)` 1회 → `id`. `created: false` 면 내가 같은 조건으로 이미 돌리고 있는 job 을 받은 것이다(사용자에게 알린다).
    `status: "failed"` 와 `error` 가 오면 큐에 넣지 못한 것이다 — 사유를 전하고 멈춘다.
 4. **끝날 때까지 기다린다**: `get_media_mix_job(brand_name, job_id)`(기본 인자 — 진단 없이 상태만)를 부르고, `status` 가
-   `pending`·`running` 이면 `python3 -c "import time; time.sleep(20)"` 로 기다렸다가 다시 부른다. 보통 1~수 분, 요일 학습(weight)은 더 걸린다.
+   `pending`·`running` 이면 `python3 -c "import time; time.sleep(20)"` 로 기다렸다가 다시 부른다. 보통 1~수 분 걸린다.
    10분이 넘도록 끝나지 않으면 사용자에게 알리고 멈춘다(나중에 B 에서 목록으로 골라 결과를 볼 수 있다).
 5. `succeeded`·`failed`·`canceled` 가 되면 B-1 부터 한다.
 

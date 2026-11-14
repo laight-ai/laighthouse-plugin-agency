@@ -231,8 +231,6 @@
     failed: { label: '실패', badge: 'badge-danger' },
     canceled: { label: '취소됨', badge: 'badge-muted' },
   }
-  var STRATEGY_LABEL = { aggressive: '공격적', neutral: '중립', conservative: '보수적' }
-  var DOW_LABEL = { even: '요일 균등', weight: '요일 가중치' }
   var WINDOW_LABEL = { A: '기준 달', M1: '1개월 전', M2: '2개월 전', M3: '3개월 전', 'PY+1': '작년 제안 달' }
   var WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일']
 
@@ -334,7 +332,6 @@
 
   function jobView(job) {
     var req = job.request
-    var fixed = req.fixed_media || []
     var body
     if (isActive(job.status)) body = progress(job)
     else if (job.status === 'failed')
@@ -368,12 +365,6 @@
       ' · ' +
       esc(req.revenue_metric) +
       '</dd>' +
-      '<dt>학습</dt><dd>' +
-      esc(STRATEGY_LABEL[req.learning_strategy || 'neutral']) +
-      ' · ' +
-      esc(DOW_LABEL[req.learning_dow || 'even']) +
-      (fixed.length ? ' · 고정비 ' + esc(fixed.join(', ')) : '') +
-      '</dd>' +
       '<dt>요청 시각</dt><dd>' +
       esc(fmtDateTime(job.created_at)) +
       '</dd>' +
@@ -400,7 +391,6 @@
 
   function result(job) {
     var table = summaryTable(job.summary || [])
-    var fixed = new Set(job.request.fixed_media || [])
     var diagnostics = readDiagnostics(job.diagnostics)
     var o = outcome(job)
     var warnings = job.warnings || []
@@ -421,7 +411,7 @@
       '<section class="card"><div class="card-head"><h2>매체별 요약</h2><span class="fg-3 t-xs">' +
       '비용은 VAT 제외 Net 기준입니다.' +
       '</span></div>' +
-      summaryTableView(table, fixed, o) +
+      summaryTableView(table, o) +
       '</section>'
     if (diagnostics) out += diagnosticsView(diagnostics, o)
     return out + '</div>'
@@ -476,7 +466,7 @@
     )
   }
 
-  function summaryTableView(table, fixed, o) {
+  function summaryTableView(table, o) {
     var optTotalCell = table.total('optimized')
     var optTotal = optTotalCell ? optTotalCell.cost : 0
     /* 제안 비용 칸에는 비중(제안 합계 대비)을 아래 줄로 곁들인다 */
@@ -516,9 +506,7 @@
           colorVar(i) +
           ')"></span><span class="cell-title">' +
           esc(m) +
-          '</span>' +
-          (fixed.has(m) ? '<span class="badge badge-outline">고정</span>' : '') +
-          '</span></td>' +
+          '</span></span></td>' +
           KINDS.map(function (k) {
             return cells(k, m)
           }).join('') +

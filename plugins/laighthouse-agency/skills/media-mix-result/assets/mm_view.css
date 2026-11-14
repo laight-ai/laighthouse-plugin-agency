@@ -255,9 +255,6 @@ table {
   background: var(--state-muted-bg);
   border-color: var(--state-muted-bd);
 }
-.badge-outline {
-  background: transparent;
-}
 
 /* ---- 카드 · 화면 틀 ---- */
 .card {
