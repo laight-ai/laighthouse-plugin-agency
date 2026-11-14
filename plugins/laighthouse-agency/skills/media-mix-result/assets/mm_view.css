@@ -271,10 +271,6 @@ table {
   padding: 14px var(--sp-5);
   border-bottom: 1px solid var(--border-subtle);
 }
-.card-head h3 {
-  font-size: var(--fs-md);
-  font-weight: var(--fw-semibold);
-}
 .card-body {
   padding: var(--sp-5);
 }

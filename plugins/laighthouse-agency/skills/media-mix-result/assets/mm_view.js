@@ -1,7 +1,6 @@
 /* 미디어믹스 결과 보고서 — laighthouse-web 결과 화면(src/pages/marketing/MediaMixResult.tsx)을 그대로 옮긴 것.
    계산(요약 표 · 증감 · 성과 표기 · 진단 읽기)은 src/lib/mediaMix.ts 와 같고, 문구는 ko 메시지 그대로다.
    요약 수치 → 매체별 표 → 진단(접힘) 순서. 같은 매체를 현재(기준 달 실적) → 제안(최적화) 순서로 나란히 비교하는 것이 핵심이다.
-   응답의 초안(draft) 행은 보이지 않는다.
 
    입력: window.__MM_JOB__ = get_media_mix_job(include_diagnostics=true) 응답 그대로,
    window.__MM_AS_OF__ = 그 응답을 받은 시각(epoch ms).

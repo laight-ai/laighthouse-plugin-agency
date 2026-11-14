@@ -138,7 +138,7 @@ def test_render_keeps_markup_in_the_data_inside_its_string():
     job = fixture()
     job["warnings"] = ["</script><b>x</b>", "<!--<script>"]
     html = build_report.render(job, "A&lt;B", 1_700_000_000.5)
-    # 템플릿의 <script> 셋만 닫히고, 데이터의 < 는 모두 \u003c 로 들어간다(<!--<script 가 블록을 삼키지 못한다)
+    # 템플릿의 <script> 둘만 닫히고, 데이터의 < 는 모두 \u003c 로 들어간다(<!--<script 가 블록을 삼키지 못한다)
     assert html.count("</script>") == 2, html.count("</script>")
     assert "\\u003c/script>\\u003cb>x\\u003c/b>" in html and "\\u003c!--\\u003cscript>" in html
     assert "<title>A&amp;lt;B 미디어믹스 2026-04 예산 제안</title>" in html
