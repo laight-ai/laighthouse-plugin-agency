@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """미디어믹스 결과 보고서 조립기 — 미리 검증된 asset 스크립트.
 
-저장 훅이 남긴 `get_media_mix_job` 응답(include_allocation·include_diagnostics 를 켠 호출)을 그대로
-`assets/report-template.html`에 넣고, 그리기 코드(`mm_view.js`)·모양(`mm_view.css`)·Chart.js 를 인라인해 HTML 한 파일을
+저장 훅이 남긴 `get_media_mix_job` 응답(include_diagnostics 를 켠 호출)을 그대로
+`assets/report-template.html`에 넣고, 그리기 코드(`mm_view.js`)·모양(`mm_view.css`)을 인라인해 HTML 한 파일을
 만든다. 계산과 그리기는 모두 mm_view.js 가 한다(laighthouse-web 결과 화면과 같은 계산) — 이 스크립트는 숫자를 만지지 않는다.
 
 사용법:
@@ -12,7 +12,7 @@
 
 출력(stdout, JSON 한 줄):
   성공  {"out": 절대경로, "bytes": 크기, "status": job 상태}
-  다시 호출 필요  {"missing": "<보낼 호출>"} — 저장된 응답이 없거나, 끝난 job 인데 배분 행·진단이 빠진 응답뿐이다
+  다시 호출 필요  {"missing": "<보낼 호출>"} — 저장된 응답이 없거나, 끝난 job 인데 진단이 빠진 응답뿐이다
   응답이 job 이 아님  {"error": "<응답 첫 줄>"} — 도구 에러(권한·없는 job 등)를 그대로 옮긴다
   저장 훅 없음  {"note": ...} — SKILL.md 「저장 훅이 없을 때」대로 --json 으로 다시 부른다
 """
@@ -43,7 +43,7 @@ TOOL = "get_media_mix_job"
 
 def call_text(brand, job_id):
     return (f'get_media_mix_job(brand_name="{brand}", job_id="{job_id}", '
-            "include_allocation=true, include_diagnostics=true)")
+            "include_diagnostics=true)")
 
 
 def read_first(dirs, names):
@@ -73,8 +73,8 @@ def parse_job(text):
 
 
 def is_complete(job):
-    """끝난 job 이면 배분 행·진단이 함께 와야 결과 화면과 같은 보고서가 된다. 끝나지 않았으면 상태만으로 충분하다."""
-    return job["status"] != "succeeded" or ("allocation" in job and "diagnostics" in job)
+    """끝난 job 이면 진단이 함께 와야 결과 화면과 같은 보고서가 된다. 끝나지 않았으면 상태만으로 충분하다."""
+    return job["status"] != "succeeded" or "diagnostics" in job
 
 
 def proposal_month(job):
@@ -94,7 +94,6 @@ def render(job, brand, as_of):
     values = {
         "__TITLE__": escape(f"{brand} 미디어믹스 {proposal_month(job)} 예산 제안"),
         "__MM_VIEW_CSS__": read_first([ASSETS_DIR], ["mm_view.css"]),
-        "__CHART_JS__": read_first([ASSETS_DIR, *SHARED_DIRS], ["chart.umd.min.txt", "chart.umd.min.js"]),
         "__MM_JOB_JSON__": script_json(job),
         "__MM_AS_OF_MS__": str(int(as_of * 1000)),
         "__MM_VIEW_JS__": read_first([ASSETS_DIR], ["mm_view_js.txt", "mm_view.js"]),
@@ -106,7 +105,7 @@ def render(job, brand, as_of):
 def pick_job(brand, job_id):
     """저장된 응답 중 이 job 의 것을 골라 (job, 받은 시각, 문제)로 돌려준다.
 
-    가장 최근 응답이 대기·계산 중이면 그것이 지금 상태다. 끝난(succeeded) job 이면 결과가 더 바뀌지 않으므로, 배분 행·진단을 켜고
+    가장 최근 응답이 대기·계산 중이면 그것이 지금 상태다. 끝난(succeeded) job 이면 결과가 더 바뀌지 않으므로, 진단을 켜고
     받은 응답을 더 오래된 것까지 찾는다(그 뒤에 기본 인자로 한 번 더 부른 응답이 있어도 된다). 없으면 그 호출을 다시 보내라고 한다.
     가장 최근 응답이 도구 에러면 그보다 오래된 대기·계산 중 상태를 쓰지 않고 그 에러를 돌려준다."""
     recs = saved.load_records(brand)

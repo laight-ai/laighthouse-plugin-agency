@@ -4,7 +4,7 @@ description: >
   월간 미디어믹스(M/M Optimizer) 결과 보고서 스킬. "미디어믹스 결과", "미디어믹스 돌려줘", "다음 달 예산 배분 제안",
   "media mix 결과 보여줘", "M/M Optimizer" 요청 시 사용. 제안받을 달의 매체별 예산 배분을 전월(기준 달) 실적으로 계산하는 job 을
   새로 실행하거나(조건 확인 후) 내가 실행한 job 목록에서 골라 결과를 받아, 라이트하우스 웹 결과 화면과 같은 모양의 HTML 보고서
-  (요약 수치 · 매체별 요약 표 · 구분별 일별 매체 배분 차트 · 진단)로 렌더링한다.
+  (요약 수치 · 매체별 요약 표 · 진단)로 렌더링한다.
 metadata:
   version: "1.0.0"
 ---
@@ -14,7 +14,7 @@ metadata:
 ## 역할
 
 라이트하우스 MCP 의 미디어믹스 job 결과를 **라이트하우스 웹 결과 화면(`/m/media-mix/{jobId}`)과 같은 모양의 HTML 한 파일**로 만든다.
-구성: 제목(제안 달) · 요청 조건 → 확인할 내용(경고) → 요약 수치 4개 → 매체별 요약(현재 실적 · 초안 · 제안) → 일별 매체 배분 차트 →
+구성: 제목(제안 달) · 요청 조건 → 확인할 내용(경고) → 요약 수치 4개 → 매체별 요약(현재 실적 · 제안) →
 진단(접힘: 학습 기간 · 표본 · 요일 효과 · 계산 시간). 실패 · 취소된 job 은 사유 배너로 나온다.
 
 - 렌더링은 **미리 검증된 asset 스크립트**만 한다(`.py`/`.js` 신규 작성, HTML 직접 작성 금지).
@@ -23,7 +23,7 @@ metadata:
 
 ## 데이터 처리 원칙 (절대 지침)
 
-> 🚫 **MCP 응답은 원문 그대로 빌더에 넘긴다.** 저장 훅이 응답을 파일로 남기고 빌더가 그 파일을 읽는다 — 응답의 배분 행(`allocation`)·
+> 🚫 **MCP 응답은 원문 그대로 빌더에 넘긴다.** 저장 훅이 응답을 파일로 남기고 빌더가 그 파일을 읽는다 — 응답의 요약(`summary`)·
 > 진단(`diagnostics`)을 옮겨 적거나, 응답 파일을 Read 로 열지 않는다. 합산 · 재계산 · 추정 금지.
 >
 > 🚫 job 을 새로 만드는 `create_media_mix_job` 은 **쓰기**다(1~수 분 계산이 돈다). 사용자가 조건을 확인하기 전에는 부르지 않는다.
@@ -40,21 +40,17 @@ metadata:
 ### A. 새로 실행할 때
 
 1. `list_media_mix_metrics(brand_name)` — 비용 · 성과 지표 후보(`{name, unit}`)를 받는다. 에러(권한 · 미디어믹스 꺼짐 · 마트 없음)는 그대로 전한다.
-2. **조건을 사용자에게 한 번에 확인받는다** — 말하지 않은 값은 추측하지 않고 묻는다(기본값이 있는 것은 기본값을 보여 주고 확인).
+2. **조건을 사용자에게 한 번에 확인받는다** — 말하지 않은 값은 추측하지 않고 묻는다. 학습 방식 · VAT 처리 등 나머지는 서버가 기본값으로 정하므로 묻지 않는다.
 
-   | 조건 | 인자 | 기본값 |
-   |---|---|---|
-   | 제안받을 달(예산을 배분할 달) | `target_month` (`YYYY-MM`). 그 전월(기준 달) 실적으로 계산한다 — 전월 데이터가 다 들어온 뒤에 돌려야 정확하다 | 없음 — 묻는다 |
-   | 비용 지표 · 성과 지표 | `cost_metric`·`revenue_metric` (1번 후보 중 서로 다른 둘) | 없음 — 묻는다 |
-   | 제안받을 달의 예산(원, VAT 제외 Net) | `target_budget` | 없음 — 묻는다 |
-   | 마트 비용이 VAT 포함인지 | `cost_includes_vat` | **없음 — 반드시 묻는다** |
-   | 학습 방식 | `learning_strategy` aggressive · neutral · conservative | neutral |
-   | 요일 학습 | `learning_dow` even · weight(더 느림) | even |
-   | 고정비 매체(배분하지 않고 기준 달 일평균 비용으로 둠) | `fixed_media` | 없음(빈 목록) |
+   | 조건 | 인자 |
+   |---|---|
+   | 제안받을 달(예산을 배분할 달) | `target_month` (`YYYY-MM`). 그 전월(기준 달) 실적으로 계산한다 — 전월 데이터가 다 들어온 뒤에 돌려야 정확하다 |
+   | 비용 지표 · 성과 지표 | `cost_metric`·`revenue_metric` (1번 후보 중 서로 다른 둘) |
+   | 제안받을 달의 예산(원, VAT 제외 Net) | `target_budget` |
 3. 확인받으면 `create_media_mix_job(...)` 1회 → `id`. `created: false` 면 내가 같은 조건으로 이미 돌리고 있는 job 을 받은 것이다(사용자에게 알린다).
    `status: "failed"` 와 `error` 가 오면 큐에 넣지 못한 것이다 — 사유를 전하고 멈춘다.
-4. **끝날 때까지 기다린다**: `get_media_mix_job(brand_name, job_id)`(기본 인자 — 배분 행 없이 상태만)를 부르고, `status` 가
-   `pending`·`running` 이면 `python3 -c "import time; time.sleep(20)"` 로 기다렸다가 다시 부른다. 보통 1~수 분, 요일 학습(weight)은 더 걸린다.
+4. **끝날 때까지 기다린다**: `get_media_mix_job(brand_name, job_id)`(기본 인자 — 진단 없이 상태만)를 부르고, `status` 가
+   `pending`·`running` 이면 `python3 -c "import time; time.sleep(20)"` 로 기다렸다가 다시 부른다. 보통 1~수 분 걸린다.
    10분이 넘도록 끝나지 않으면 사용자에게 알리고 멈춘다(나중에 B 에서 목록으로 골라 결과를 볼 수 있다).
 5. `succeeded`·`failed`·`canceled` 가 되면 B-1 부터 한다.
 
@@ -77,14 +73,14 @@ metadata:
    - 상태를 본다. 목록에서 고른 job 이 완료 · 실패 · 취소면 바로 1번으로 간다. job id 를 직접 받았거나 고른 job 이 대기 · 계산 중이면
      `get_media_mix_job(brand_name, job_id)`(기본 인자)로 상태를 본다. 에러(없는 job · 다른 사람의 job · 권한 등)가 오면 원문을 전하고 멈춘다.
      `pending`·`running` 이면 A-4 대로 끝날 때까지 기다린다. 10분이 넘으면 그 상태로 1번부터 해서 진행 중 보고서를 낸다.
-1. `get_media_mix_job(brand_name, job_id, include_allocation=true, include_diagnostics=true)` **1회**. 저장 훅이 응답을 남기므로 배분 행 · 진단은 읽거나 옮기지 않는다.
+1. `get_media_mix_job(brand_name, job_id, include_diagnostics=true)` **1회**. 배분 행(`include_allocation`)은 보고서에 쓰지 않으니 켜지 않는다. 저장 훅이 응답을 남기므로 진단은 읽거나 옮기지 않는다.
 2. 빌드:
    ```
    python3 assets/build_report.py --brand <브랜드> --job-id <job id>
    ```
    출력 JSON:
    - `out` — 완성된 HTML 경로(`~/Downloads/laighthouse-reports/{브랜드}_media-mix_{제안 달}_{id 앞 8자}.html`). 바꿀 때만 `--out`.
-   - `missing` — 그 호출을 그대로 다시 보내고 2번을 다시 한다(배분 행 · 진단 없이 받은 응답뿐이었다).
+   - `missing` — 그 호출을 그대로 다시 보내고 2번을 다시 한다(진단 없이 받은 응답뿐이었다).
    - `error` — 도구 에러 원문(권한 · 없는 job 등). 그대로 사용자에게 전하고 멈춘다.
    - `note` — 저장 훅이 없는 호스트다. 「저장 훅이 없을 때」대로 한다.
 3. 완성된 HTML 을 낸다 — 빌더가 위 경로에 저장했다. 채팅에서 보여 줄 수 있는 호스트(Artifact 등)면 그 파일로 게시한다.

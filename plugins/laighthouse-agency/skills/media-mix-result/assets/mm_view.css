@@ -187,9 +187,6 @@ table {
   font-size: var(--fs-sm);
   line-height: var(--lh-sm);
 }
-.fg-2 {
-  color: var(--fg-secondary);
-}
 .fg-3 {
   color: var(--fg-tertiary);
 }
@@ -258,14 +255,6 @@ table {
   background: var(--state-muted-bg);
   border-color: var(--state-muted-bd);
 }
-.badge-outline {
-  background: transparent;
-}
-.hint {
-  font-size: var(--fs-xs);
-  color: var(--fg-tertiary);
-  line-height: var(--lh-xs);
-}
 
 /* ---- 카드 · 화면 틀 ---- */
 .card {
@@ -306,13 +295,6 @@ table {
   line-height: var(--lh-2xl);
   font-weight: var(--fw-bold);
   letter-spacing: -0.015em;
-}
-.section-title {
-  font-size: var(--fs-md);
-  font-weight: var(--fw-semibold);
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 /* ---- 표 ---- */
@@ -560,9 +542,6 @@ table {
 }
 
 /* ---- 화면이 쓰는 Tailwind 유틸리티(간격은 --sp 단계) ---- */
-.mb-1 {
-  margin-bottom: var(--sp-1);
-}
 .mb-2 {
   margin-bottom: var(--sp-2);
 }
@@ -571,12 +550,6 @@ table {
 }
 .mt-2 {
   margin-top: var(--sp-2);
-}
-.px-4 {
-  padding-inline: var(--sp-4);
-}
-.py-3 {
-  padding-block: var(--sp-3);
 }
 .pl-4 {
   padding-left: var(--sp-4);
@@ -589,9 +562,6 @@ table {
 }
 .gap-3 {
   gap: var(--sp-3);
-}
-.gap-4 {
-  gap: var(--sp-4);
 }
 .gap-5 {
   gap: var(--sp-5);
@@ -607,15 +577,4 @@ table {
 }
 .font-semibold {
   font-weight: var(--fw-semibold);
-}
-.grid {
-  display: grid;
-}
-.grid-cols-1 {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-}
-@media (width >= 80rem) {
-  .xl\:grid-cols-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }

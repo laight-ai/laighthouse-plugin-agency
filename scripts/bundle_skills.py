@@ -44,7 +44,7 @@ SHARED_FILES = {
     "weekly-report": KIT + REPORT_HTML + FEES + FEE_VIEWS + REFS,
     "monthly-report": KIT + REPORT_HTML + FEES + FEE_VIEWS + REFS,
     "overall-summary": OVERALL_SHARED,
-    "media-mix-result": ("assets/saved_responses.py", "assets/chart.umd.min.js"),
+    "media-mix-result": ("assets/saved_responses.py",),
     "naver-search": EXTERNAL,
     "naver-news": EXTERNAL,
     "naver-blog": EXTERNAL,
