@@ -1,16 +1,16 @@
 /* 미디어믹스 결과 보고서 — laighthouse-web 결과 화면(src/pages/marketing/MediaMixResult.tsx)을 그대로 옮긴 것.
-   계산(요약 표 · 증감 · 성과 표기 · 진단 읽기)은 src/lib/mediaMix.ts 와 같고, 문구는 ko 메시지 그대로다.
-   요약 수치 → 매체별 표 → 구분별 일별 매체 누적 막대 → 진단(접힘) 순서. 같은 매체를 현재(기준 달 실적) → 초안(최적화 전)
-   → 제안(최적화) 순서로 나란히 비교하는 것이 핵심이다.
+   계산(요약 표 · 증감 · 성과 표기)은 src/lib/mediaMix.ts 와 같고, 문구는 ko 메시지 그대로다.
+   요약 수치 → 매체별 표 순서. 같은 매체를 현재(기준 달 실적) → 제안(최적화) 순서로 나란히 비교하는 것이 핵심이다.
 
-   입력: window.__MM_JOB__ = get_media_mix_job(include_allocation=true, include_diagnostics=true) 응답 그대로,
+   입력: window.__MM_JOB__ = get_media_mix_job 응답 그대로,
    window.__MM_AS_OF__ = 그 응답을 받은 시각(epoch ms).
-   Chart.js 4(UMD, window.Chart)는 템플릿이 먼저 인라인한다. node 에서는 계산 함수만 module.exports 로 내보낸다. */
+   node 에서는 계산 함수만 module.exports 로 내보낸다. */
 ;(function (root) {
   'use strict'
 
   /* ---------- 계산(lib/mediaMix.ts) ---------- */
-  var KINDS = ['current', 'draft', 'optimized']
+  /* 보이는 구분 — 응답에는 초안(draft) 행도 있지만 현재와 제안만 견준다 */
+  var KINDS = ['current', 'optimized']
   var isActive = function (s) {
     return s === 'pending' || s === 'running'
   }
@@ -38,7 +38,7 @@
   }
 
   /* summary 는 구분 × 매체 합계, media '*' 가 그 구분의 전체 합계다.
-     매체 순서 — 제안(optimized) 비용이 큰 순, 같으면 이름순. 차트 범례 · 색도 이 순서를 따른다 */
+     매체 순서 — 제안(optimized) 비용이 큰 순, 같으면 이름순. 매체 색도 이 순서를 따른다 */
   function summaryTable(rows) {
     var byKey = new Map(
       rows.map(function (r) {
@@ -81,47 +81,6 @@
     return to == null || from == null || from === 0 ? null : ((to - from) / Math.abs(from)) * 100
   }
 
-  /* 한 구분의 일별 매체 누적 막대 — media 순서대로 쌓고, 그날 행이 없는 매체는 0 */
-  function dailyStack(rows, kind, metric, media) {
-    var mine = rows.filter(function (r) {
-      return r.kind === kind
-    })
-    var dates = Array.from(
-      new Set(
-        mine.map(function (r) {
-          return r.date
-        }),
-      ),
-    ).sort()
-    var at = new Map(
-      mine.map(function (r) {
-        return [r.media + '\u0000' + r.date, r[metric]]
-      }),
-    )
-    return {
-      dates: dates,
-      series: media.map(function (m) {
-        return {
-          media: m,
-          values: dates.map(function (d) {
-            var v = at.get(m + '\u0000' + d)
-            return v == null ? 0 : v
-          }),
-        }
-      }),
-    }
-  }
-
-  /* 세 구분의 일별 합계 중 가장 큰 값 — 세 차트의 y축을 같은 눈금으로 맞춘다 */
-  function dailyMax(rows, metric) {
-    var sum = new Map()
-    rows.forEach(function (r) {
-      var k = r.kind + '\u0000' + r.date
-      sum.set(k, (sum.get(k) || 0) + r[metric])
-    })
-    return Math.max.apply(null, [0].concat(Array.from(sum.values())))
-  }
-
   var won = function (v) {
     return v == null ? '–' : '₩' + Math.round(v).toLocaleString('ko-KR')
   }
@@ -160,66 +119,6 @@
     return kind === 'count'
       ? won(v)
       : v.toLocaleString('ko-KR', { minimumSignificantDigits: 3, maximumSignificantDigits: 3 })
-  }
-
-  /* 진단(diagnostics) — BE 가 dict 로 준다. 모양이 다른 값은 빼고 읽는다 */
-  var obj = function (v) {
-    return v && typeof v === 'object' && !Array.isArray(v) ? v : {}
-  }
-  var numOr = function (v) {
-    return typeof v === 'number' && isFinite(v) ? v : null
-  }
-  var strOr = function (v) {
-    return typeof v === 'string' ? v : null
-  }
-  function readDiagnostics(raw) {
-    if (!raw) return null
-    var windows = []
-    Object.keys(obj(raw.windows)).forEach(function (label) {
-      var w = raw.windows[label]
-      if (Array.isArray(w) && typeof w[0] === 'string' && typeof w[1] === 'string')
-        windows.push({ label: label, start: w[0], end: w[1] })
-    })
-    var media = Object.keys(obj(raw.media)).map(function (name) {
-      var m = obj(raw.media[name])
-      var dow = m.dow == null ? null : obj(m.dow)
-      return {
-        media: name,
-        samples: numOr(m.n_samples),
-        pinned: Array.isArray(m.pinned) ? m.pinned.length : 0,
-        dow: dow && {
-          ratio: numOr(dow.ratio),
-          significant: typeof dow.significant === 'boolean' ? dow.significant : null,
-          bestDay: strOr(dow.best_day),
-          worstDay: strOr(dow.worst_day),
-          bestVsWorstPct: numOr(dow.best_vs_worst_pct),
-        },
-      }
-    })
-    var weights = raw.best_alpha_weights == null ? null : obj(raw.best_alpha_weights)
-    var rt = obj(raw.runtime_seconds)
-    return {
-      windows: windows,
-      media: media,
-      notes: Array.isArray(raw.notes)
-        ? raw.notes.filter(function (n) {
-            return typeof n === 'string'
-          })
-        : [],
-      /* weight 모드의 요일별 예산 가중치 — 0 = 월요일 … 6 = 일요일. even 이면 null */
-      dowWeights:
-        weights &&
-        [0, 1, 2, 3, 4, 5, 6].map(function (i) {
-          return numOr(weights[String(i)])
-        }),
-      maxRevenue: numOr(raw.max_revenue),
-      runtime: {
-        draft: numOr(rt.draft_seconds),
-        gp: numOr(rt.gp_seconds),
-        bo: numOr(rt.bo_seconds),
-        total: numOr(rt.total_seconds),
-      },
-    }
   }
 
   /* ---------- 증감 표기(report/table.tsx) — 지표와 관계없이 오르면 초록 · 내리면 빨강 ---------- */
@@ -262,9 +161,9 @@
   }
 
   /* ---------- 문구(ko) ---------- */
-  var KIND_LABEL = { current: '현재(실적)', draft: '초안(최적화 전)', optimized: '제안(최적화)' }
-  /* optimized 매출은 실적이 아니라 GP 예측치, draft 매출은 과거 패턴의 추정치다 */
-  var REVENUE_LABEL = { current: '매출', draft: '추정 매출', optimized: '예상 매출' }
+  var KIND_LABEL = { current: '현재(실적)', optimized: '제안(최적화)' }
+  /* optimized 매출은 실적이 아니라 GP 예측치다 */
+  var REVENUE_LABEL = { current: '매출', optimized: '예상 매출' }
   var STATUS = {
     pending: { label: '대기 중', badge: 'badge-info' },
     running: { label: '계산 중', badge: 'badge-info' },
@@ -272,10 +171,6 @@
     failed: { label: '실패', badge: 'badge-danger' },
     canceled: { label: '취소됨', badge: 'badge-muted' },
   }
-  var STRATEGY_LABEL = { aggressive: '공격적', neutral: '중립', conservative: '보수적' }
-  var DOW_LABEL = { even: '요일 균등', weight: '요일 가중치' }
-  var WINDOW_LABEL = { A: '기준 달', M1: '1개월 전', M2: '2개월 전', M3: '3개월 전', 'PY+1': '작년 제안 달' }
-  var WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일']
 
   /* 성과 지표 표기 — 금액(money)이면 매출 · ROAS, 아니면 지표 이름과 성과당 비용(count) 또는 성과 ÷ 비용(unknown) */
   function outcome(job) {
@@ -289,9 +184,7 @@
           ? REVENUE_LABEL[k]
           : k === 'current'
             ? metric
-            : k === 'draft'
-              ? '추정 ' + metric
-              : '예상 ' + metric
+            : '예상 ' + metric
       },
       eff: kind === 'money' ? 'ROAS' : kind === 'count' ? metric + '당 비용' : metric + ' ÷ 비용',
       value: function (v) {
@@ -306,7 +199,7 @@
     }
   }
 
-  /* 매체 색 — 매체 순서(제안 비용이 큰 순)대로 토큰 팔레트를 돌려 쓴다. 표 · 범례 · 차트가 같은 색이다 */
+  /* 매체 색 — 매체 순서(제안 비용이 큰 순)대로 토큰 팔레트를 돌려 쓴다 */
   var PALETTE = [
     '--blue-500',
     '--green-500',
@@ -329,15 +222,12 @@
     monthText: monthText,
     summaryTable: summaryTable,
     changeRate: changeRate,
-    dailyStack: dailyStack,
-    dailyMax: dailyMax,
     won: won,
     roasText: roasText,
     outcomeKind: outcomeKind,
     outcomeText: outcomeText,
     efficiency: efficiency,
     efficiencyText: efficiencyText,
-    readDiagnostics: readDiagnostics,
     resolveChangeDirection: resolveChangeDirection,
     markChange: markChange,
     durationText: durationText,
@@ -360,7 +250,6 @@
     alert:
       '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
-    'chevron-down': '<path d="m6 9 6 6 6-6"/>',
   }
   function icon(name, cls) {
     return (
@@ -372,25 +261,6 @@
       '</svg>'
     )
   }
-  var token = function (name) {
-    return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-  }
-  /* 차트 영역 배경(FE components/ui/Chart 의 chartBackground) */
-  var chartBackground = {
-    id: 'customBackground',
-    beforeDraw: function (chart) {
-      var ctx = chart.ctx
-      var a = chart.chartArea
-      if (!a) return
-      ctx.save()
-      ctx.fillStyle = token('--ink-50')
-      ctx.fillRect(a.left, a.top, a.width, a.height)
-      ctx.restore()
-    },
-  }
-
-  var charts = [] // 그린 뒤 붙일 차트 — { id, config }
-
   function statusBadge(status) {
     var s = STATUS[status] || { label: status, badge: 'badge-muted' }
     return '<span class="badge badge-dot ' + s.badge + '">' + esc(s.label) + '</span>'
@@ -398,7 +268,6 @@
 
   function jobView(job) {
     var req = job.request
-    var fixed = req.fixed_media || []
     var body
     if (isActive(job.status)) body = progress(job)
     else if (job.status === 'failed')
@@ -432,12 +301,6 @@
       ' · ' +
       esc(req.revenue_metric) +
       '</dd>' +
-      '<dt>학습</dt><dd>' +
-      esc(STRATEGY_LABEL[req.learning_strategy || 'neutral']) +
-      ' · ' +
-      esc(DOW_LABEL[req.learning_dow || 'even']) +
-      (fixed.length ? ' · 고정비 ' + esc(fixed.join(', ')) : '') +
-      '</dd>' +
       '<dt>요청 시각</dt><dd>' +
       esc(fmtDateTime(job.created_at)) +
       '</dd>' +
@@ -464,41 +327,15 @@
 
   function result(job) {
     var table = summaryTable(job.summary || [])
-    var fixed = new Set(job.request.fixed_media || [])
-    var diagnostics = readDiagnostics(job.diagnostics)
     var o = outcome(job)
-    var metric = job.request.revenue_metric
-    var warnings = job.warnings || []
     var out = '<div class="stack gap-5">'
-    if (warnings.length)
-      out +=
-        '<div class="banner banner-warning">' +
-        icon('alert') +
-        '<div class="t-sm"><span class="b-title">확인할 내용</span><ul class="b-body t-xs mt-2 list-disc pl-4 stack gap-1">' +
-        warnings
-          .map(function (w) {
-            return '<li>' + esc(w) + '</li>'
-          })
-          .join('') +
-        '</ul></div></div>'
     out += kpis(job, table, o)
     out +=
       '<section class="card"><div class="card-head"><h2>매체별 요약</h2><span class="fg-3 t-xs">' +
       '비용은 VAT 제외 Net 기준입니다.' +
       '</span></div>' +
-      summaryTableView(table, fixed, o)
-    if (fixed.size)
-      out +=
-        '<p class="hint px-4 py-3">' +
-        (o.kind === 'money'
-          ? '고정비 매체는 기준 달 일평균 비용으로 고정하고, 초안 매출은 계산하지 않아 0으로 나옵니다.'
-          : '고정비 매체는 기준 달 일평균 비용으로 고정하고, 초안의 ' +
-            esc(metric) +
-            ' 값은 계산하지 않아 0으로 나옵니다.') +
-        '</p>'
-    out += '</section>'
-    out += dailyCharts(job.allocation || [], table, fixed, o)
-    if (diagnostics) out += diagnosticsView(diagnostics, o)
+      summaryTableView(table, o) +
+      '</section>'
     return out + '</div>'
   }
 
@@ -551,7 +388,7 @@
     )
   }
 
-  function summaryTableView(table, fixed, o) {
+  function summaryTableView(table, o) {
     var optTotalCell = table.total('optimized')
     var optTotal = optTotalCell ? optTotalCell.cost : 0
     /* 제안 비용 칸에는 비중(제안 합계 대비)을 아래 줄로 곁들인다 */
@@ -591,9 +428,7 @@
           colorVar(i) +
           ')"></span><span class="cell-title">' +
           esc(m) +
-          '</span>' +
-          (fixed.has(m) ? '<span class="badge badge-outline">고정</span>' : '') +
-          '</span></td>' +
+          '</span></span></td>' +
           KINDS.map(function (k) {
             return cells(k, m)
           }).join('') +
@@ -619,226 +454,9 @@
     )
   }
 
-  /* 구분마다 비용 · 매출 일별 매체 누적 막대 두 장. 세 구분의 y축 눈금을 같게 맞춰 눈으로 비교한다 */
-  function dailyCharts(rows, table, fixed, o) {
-    var costMax = dailyMax(rows, 'cost')
-    var revenueMax = dailyMax(rows, 'revenue')
-    var legend = table.media
-      .map(function (m, i) {
-        return (
-          '<li class="row gap-1"><span class="mm-dot" style="background:var(' +
-          colorVar(i) +
-          ')"></span>' +
-          esc(m) +
-          (fixed.has(m) ? ' (고정)' : '') +
-          '</li>'
-        )
-      })
-      .join('')
-    var cards = KINDS.map(function (kind) {
-      var total = table.total(kind)
-      return (
-        '<section class="card"><div class="card-head"><h3>' +
-        esc(KIND_LABEL[kind]) +
-        '</h3><span class="fg-3 t-xs num">' +
-        esc(o.eff + ' ' + o.effText(total && total.roas)) +
-        '</span></div><div class="card-body stack gap-4">' +
-        stackChart('비용 ' + won(total && total.cost), rows, kind, 'cost', table.media, costMax, won) +
-        stackChart(o.label(kind) + ' ' + o.value(total && total.revenue), rows, kind, 'revenue', table.media, revenueMax, o.value) +
-        '</div></section>'
-      )
-    }).join('')
-    return (
-      '<section class="stack gap-3"><div class="row-between"><h2 class="section-title">일별 매체 배분</h2>' +
-      '<ul class="row gap-4 flex-wrap t-xs fg-2" aria-label="매체 범례">' +
-      legend +
-      '</ul></div><div class="grid grid-cols-1 xl:grid-cols-3 gap-4">' +
-      cards +
-      '</div></section>'
-    )
-  }
-
-  function stackChart(title, rows, kind, metric, media, max, format) {
-    var id = 'mm-chart-' + charts.length
-    var stack = dailyStack(rows, kind, metric, media)
-    charts.push({ id: id, stack: stack, max: max, format: format })
-    return (
-      '<div><div class="t-xs fg-2 num mb-1" style="font-weight:600">' +
-      esc(title) +
-      '</div><div style="height:200px;position:relative"><canvas id="' +
-      id +
-      '"></canvas></div></div>'
-    )
-  }
-
-  function mountCharts() {
-    var Chart = root.Chart
-    if (!Chart) return
-    Chart.defaults.font.family = token('--font-body')
-    Chart.defaults.color = token('--fg-secondary')
-    var compact = new Intl.NumberFormat('ko', { notation: 'compact', maximumFractionDigits: 1 })
-    charts.forEach(function (c) {
-      var canvas = document.getElementById(c.id)
-      if (!canvas) return
-      new Chart(canvas, {
-        type: 'bar',
-        data: {
-          labels: c.stack.dates.map(function (d) {
-            return d.slice(8)
-          }),
-          datasets: c.stack.series.map(function (s, i) {
-            return { label: s.media, data: s.values, backgroundColor: token(colorVar(i)), borderRadius: 1 }
-          }),
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          scales: {
-            x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 6 } },
-            y: {
-              stacked: true,
-              beginAtZero: true,
-              suggestedMax: c.max,
-              ticks: {
-                callback: function (v) {
-                  return compact.format(Number(v))
-                },
-              },
-              grid: { color: token('--border-subtle') },
-            },
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                title: function (items) {
-                  return c.stack.dates[items[0].dataIndex] || ''
-                },
-                label: function (ctx) {
-                  return ctx.dataset.label + ': ' + c.format(ctx.parsed.y || 0)
-                },
-              },
-            },
-          },
-        },
-        plugins: [chartBackground],
-      })
-    })
-  }
-
-  /* 진단 — 분석용이라 접어 둔다. 요일 효과가 유의하지 않은 매체는 차이를 참고용으로만 보여 준다 */
-  function diagnosticsView(d, o) {
-    var sec = function (v) {
-      return v == null ? '–' : durationText(Math.round(v))
-    }
-    var out =
-      '<details class="card mm-diag"><summary class="card-head"><h2>진단</h2>' +
-      '<span class="fg-3 t-xs">학습 기간 · 표본 · 요일 효과 · 계산 시간</span>' +
-      icon('chevron-down', 'mm-diag-caret') +
-      '</summary><div class="card-body stack gap-5">'
-    if (d.windows.length)
-      out +=
-        '<div><h3 class="t-sm mb-2" style="font-weight:600">학습에 쓴 기간</h3><dl class="dl">' +
-        d.windows
-          .map(function (w) {
-            return (
-              '<dt>' +
-              esc(WINDOW_LABEL[w.label] || w.label) +
-              '</dt><dd class="num">' +
-              esc(w.start) +
-              ' ~ ' +
-              esc(w.end) +
-              '</dd>'
-            )
-          })
-          .join('') +
-        '</dl></div>'
-    if (d.media.length)
-      out +=
-        '<div class="table-wrap overflow-x-auto"><table class="data-table table-dense"><thead><tr><th>매체</th>' +
-        '<th class="num">학습 일수</th><th>모델 상태</th><th>요일 효과</th></tr></thead><tbody>' +
-        d.media
-          .map(function (m) {
-            var dow = m.dow
-            var effect = ''
-            if (!dow) effect = '<span class="fg-3">–</span>'
-            else {
-              var parts = []
-              if (dow.bestDay && dow.worstDay && dow.bestVsWorstPct != null)
-                parts.push(
-                  '<span>' +
-                    esc(dow.bestDay + '요일이 ' + dow.worstDay + '요일보다 약 ' + dow.bestVsWorstPct.toFixed(1) + '% 높음') +
-                    '</span>',
-                )
-              if (dow.ratio != null)
-                parts.push('<span class="fg-3">요일 효과 비중 ' + (dow.ratio * 100).toFixed(1) + '%</span>')
-              if (dow.significant === false) parts.push('<span class="badge">유의하지 않음 · 참고용</span>')
-              effect = '<span class="row gap-2 flex-wrap">' + parts.join('') + '</span>'
-            }
-            return (
-              '<tr><td class="cell-title">' +
-              esc(m.media) +
-              '</td><td class="num">' +
-              (m.samples == null ? '–' : m.samples) +
-              '</td><td>' +
-              (m.pinned > 0
-                ? '<span class="badge badge-warning">경계값 ' + m.pinned + '개 · 신뢰도 낮음</span>'
-                : '<span class="fg-3">정상</span>') +
-              '</td><td class="t-sm">' +
-              effect +
-              '</td></tr>'
-            )
-          })
-          .join('') +
-        '</tbody></table></div>'
-    out += '<dl class="dl">'
-    if (d.dowWeights)
-      out +=
-        '<dt>요일별 예산 가중치</dt><dd class="num">' +
-        d.dowWeights
-          .map(function (w, i) {
-            return WEEKDAYS[i] + ' ' + (w == null ? '–' : w.toFixed(2))
-          })
-          .join(' · ') +
-        '</dd>'
-    if (d.maxRevenue != null)
-      out +=
-        '<dt>' +
-        (o.kind === 'money' ? '가중치 기준 예상 총매출' : '가중치 기준 ' + esc(o.label('optimized')) + ' 합계') +
-        '</dt><dd class="num">' +
-        esc(o.value(d.maxRevenue)) +
-        '</dd>'
-    out +=
-      '<dt>계산 시간</dt><dd class="num">' +
-      esc(
-        '전체 ' +
-          sec(d.runtime.total) +
-          ' (초안 ' +
-          sec(d.runtime.draft) +
-          ' · 학습 ' +
-          sec(d.runtime.gp) +
-          ' · 배분 ' +
-          sec(d.runtime.bo) +
-          ')',
-      ) +
-      '</dd>'
-    if (d.notes.length)
-      out +=
-        '<dt>배분 메모</dt><dd><ul class="stack gap-1">' +
-        d.notes
-          .map(function (n) {
-            return '<li>' + esc(n) + '</li>'
-          })
-          .join('') +
-        '</ul></dd>'
-    return out + '</dl></div></details>'
-  }
-
   function render(job) {
     var app = document.getElementById('app')
     app.innerHTML = jobView(job)
-    mountCharts()
   }
 
   render(root.__MM_JOB__)
