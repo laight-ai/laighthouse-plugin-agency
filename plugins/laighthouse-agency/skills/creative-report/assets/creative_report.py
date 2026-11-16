@@ -21,6 +21,7 @@
 """
 import argparse
 import base64
+import html as htmllib
 import json
 import os
 import re
@@ -382,7 +383,7 @@ def main():
     missing = []
     if items is None:
         missing.append({"tool": "get_ad_creative_info", "brand_name": a.brand})
-    if prev_env is None:   # 없거나 에러 응답 — 비교 없이 그리지 않고 다시 부르게 한다
+    if prev_rec is None:   # 직전 기간 호출이 없다(에러 응답이면 다시 부르지 않고 비교 없이 그린다 — 데이터 시작 전 기간 등)
         missing.append({"tool": "get_ad_performance", "start_date": p_start, "end_date": p_end, "time_grain": "total",
                         "group_by": perf_group_by})
     if missing:
@@ -427,7 +428,8 @@ def main():
     with open(os.path.join(SHARED, "report_kit.css"), encoding="utf-8") as f:
         kit_css = f.read()
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
-    html = html.replace("/*__KIT_CSS__*/", kit_css).replace('"__DATA__"', blob).replace("__TITLE__", "%s 소재 성과" % a.brand)
+    html = (html.replace("__TITLE__", htmllib.escape("%s 소재 성과" % a.brand))   # 데이터보다 먼저 — 데이터 안의 같은 글자는 건드리지 않는다
+            .replace("/*__KIT_CSS__*/", kit_css).replace('"__DATA__"', blob))
     out = a.out or os.path.join(os.path.expanduser("~"), "Downloads", "laighthouse-reports",
                                 "%s_creative_%s_%s.html" % (re.sub(r'[\\/:*?"<>|]', "_", a.brand), a.start_date, a.end_date))
     os.makedirs(os.path.dirname(out), exist_ok=True)

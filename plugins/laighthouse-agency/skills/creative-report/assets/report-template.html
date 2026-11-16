@@ -143,13 +143,10 @@ const fin = v => (v == null || !isFinite(v)) ? null : v;
 const f = {
   int: v => (v = fin(v)) == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
   money: v => (v = fin(v)) == null ? '—' : cur + Math.round(v).toLocaleString('ko-KR'),
-  short: v => (v = fin(v)) == null ? '—' : Math.abs(v) >= 1e6 ? cur + (v / 1e6).toFixed(1) + 'M' : Math.abs(v) >= 1e4 ? cur + Math.round(v / 1e3) + 'K' : cur + Math.round(v).toLocaleString('ko-KR'),
   pct: v => (v = fin(v)) == null ? '—' : v.toFixed(2) + '%',
 };
 const ratio = (a, b, k = 1) => b ? a / b * k : null;
 const dots = d => d.replace(/-/g, '.');
-const ZERO = [0, 0, 0, 0, 0, 0];
-const add = (a, b) => a.map((x, i) => x + (b ? b[i] : 0));
 const mdot = m => `<span class="lh-mdot" style="--c:${colorOf(m)}"></span>`;
 
 // 원자 지표 [광고비, 노출, 클릭, 전환, 매출, 조회수] → 지표. 브랜드 데이터에 있는 것만 고를 수 있다
