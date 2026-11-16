@@ -243,11 +243,15 @@ def chat_markdown(brand, s, e, groups, sort, cols, cur, notes):
     return "\n".join(lines).rstrip() + "\n\n— by LaightAI"
 
 
-def find_perf(recs, start, end):
+def find_perf(recs, start, end, group_by=None):
+    """기간의 소재 성과 응답(가장 최근). group_by를 주면 그 차원 구성과 같은 응답만 — 직전 기간은 이번 기간과
+    차원이 같아야 소재 키(ad_id 등)가 맞는다."""
     for r in reversed(recs):
         ti = r.get("tool_input") or {}
+        gb = ti.get("group_by") or []
         if (r["_tool"] == "get_ad_performance" and not ti.get("filters") and ti.get("metrics") is None
-                and (ti.get("time_grain") or "day") == "total" and "ad_name" in (ti.get("group_by") or [])
+                and (ti.get("time_grain") or "day") == "total" and "ad_name" in gb
+                and (group_by is None or sorted(gb) == sorted(group_by))
                 and str(ti.get("start_date"))[:10] == start and str(ti.get("end_date"))[:10] == end):
             return r
     return None
@@ -357,7 +361,8 @@ def main():
 
     # 직전 기간(같은 길이) — 표 모드는 있으면 쓰고, 보고서 모드는 필수
     p_start, p_end = prev_period(a.start_date, a.end_date)
-    prev_rec = find_perf(recs, p_start, p_end)
+    perf_group_by = (perf.get("tool_input") or {}).get("group_by") or []
+    prev_rec = find_perf(recs, p_start, p_end, perf_group_by)
     prev_env = load_env(prev_rec) if prev_rec else None
     prev_rows = creative_rows(prev_env, resolve_keys(prev_env.get("metrics"), prev_env["rows"]), a.media) if prev_env else None
     # 비교는 이번 기간에 집행한 매체끼리만 — 직전 기간에만 집행한 매체는 화면·요약 어디에도 나오지 않는다
@@ -377,9 +382,9 @@ def main():
     missing = []
     if items is None:
         missing.append({"tool": "get_ad_creative_info", "brand_name": a.brand})
-    if prev_rec is None:
+    if prev_env is None:   # 없거나 에러 응답 — 비교 없이 그리지 않고 다시 부르게 한다
         missing.append({"tool": "get_ad_performance", "start_date": p_start, "end_date": p_end, "time_grain": "total",
-                        "group_by": "이번 기간 호출과 같은 group_by"})
+                        "group_by": perf_group_by})
     if missing:
         return sr.emit({"missing": missing})
 

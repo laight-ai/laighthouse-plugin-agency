@@ -41,7 +41,7 @@ E가 오늘 이후면 MCP를 부르지 말고 "데이터는 어제까지만 있�
 2. **MCP 호출 (한 메시지에 동시에)**:
    - `get_ad_performance`(S ~ E, `time_grain:"total"`, `group_by:["media","source","campaign_name","ad_group_name","ad_id","ad_name"]`,
      `metrics`·`filters` 생략). 알 수 없는 차원이라는 에러면 에러 메시지의 차원 목록에 있는 것만 남겨(`ad_name`은 꼭 둔다) 한 번 다시 부른다.
-     5만 행 오류면 `ad_id` → `source` 순으로 빼고 다시 부른다.
+     5만 행 오류면 `ad_id` → `source` 순으로 빼고 다시 부른다. 차원을 줄였으면 아래 직전 기간 호출도 같은 `group_by`로 다시 부른다.
    - 보고서(B)면 함께 부른다:
      - `get_ad_creative_info`(`brand_name`만 — `source`·`name_query`·`limit`은 넣지 않는다).
    - 두 형태 모두 함께 부른다: 직전 기간 성과 — 첫 호출과 같은 인자에 기간만 직전 같은 길이 기간

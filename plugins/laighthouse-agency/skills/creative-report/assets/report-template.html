@@ -338,9 +338,10 @@ function drawTree() {
       return `<th class="num sortable${on ? ' sorted' : ''}" data-k="${m.k}" aria-sort="${on ? (dt.sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}">${m.l}<span class="sort">${on ? (dt.sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span></th>`; }).join('')
     + '</tr></thead>';
   const out = [];
-  (function walk(ns) {
+  (function walk(ns, hit) {   // hit = 조상 이름이 검색어와 맞음 — 그 아래는 모두 보인다
     sorted(ns).forEach(n => {
-      if (dt.q && !matches(n)) return;
+      const self = hit || (dt.q && n.n.toLowerCase().includes(dt.q));
+      if (dt.q && !self && !matches(n)) return;
       const kids = n.k.length > 0, open = dt.q ? true : dt.open.has(n.id);
       const cells = levels.map((_, lv) => {
         let s = '';
@@ -350,7 +351,7 @@ function drawTree() {
       }).join('');
       out.push(`<tr class="lv-${n.d}">${cells}` + (img ? `<td style="text-align:center">${n.t ? `<img class="cr-thumb" src="${n.t}" alt="${esc(n.n)}" tabindex="0">` : ''}</td>` : '')
         + cols.map(m => `<td class="num"><span class="vc"><span>${f[m.fm](m.v(n.c))}</span>${deltaHtml(n.c, n.p, m)}</span></td>`).join('') + '</tr>');
-      if (kids && open) walk(n.k);
+      if (kids && open) walk(n.k, self);
     });
   })(roots);
   $('dt').innerHTML = head + '<tbody>' + (out.join('') || `<tr><td class="lh-empty" colspan="${levels.length + cols.length + 1}">검색어와 맞는 캠페인·광고가 없습니다.</td></tr>`) + '</tbody>';
