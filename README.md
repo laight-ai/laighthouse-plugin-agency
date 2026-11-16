@@ -24,6 +24,7 @@
 | | `daily-report` | Daily 보고서(HTML) — 기준일 vs 전일·전주 동요일 |
 | | `weekly-report` | Weekly 보고서(HTML) — 이번주 vs 전주, 월 누적 진척도 |
 | | `monthly-report` | Monthly 보고서(HTML) — 대상 월 vs 전월, 예산·목표 달성 |
+| | `creative-report` | 소재 성과 — 매체별 소재 TOP을 채팅 표로, 또는 썸네일 포함 보고서(HTML)로 |
 | | `naver-search` | 외부 요인: 브랜드(자사·경쟁) 네이버 추정 검색수 비교(날짜 범위) |
 | | `naver-news` | 외부 요인: 브랜드 네이버 뉴스 기사 수 비교 + 자사 주요 기사 4건 |
 | | `naver-blog` | 외부 요인: 브랜드 네이버 블로그 글 수(제목 일치) 비교 + 자사 주요 글 4건 |

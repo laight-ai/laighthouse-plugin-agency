@@ -22,7 +22,7 @@
         ]
       },
       {
-        "matcher": "^mcp__.+__(get_ad_performance|get_target_progress_v2|list_promotions|list_campaign_change_raw|get_external_context|get_media_mix_job)$",
+        "matcher": "^mcp__.+__(get_ad_performance|get_target_progress_v2|list_promotions|list_campaign_change_raw|get_external_context|get_media_mix_job|get_ad_creative_info|get_ad_creative_image)$",
         "hooks": [
           {
             "type": "command",
