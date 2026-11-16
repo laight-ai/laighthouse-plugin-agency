@@ -193,7 +193,8 @@ def image_uri(recs, item_id, files):
     except (TypeError, ValueError):
         got = None
     if got:
-        return "data:%s;base64,%s" % (got[0], re.sub(r"\s", "", got[1]))
+        mime = got[0] if re.fullmatch(r"image/[\w.+-]+", str(got[0])) else "image/jpeg"   # 속성에 그대로 들어가므로 형식만 허용
+        return "data:%s;base64,%s" % (mime, re.sub(r"\s", "", got[1]))
     # 호스트가 이미지를 `[Image: source: <경로>]` 안내로 바꿔 넘긴 경우 — 그 파일을 읽는다
     src = IMG_SRC_RE.search(text or "")
     if src and os.path.exists(src.group(1).strip()):
