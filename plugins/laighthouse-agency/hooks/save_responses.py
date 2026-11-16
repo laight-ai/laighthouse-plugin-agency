@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PostToolUse 저장 훅: laighthouse MCP 응답(get_ad_performance / get_target_progress_v2 /
-list_promotions / list_campaign_change_raw / get_external_context / get_media_mix_job /
+list_promotions / list_campaign_change_raw / get_external_context /
 get_ad_creative_info / get_ad_creative_image)을 원본 그대로 파일로 남긴다.
 
 왜 존재하나: 보고서 스킬은 MCP 호출을 한 메시지에 모두 보낸 뒤 `assets/prepare.py`로 빌더 입력과

@@ -209,7 +209,6 @@ ENTRY = {
     "naver-news": ("assets/prepare.py", RANGE, "missing"),
     "naver-blog": ("assets/prepare.py", RANGE, "missing"),
     "weather-impact": ("assets/prepare.py", RANGE, "missing"),
-    "media-mix-result": ("assets/build_report.py", ["--job-id", "job"], "note"),
 }
 
 
@@ -222,7 +221,8 @@ def run_entry(skill_dir, script, args, tmp):
 
 
 def test_each_entry_script_runs_to_its_no_responses_output_when_mounted_alone():
-    assert set(ENTRY) | {"skill-catalog"} == set(skill_names()), "새 스킬은 ENTRY에 진입 스크립트를 더한다"
+    # skill-catalog · nextmonth-budget-planning 은 스크립트 없이 답한다
+    assert set(ENTRY) | {"skill-catalog", "nextmonth-budget-planning"} == set(skill_names()), "새 스킬은 ENTRY에 진입 스크립트를 더한다"
     with tempfile.TemporaryDirectory() as tmp:
         for skill, (script, args, key) in sorted(ENTRY.items()):
             d = mount_alone(tmp, skill)
@@ -231,22 +231,9 @@ def test_each_entry_script_runs_to_its_no_responses_output_when_mounted_alone():
             assert code == 0 and key in json.loads(out), f"{skill}: {script} 실패\n{out}{err}"
 
 
-def test_media_mix_result_renders_from_a_response_file_when_mounted_alone():
-    with tempfile.TemporaryDirectory() as tmp:
-        d = mount_alone(tmp, "media-mix-result")
-        out = os.path.join(tmp, "mm.html")
-        code, stdout, err = run_entry(d, "assets/build_report.py", [
-            "--json", os.path.join(HERE, "fixtures", "media_mix", "job-even.json"), "--out", out], tmp)
-        assert code == 0, stdout + err
-        with open(out, encoding="utf-8") as f:
-            html = f.read()
-        assert "function summaryTable" in html and "__MM_VIEW_JS__" not in html, "그리기 코드가 인라인되지 않았다"
-
-
 def test_a_missing_copy_is_caught_when_mounted_alone():
     """위 검사가 실제로 잡는지: 사본 하나를 지우면 그 스킬이 실패한다."""
     cases = [
-        ("media-mix-result", "shared/assets/saved_responses.py"),      # 공용 킷 찾기
         ("daily-report", "shared/assets/report_kit.css"),
         ("weekly-report", "shared/assets/fee_views.py"),                # 진입 스크립트가 import 하는 모듈
         ("naver-search", "shared/assets/external_context/page.py"),
