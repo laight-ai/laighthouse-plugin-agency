@@ -40,6 +40,7 @@ import saved_responses as sr  # noqa: E402
 
 sys.path.insert(0, HERE)
 import creative_digest as cd  # noqa: E402
+from creative_common import ATOMS, MIN_IMP, MIN_SHARE  # noqa: E402  (ATOMS 순서 = 보고서 화면 JS의 원자 지표 순서)
 
 KEYS = {   # 지표 키 후보(대소문자 무시, 정확히 같은 이름) — 처음 있는 것
     "cost": ("광고비", "cost", "spend", "spending"),
@@ -49,11 +50,11 @@ KEYS = {   # 지표 키 후보(대소문자 무시, 정확히 같은 이름) —
     "revenue": ("매출", "revenue", "purchase_value", "conversion_value"),
     "view": ("조회수", "video_views", "views", "view"),
 }
-MIN_IMP, MIN_SHARE, ATOMS = cd.MIN_IMP, cd.MIN_SHARE, cd.ATOMS   # 기준은 creative_digest 한 곳에서 정한다
 SORT_LABEL = {"cost": "광고비", "ctr": "CTR", "roas": "ROAS", "click": "클릭", "conversion": "전환"}
 RATIO_SORTS = ("ctr", "roas")
 MAX_IMAGES = 30
 IMG_RE = re.compile(r"^[A-Za-z0-9+/=\s]{200,}$")
+IMG_SRC_RE = re.compile(r"\[Image: source: ([^\]]+)\]")
 
 
 def resolve_keys(metrics, rows=()):
@@ -190,7 +191,14 @@ def image_uri(recs, item_id, files):
         got = find_image(json.loads(text))
     except (TypeError, ValueError):
         got = None
-    return "data:%s;base64,%s" % (got[0], re.sub(r"\s", "", got[1])) if got else ""   # "" = 받았지만 이미지 없음(에러)
+    if got:
+        return "data:%s;base64,%s" % (got[0], re.sub(r"\s", "", got[1]))
+    # 호스트가 이미지를 `[Image: source: <경로>]` 안내로 바꿔 넘긴 경우 — 그 파일을 읽는다
+    src = IMG_SRC_RE.search(text or "")
+    if src and os.path.exists(src.group(1).strip()):
+        return image_uri([], item_id, {str(item_id): src.group(1).strip()})
+    # 에러 응답(썸네일 없음 등)이면 빈 썸네일, 아니면 이미지를 못 남긴 것 — image_calls로 다시 드러내 --image-file 경로를 타게 한다
+    return "" if re.search(r"error|ValueError", text or "", re.I) else None
 
 
 # ── 출력 ────────────────────────────────────────────────────────────────────────────────────────────────

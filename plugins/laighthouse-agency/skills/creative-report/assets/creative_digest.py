@@ -1,11 +1,10 @@
-"""소재 성과 — 요약 근거(digest)와 소재 기준 상수. 모델이 직접 부르지 않는다.
+"""소재 성과 — 요약 근거(digest). 모델이 직접 부르지 않는다.
 
 digest는 모델이 「소재 Summary」를 쓸 근거다(guides/creative-summary.md). 수치는 화면에 쓸 문자열로 만들어 두고,
 변화(직전 기간 대비)도 미리 계산한다 — 모델은 값을 다시 계산하지 않고 그대로 옮긴다.
 """
 
-MIN_IMP, MIN_SHARE = 1000, 0.01   # 비율 지표(CTR·ROAS) 순위·효율 비교에 쓰는 최소 표본: 노출 ≥ 1,000 그리고 광고비 ≥ 매체 광고비의 1%
-ATOMS = ("cost", "impression", "click", "conversion", "revenue", "view")   # 원자 지표 — 보고서 화면 JS의 순서와 같다
+from creative_common import ATOMS, MIN_IMP, MIN_SHARE
 
 
 def ratios(e):
