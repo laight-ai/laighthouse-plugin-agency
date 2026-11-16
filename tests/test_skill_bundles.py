@@ -209,7 +209,7 @@ ENTRY = {
     "naver-news": ("assets/prepare.py", RANGE, "missing"),
     "naver-blog": ("assets/prepare.py", RANGE, "missing"),
     "weather-impact": ("assets/prepare.py", RANGE, "missing"),
-    "media-mix-result": ("assets/build_report.py", ["--job-id", "job"], "note"),
+    "nextmonth-budget-planning": ("assets/build_report.py", ["--job-id", "job"], "note"),
 }
 
 
@@ -233,7 +233,7 @@ def test_each_entry_script_runs_to_its_no_responses_output_when_mounted_alone():
 
 def test_media_mix_result_renders_from_a_response_file_when_mounted_alone():
     with tempfile.TemporaryDirectory() as tmp:
-        d = mount_alone(tmp, "media-mix-result")
+        d = mount_alone(tmp, "nextmonth-budget-planning")
         out = os.path.join(tmp, "mm.html")
         code, stdout, err = run_entry(d, "assets/build_report.py", [
             "--json", os.path.join(HERE, "fixtures", "media_mix", "job-even.json"), "--out", out], tmp)
@@ -246,7 +246,7 @@ def test_media_mix_result_renders_from_a_response_file_when_mounted_alone():
 def test_a_missing_copy_is_caught_when_mounted_alone():
     """위 검사가 실제로 잡는지: 사본 하나를 지우면 그 스킬이 실패한다."""
     cases = [
-        ("media-mix-result", "shared/assets/saved_responses.py"),      # 공용 킷 찾기
+        ("nextmonth-budget-planning", "shared/assets/saved_responses.py"),      # 공용 킷 찾기
         ("daily-report", "shared/assets/report_kit.css"),
         ("weekly-report", "shared/assets/fee_views.py"),                # 진입 스크립트가 import 하는 모듈
         ("naver-search", "shared/assets/external_context/page.py"),

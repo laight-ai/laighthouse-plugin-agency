@@ -21,7 +21,7 @@
 | 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
 | 스킬 | creative-report | 소재 성과 — 매체별 소재 TOP(광고비·CTR·ROAS 등)을 채팅 표로, 또는 썸네일 포함 보고서(HTML)로. 먼저 형태를 고르게 한다 |
 | 스킬 | naver-search · naver-news · naver-blog · weather-impact | 외부 요인 보고서(HTML, 날짜 범위) — 네이버 검색량·뉴스·블로그, 서울 날씨(+광고 클릭) |
-| 스킬 | media-mix-result | 월간 미디어믹스 결과 보고서(HTML) — 라이트하우스 웹 결과 화면과 같은 모양, 전용 킷(`assets/mm_view.*`) |
+| 스킬 | nextmonth-budget-planning | 월간 미디어믹스 결과 보고서(HTML) — 라이트하우스 웹 결과 화면과 같은 모양, 전용 킷(`assets/mm_view.*`) |
 | 스킬 | skill-catalog | 라이트하우스 스킬 목록(이름·명령어·설명·요청 예시)을 채팅에 표로 보여 준다 — "스킬 목록", "어떤 스킬 있어" |
 
 ## 사용법
@@ -40,8 +40,8 @@
 
 ### 미디어믹스 결과 (1.12.0~)
 
-> "다라세제 미디어믹스 결과 보여줘" → `media-mix-result` (내가 실행한 job 목록에서 골라 결과를 본다)
-> "다라세제 3월 실적으로 4월 예산 7천만 원 미디어믹스 돌려줘" → `media-mix-result` (조건을 확인받고 새로 실행 → 끝나면 보고서)
+> "다라세제 미디어믹스 결과 보여줘" → `nextmonth-budget-planning` (내가 실행한 job 목록에서 골라 결과를 본다)
+> "다라세제 3월 실적으로 4월 예산 7천만 원 미디어믹스 돌려줘" → `nextmonth-budget-planning` (조건을 확인받고 새로 실행 → 끝나면 보고서)
 
 MCP 도구 `get_media_mix_job`을 기본 인자로 부르고, 저장 훅이 남긴 응답을
 `assets/build_report.py`가 그대로 HTML에 넣는다. 계산·모양은 전용 킷 `assets/mm_view.js`·`mm_view.css`가 맡고,

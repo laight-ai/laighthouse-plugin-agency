@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""media-mix-result 스킬 자체 검사(표준 라이브러리 + node). 성공하면 "ok".
+"""nextmonth-budget-planning 스킬 자체 검사(표준 라이브러리 + node). 성공하면 "ok".
 
 - build_report.py: 저장 훅이 남긴 get_media_mix_job 응답 중 무엇을 고르는지(끝난 응답, 없으면 부를 호출,
   도구 에러), 그리고 응답을 <script> 안에 안전하게 넣는지.
@@ -16,7 +16,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PLUGIN = os.path.normpath(os.path.join(HERE, "..", "plugins", "laighthouse-agency"))
-ASSETS = os.path.join(PLUGIN, "skills", "media-mix-result", "assets")
+ASSETS = os.path.join(PLUGIN, "skills", "nextmonth-budget-planning", "assets")
 FIXTURES = os.path.join(HERE, "fixtures", "media_mix")
 sys.path.insert(0, ASSETS)
 
