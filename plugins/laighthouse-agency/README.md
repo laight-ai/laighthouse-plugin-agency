@@ -44,7 +44,7 @@
 > "다라세제 3월 실적으로 4월 예산 7천만 원 미디어믹스 돌려줘" → `nextmonth-budget-planning` (조건을 확인받고 새로 실행 → 끝나면 보고서)
 
 MCP 도구 `get_media_mix_job`을 기본 인자로 부르고, Claude 가 응답의 `summary`로 증감률·비중을 `python3`로 계산한 뒤
-SKILL.md 의 「HTML 뼈대」대로 HTML 을 직접 쓴다(1.18.0~, 스크립트 없음). 표는 기준 달 「N월 현재까지」와 「M월 제안」을 나란히 두고,
+SKILL.md 의 「HTML 뼈대」대로 HTML 을 직접 쓴다(1.19.0~, 스크립트 없음). 표는 기준 달 「N월 현재까지」와 「M월 제안」을 나란히 두고,
 제안 칸마다 현재 대비 증감을 빨강(상승)·파랑(하락)으로 붙인다. SKILL.md 는 laighthouse-plugin(`laighthouse-analytics-prod`) · -external 과
 같은 파일이다 — 고칠 때는 함께 고친다. 이전 렌더러(`assets/build_report.py`·`mm_view.js`·`mm_view.css`와 그 테스트)는 git 태그
 `archive/media-mix-html-renderer`에 있다(되살리기: `git checkout archive/media-mix-html-renderer -- <경로>`).
