@@ -173,6 +173,30 @@ def test_view_calculations_match_the_web_screen():
     assert node_eval("[v.prevMonth('2026-04'), v.prevMonth('2027-01')]") == ["2026-03", "2026-12"]
 
 
+def test_view_reads_outcome_names_and_the_old_revenue_names():
+    if shutil.which("node") is None:
+        print("skip: node 없음 — mm_view.js 계산 검사를 건너뛴다")
+        return
+    # 서버는 성과를 outcome · outcome_per_cost · outcome_unit · outcome_metric 으로 주고, 예전 서버는
+    # revenue · roas · revenue_unit · revenue_metric 으로 준다. 어느 쪽이든 같은 값을 읽는다.
+    summary = [
+        {"kind": "optimized", "media": "*", "cost": 100, "outcome": 250, "outcome_per_cost": 2.5},
+        {"kind": "current", "media": "*", "cost": 100, "revenue": 300, "roas": 3},
+        {"kind": "current", "media": "A", "cost": 0, "outcome": 5, "outcome_per_cost": None, "roas": 9},
+    ]
+    table = f"v.summaryTable({json.dumps(summary)})"
+    assert node_eval(f"[{table}.total('optimized'), {table}.total('current'), {table}.cell('current', 'A')]") == [
+        {"cost": 100, "outcome": 250, "perCost": 2.5},
+        {"cost": 100, "outcome": 300, "perCost": 3},
+        {"cost": 0, "outcome": 5, "perCost": None},
+    ]
+    new_job = {"request": {"outcome_metric": "구매수"}, "outcome_unit": "회"}
+    old_job = {"request": {"revenue_metric": "매출"}, "revenue_unit": "₩"}
+    # 금액이어도 ROAS · 매출이라 부르지 않고 지표 이름으로 부른다
+    assert node_eval(f"[v.outcome({json.dumps(new_job)}).eff, v.outcome({json.dumps(old_job)}).eff, "
+                     f"v.outcome({json.dumps(old_job)}).label('optimized')]") == ["구매수당 비용", "매출 ÷ 비용", "예상 매출"]
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
