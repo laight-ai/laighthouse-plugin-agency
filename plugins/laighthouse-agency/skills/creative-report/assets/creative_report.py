@@ -49,11 +49,10 @@ KEYS = {   # 지표 키 후보(대소문자 무시, 정확히 같은 이름) —
     "revenue": ("매출", "revenue", "purchase_value", "conversion_value"),
     "view": ("조회수", "video_views", "views", "view"),
 }
-MIN_IMP, MIN_SHARE = 1000, 0.01
+MIN_IMP, MIN_SHARE, ATOMS = cd.MIN_IMP, cd.MIN_SHARE, cd.ATOMS   # 기준은 creative_digest 한 곳에서 정한다
 SORT_LABEL = {"cost": "광고비", "ctr": "CTR", "roas": "ROAS", "click": "클릭", "conversion": "전환"}
 RATIO_SORTS = ("ctr", "roas")
 MAX_IMAGES = 30
-ATOMS = ("cost", "impression", "click", "conversion", "revenue", "view")   # 화면 JS의 원자 지표 순서와 같다
 IMG_RE = re.compile(r"^[A-Za-z0-9+/=\s]{200,}$")
 
 
@@ -337,6 +336,8 @@ def main():
     if sort == "conversion" and not has["conversion"]:
         sort = "cost"
     sorts = ["cost", "ctr", "roas" if has["revenue"] else "click"] + (["conversion"] if has["conversion"] else [])
+    if sort not in sorts:   # 매출이 있는 브랜드에 --sort click — 화면 탭·인쇄 머리말·썸네일 우선순위가 이 기준을 알게 한다
+        sorts.append(sort)
 
     by_media = {}
     for e in rows:
@@ -353,7 +354,7 @@ def main():
     prev_rows = creative_rows(prev_env, resolve_keys(prev_env.get("metrics"), prev_env["rows"]), a.media) if prev_env else None
     # 비교는 이번 기간에 집행한 매체끼리만 — 직전 기간에만 집행한 매체는 화면·요약 어디에도 나오지 않는다
     if prev_rows is not None:
-        prev_rows = [e for e in prev_rows if e["media"] in {r["media"] for r in rows}]
+        prev_rows = [e for e in prev_rows if e["media"] in by_media]
     if a.mode == "table":
         digest = cd.build(rows, prev_rows, has, cur, "%s ~ %s" % (a.start_date, a.end_date), "%s ~ %s" % (p_start, p_end))
         groups = []
