@@ -37,13 +37,13 @@ metadata:
 
 ### A. 새로 실행할 때
 
-1. `list_media_mix_metrics(brand_name)` — 비용 · 성과 지표 후보(`{name, unit}`)를 받는다. 에러(권한 · 미디어믹스 꺼짐 · 마트 없음)는 그대로 전한다.
+1. `list_media_mix_metrics(brand_name)` — 비용 지표 후보 `cost_metrics` 와 성과 지표 후보 `revenue_metrics` 를 따로 받는다(각 항목 `{name, unit}`. 운영자가 브랜드에 보이게 한 지표만 온다). 예전 서버라 `{name, unit}` 목록 하나만 오면 그 목록을 두 쪽 후보로 함께 쓴다. 에러(권한 · 미디어믹스 꺼짐 · 마트 없음)는 그대로 전한다.
 2. **조건을 사용자에게 한 번에 확인받는다** — 말하지 않은 값은 추측하지 않고 묻는다. 학습 방식 · VAT 처리 등 나머지는 서버가 기본값으로 정하므로 묻지 않는다.
 
    | 조건 | 인자 |
    |---|---|
    | 제안받을 달(예산을 배분할 달) | `target_month` (`YYYY-MM`). 그 전월(기준 달) 실적으로 계산한다 — 전월 데이터가 다 들어온 뒤에 돌려야 정확하다 |
-   | 비용 지표 · 성과 지표 | `cost_metric`·`revenue_metric` (1번 후보 중 서로 다른 둘) |
+   | 비용 지표 · 성과 지표 | `cost_metric` 은 1번 `cost_metrics` 에서, `revenue_metric` 은 `revenue_metrics` 에서 하나씩(서로 다른 둘). 반대쪽 후보에만 있는 지표는 서버가 거절한다 |
    | 제안받을 달의 예산(원, VAT 제외 Net) | `target_budget` |
 3. 확인받으면 `create_media_mix_job(...)` 1회 → `id`. `created: false` 면 내가 같은 조건으로 이미 돌리고 있는 job 을 받은 것이다(사용자에게 알린다).
    `status: "failed"` 와 `error` 가 오면 큐에 넣지 못한 것이다 — 사유를 전하고 멈춘다.
