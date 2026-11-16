@@ -10,8 +10,9 @@
 사용법:
   python3 assets/creative_report.py --brand <브랜드> --start-date <S> --end-date <E> --mode table|report
          [--media <매체> ...] [--sort cost|ctr|roas|click|conversion] [--top 3] [--image-file <id>=<경로> ...]
+보고서 화면 = 매체별 상위 소재(썸네일 카드) + 세부 광고 성과 표(썸네일 열, 광고 단계까지 펼친 채로 시작). 이미지가 들어가는 두 부분만 둔다.
 출력(stdout JSON):
-  table  → {"chat": "<채팅에 그대로 낼 마크다운>", "facts": {...}}
+  table  → {"chat": "<채팅에 그대로 낼 마크다운>", "facts": {...}, "digest": {...}}
   report → {"image_calls": [id, ...]}   이 이미지를 아직 안 받았다 — 한 메시지에 모두 부르고 같은 명령을 다시 실행한다
            {"out": "<html 경로>", "facts": {...}}
   공통   → {"missing": [...]} 호출이 빠졌다 · {"error": "..."} 멈춘 이유 · {"note": ...} 저장 훅이 없는 호스트
@@ -305,7 +306,6 @@ def main():
     ap.add_argument("--sort", choices=tuple(SORT_LABEL), default="cost")
     ap.add_argument("--top", type=int, default=3)
     ap.add_argument("--image-file", nargs="*", default=[])
-    ap.add_argument("--summary", help="소재 Summary 불릿 JSON 파일({\"bullets\": [...]}) — 보고서 모드 2단계")
     ap.add_argument("--out")
     a = ap.parse_args()
 
@@ -354,15 +354,8 @@ def main():
     # 비교는 이번 기간에 집행한 매체끼리만 — 직전 기간에만 집행한 매체는 화면·요약 어디에도 나오지 않는다
     if prev_rows is not None:
         prev_rows = [e for e in prev_rows if e["media"] in {r["media"] for r in rows}]
-    # 일별 추이(day × media) — 보고서 모드만 필수
-    trend_rec = sr.pick(recs, "get_ad_performance", start_date=a.start_date, end_date=a.end_date, time_grain="day",
-                        group_by=["media"])
-    trend_env = load_env(trend_rec) if trend_rec else None
-    trend = (cd.trend_series(trend_env, resolve_keys(trend_env.get("metrics"), trend_env["rows"]), pick,
-                             a.start_date, a.end_date, a.media) if trend_env else None)
-    digest = cd.build(rows, prev_rows, has, cur, "%s ~ %s" % (a.start_date, a.end_date), "%s ~ %s" % (p_start, p_end), trend)
-
     if a.mode == "table":
+        digest = cd.build(rows, prev_rows, has, cur, "%s ~ %s" % (a.start_date, a.end_date), "%s ~ %s" % (p_start, p_end))
         groups = []
         for m in order:
             top, fb = rank(by_media[m], sort, a.top)
@@ -378,9 +371,6 @@ def main():
     if prev_rec is None:
         missing.append({"tool": "get_ad_performance", "start_date": p_start, "end_date": p_end, "time_grain": "total",
                         "group_by": "이번 기간 호출과 같은 group_by"})
-    if trend_rec is None:
-        missing.append({"tool": "get_ad_performance", "start_date": a.start_date, "end_date": a.end_date, "time_grain": "day",
-                        "group_by": ["media"]})
     if missing:
         return sr.emit({"missing": missing})
 
@@ -403,24 +393,12 @@ def main():
     if todo:
         return sr.emit({"image_calls": todo})
     thumbs = {k: uris.get(v) or None for k, v in picked.items()}
-    if not a.summary:   # 2단계: 모델이 digest로 소재 Summary를 쓰고 --summary로 다시 부른다
-        return sr.emit({"digest": digest, "next": "guides/creative-summary.md를 따라 불릿을 써서 --summary <파일>로 다시 실행"})
-    try:
-        with open(a.summary, encoding="utf-8") as f:
-            bullets = json.load(f).get("bullets") or []
-        assert isinstance(bullets, list)
-    except (OSError, ValueError, AttributeError, AssertionError) as exc:
-        return sr.emit({"error": "--summary 파일을 읽지 못했다: %s" % exc})
 
     data = {"brand": a.brand, "start": a.start_date, "end": a.end_date, "currency": cur, "top": a.top,
             "sort": sort, "sorts": [[s, SORT_LABEL[s]] for s in sorts], "has": has,
             "min": {"impression": MIN_IMP, "share": MIN_SHARE}, "media": [],
             "prev": {"start": p_start, "end": p_end, "ok": prev_rows is not None},
-            "tree": detail_tree(rows, prev_rows, thumbs), "summary": bullets,
-            "trend": trend,
-            # 매체별 직전 기간 합계(원자 지표) — 머리말 증감용
-            "prev_media": {m: [sum(e[k] for e in prev_rows if e["media"] == m) for k in ATOMS]
-                           for m in {e["media"] for e in prev_rows}} if prev_rows is not None else {}}
+            "tree": detail_tree(rows, prev_rows, thumbs)}
     fields = ("name", "campaign_name", "ad_group_name", "cost", "impression", "click", "conversion", "revenue", "view",
               "ctr", "cpc", "cvr", "roas")
     # 소재별 직전 기간 원자 지표(카드 증감·신규 표시용). 같은 소재 = 매체·캠페인·광고그룹·ad_id·소재명이 같은 것
@@ -435,9 +413,7 @@ def main():
     with open(os.path.join(SHARED, "report_kit.css"), encoding="utf-8") as f:
         kit_css = f.read()
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
-    with open(os.path.join(SHARED, "chart.umd.min.js"), encoding="utf-8") as f:
-        chart_js = f.read()
-    html = html.replace("/*__CHART_JS__*/", chart_js).replace("/*__KIT_CSS__*/", kit_css).replace('"__DATA__"', blob).replace("__TITLE__", "%s 소재 성과" % a.brand)
+    html = html.replace("/*__KIT_CSS__*/", kit_css).replace('"__DATA__"', blob).replace("__TITLE__", "%s 소재 성과" % a.brand)
     out = a.out or os.path.join(os.path.expanduser("~"), "Downloads", "laighthouse-reports",
                                 "%s_creative_%s_%s.html" % (re.sub(r'[\\/:*?"<>|]', "_", a.brand), a.start_date, a.end_date))
     os.makedirs(os.path.dirname(out), exist_ok=True)

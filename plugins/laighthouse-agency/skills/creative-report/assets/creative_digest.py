@@ -1,9 +1,8 @@
-"""소재 성과 — 요약 근거(digest)와 일별 추이. creative_report.py가 import 한다(모델이 직접 부르지 않는다).
+"""소재 성과 — 요약 근거(digest). creative_report.py가 import 한다(모델이 직접 부르지 않는다).
 
 digest는 모델이 「소재 Summary」를 쓸 근거다(guides/creative-summary.md). 수치는 화면에 쓸 문자열로 만들어 두고,
 변화(직전 기간 대비)도 미리 계산한다 — 모델은 값을 다시 계산하지 않고 그대로 옮긴다.
 """
-from datetime import date, timedelta
 
 MIN_IMP, MIN_SHARE = 1000, 0.01   # creative_report.py의 최소 표본 기준과 같다
 ATOMS = ("cost", "impression", "click", "conversion", "revenue", "view")
@@ -93,7 +92,7 @@ def eligible(items):
     return [e for e in items if e["impression"] >= MIN_IMP and e["cost"] >= tc * MIN_SHARE]
 
 
-def build(rows, prev_rows, has, cur, period, prev_period, trend=None, top=5):
+def build(rows, prev_rows, has, cur, period, prev_period, top=5):
     """요약 근거. prev_rows가 None이면 직전 기간 비교 없이 값만 낸다."""
     pmap = {key(e): e for e in prev_rows or []}
     by_media = {}
@@ -145,48 +144,5 @@ def build(rows, prev_rows, has, cur, period, prev_period, trend=None, top=5):
             {"소재": label(e or p), "광고비": "%s → %s" % (money(p["cost"] if p else 0, cur), money(e["cost"] if e else 0, cur)),
              "변화": "신규 집행" if not p or not p["cost"] else "집행 중단" if not e or not e["cost"] else change(e["cost"], p["cost"])}
             for _, e, p in moves[:top] if _]
-    if trend:
-        d["일별 추이"] = trend_facts(trend, cur)
     return d
 
-
-# ── 일별 추이 ─────────────────────────────────────────────────────────────────────────────────────────
-def trend_series(env, keys, pick, start, end, media_filter):
-    """day × media 응답 → {"dates": [...], "media": {매체: [[원자 지표 5개] × 날짜]}}. 집행 없는 날은 0."""
-    s, e = date.fromisoformat(start), date.fromisoformat(end)
-    dates = [(s + timedelta(days=i)).isoformat() for i in range((e - s).days + 1)]
-    idx = {d: i for i, d in enumerate(dates)}
-    want = {m.lower() for m in media_filter or []}
-    series = {}
-    for r in env.get("rows") or []:
-        m, d = str(r.get("media") or "-"), str(r.get("date") or "")[:10]
-        if d not in idx or (want and m.lower() not in want):
-            continue
-        vals = series.setdefault(m, [[0] * len(ATOMS) for _ in dates])[idx[d]]
-        for i, k in enumerate(ATOMS):
-            vals[i] += pick(r, keys[k])
-    series = {m: v for m, v in series.items() if any(x[0] or x[1] for x in v)}
-    return {"dates": dates, "media": series}
-
-
-def trend_facts(trend, cur):
-    """일별 광고비 흐름: 전체·매체별 앞 절반 vs 뒤 절반 일평균, 광고비가 가장 큰 날·작은 날."""
-    dates, out = trend["dates"], {}
-    if len(dates) < 4:
-        return {"안내": "기간이 짧아 추이를 쓰지 않는다"}
-    total_ = [sum(v[i][0] for v in trend["media"].values()) for i in range(len(dates))]
-
-    def facts(costs):
-        h = len(costs) // 2
-        a, b = sum(costs[:h]) / h, sum(costs[h:]) / (len(costs) - h)
-        hi = max(range(len(costs)), key=lambda i: costs[i])
-        spent = [i for i in range(len(costs)) if costs[i]] or list(range(len(costs)))
-        lo = min(spent, key=lambda i: costs[i])   # 집행한 날 가운데 가장 적게 쓴 날
-        return {"앞 절반 일평균 광고비": money(a, cur), "뒤 절반 일평균 광고비": money(b, cur), "변화": change(b, a),
-                "가장 많이 쓴 날": "%s %s" % (dates[hi], money(costs[hi], cur)),
-                "집행일 중 가장 적게 쓴 날": "%s %s" % (dates[lo], money(costs[lo], cur)),
-                "집행일 수": "%d/%d일" % (sum(1 for c in costs if c), len(costs))}
-    out["전체"] = facts(total_)
-    for m, v in trend["media"].items():
-        out[m] = facts([x[0] for x in v])
-    return out
