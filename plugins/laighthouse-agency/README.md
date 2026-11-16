@@ -21,7 +21,7 @@
 | 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
 | 스킬 | creative-report | 소재 성과 — 매체별 소재 TOP(광고비·CTR·ROAS 등)을 채팅 표로, 또는 썸네일 포함 보고서(HTML)로. 먼저 형태를 고르게 한다 |
 | 스킬 | naver-search · naver-news · naver-blog · weather-impact | 외부 요인 보고서(HTML, 날짜 범위) — 네이버 검색량·뉴스·블로그, 서울 날씨(+광고 클릭) |
-| 스킬 | nextmonth-budget-planning | 월간 미디어믹스 결과 보고서(HTML) — 라이트하우스 웹 결과 화면과 같은 모양, 전용 킷(`assets/mm_view.*`) |
+| 스킬 | nextmonth-budget-planning | 월간 미디어믹스 결과 보고서(HTML) — 라이트하우스 웹 결과 화면과 같은 모양, Claude 가 SKILL.md 의 뼈대대로 직접 작성 |
 | 스킬 | skill-catalog | 라이트하우스 스킬 목록(이름·명령어·설명·요청 예시)을 채팅에 표로 보여 준다 — "스킬 목록", "어떤 스킬 있어" |
 
 ## 사용법
@@ -43,12 +43,11 @@
 > "다라세제 미디어믹스 결과 보여줘" → `nextmonth-budget-planning` (내가 실행한 job 목록에서 골라 결과를 본다)
 > "다라세제 3월 실적으로 4월 예산 7천만 원 미디어믹스 돌려줘" → `nextmonth-budget-planning` (조건을 확인받고 새로 실행 → 끝나면 보고서)
 
-MCP 도구 `get_media_mix_job`을 기본 인자로 부르고, 저장 훅이 남긴 응답을
-`assets/build_report.py`가 그대로 HTML에 넣는다. 계산·모양은 전용 킷 `assets/mm_view.js`·`mm_view.css`가 맡고,
-laighthouse-web 결과 화면(`src/pages/marketing/MediaMixResult.tsx`·`src/lib/mediaMix.ts`)을 옮긴 것이다 — 웹 화면이
-바뀌면 함께 고친다. 이 스킬(`build_report.py`의 응답 읽기 부분 제외)은 laighthouse-plugin(`laighthouse-analytics-prod`)과
-같은 파일이다 — 고칠 때는 양쪽을 함께 고친다. 자체 검사: `python3 tests/test_media_mix_result.py`(node 가 있으면 `mm_view.js` 계산도
-웹과 같은지 본다, 입력은 웹 목 데이터 사본 `tests/fixtures/media_mix/`).
+MCP 도구 `get_media_mix_job`을 기본 인자로 부르고, Claude 가 응답의 `summary`로 증감률·비중을 `python3`로 계산한 뒤
+SKILL.md 의 「HTML 뼈대」대로 HTML 을 직접 쓴다(1.18.0~, 스크립트 없음). 표는 기준 달 「N월 현재까지」와 「M월 제안」을 나란히 두고,
+제안 칸마다 현재 대비 증감을 빨강(상승)·파랑(하락)으로 붙인다. SKILL.md 는 laighthouse-plugin(`laighthouse-analytics-prod`) · -external 과
+같은 파일이다 — 고칠 때는 함께 고친다. 이전 렌더러(`assets/build_report.py`·`mm_view.js`·`mm_view.css`와 그 테스트)는 git 태그
+`archive/media-mix-html-renderer`에 있다(되살리기: `git checkout archive/media-mix-html-renderer -- <경로>`).
 
 ### 외부 요인 보고서 (1.9.0~)
 

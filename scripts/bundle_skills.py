@@ -44,7 +44,7 @@ SHARED_FILES = {
     "weekly-report": KIT + REPORT_HTML + FEES + FEE_VIEWS + REFS,
     "monthly-report": KIT + REPORT_HTML + FEES + FEE_VIEWS + REFS,
     "overall-summary": OVERALL_SHARED,
-    "nextmonth-budget-planning": ("assets/saved_responses.py",),
+    "nextmonth-budget-planning": (),  # 결과 HTML 을 Claude 가 직접 쓴다 — 공용 파일 없음
     "creative-report": ("assets/saved_responses.py", "assets/report_kit.css"),   # creative_report.py가 읽는다
     "naver-search": EXTERNAL,
     "naver-news": EXTERNAL,
