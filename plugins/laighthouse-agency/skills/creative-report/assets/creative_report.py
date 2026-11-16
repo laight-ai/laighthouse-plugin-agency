@@ -41,7 +41,7 @@ import saved_responses as sr  # noqa: E402
 
 sys.path.insert(0, HERE)
 import creative_digest as cd  # noqa: E402
-from creative_common import ATOMS, MIN_IMP, MIN_SHARE  # noqa: E402  (ATOMS 순서 = 보고서 화면 JS의 원자 지표 순서)
+from creative_common import ATOMS, CURRENCY_SYMBOL, MIN_IMP, MIN_SHARE, money  # noqa: E402  (ATOMS 순서 = 보고서 화면 JS의 원자 지표 순서)
 
 KEYS = {   # 지표 키 후보(대소문자 무시, 정확히 같은 이름) — 처음 있는 것
     "cost": ("광고비", "cost", "spend", "spending"),
@@ -207,7 +207,7 @@ def fmt(v, kind, cur):
     if v is None:
         return "-"
     if kind == "money":
-        return "%s%s" % (cur, format(round(v), ","))
+        return money(v, cur)
     if kind == "pct":
         return "%.1f%%" % v
     if kind == "ctr":
@@ -335,7 +335,7 @@ def main():
     if not all(keys[k] for k in ("cost", "impression", "click")):
         return sr.emit({"error": "광고비·노출·클릭 지표를 찾지 못했다", "metrics": env.get("metrics")})
     cur = next((u for k, u in (env.get("metric_units") or {}).items() if k in keys["cost"] and u), "")
-    cur = {"KRW": "₩", "USD": "$"}.get(cur, cur if len(cur) <= 2 else "")
+    cur = CURRENCY_SYMBOL.get(cur, cur if len(cur) <= 2 else "")
 
     rows = creative_rows(env, keys, a.media)
     if not rows:

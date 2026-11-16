@@ -4,7 +4,7 @@ digest는 모델이 「소재 Summary」를 쓸 근거다(guides/creative-summar
 변화(직전 기간 대비)도 미리 계산한다 — 모델은 값을 다시 계산하지 않고 그대로 옮긴다.
 """
 
-from creative_common import ATOMS, MIN_IMP, MIN_SHARE
+from creative_common import ATOMS, MIN_IMP, MIN_SHARE, money
 
 
 def ratios(e):
@@ -25,12 +25,6 @@ def total(rows):
 
 
 # ── 표기 ──────────────────────────────────────────────────────────────────────────────────────────────
-def money(v, cur):
-    if v is None:
-        return "-"
-    return "%s%s" % (cur, format(round(v, 1), ",.1f") if abs(v) < 100 and v != int(v) else format(round(v), ","))
-
-
 def count(v):
     return "-" if v is None else format(round(v), ",")
 

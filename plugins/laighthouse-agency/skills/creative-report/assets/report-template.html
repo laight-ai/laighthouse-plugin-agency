@@ -142,7 +142,13 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&am
 const fin = v => (v == null || !isFinite(v)) ? null : v;
 const f = {
   int: v => (v = fin(v)) == null ? '—' : Math.round(v).toLocaleString('ko-KR'),
-  money: v => (v = fin(v)) == null ? '—' : cur + Math.round(v).toLocaleString('ko-KR'),
+  // creative_common.money와 같은 규칙: 소수가 없는 통화(₩·¥·원·단위 모름)는 100 미만만 소수 1자리, 나머지는 2자리
+  money: v => {
+    if ((v = fin(v)) == null) return '—';
+    const d = ['₩', '¥', '원', ''].includes(cur) ? (Math.abs(v) >= 100 ? 0 : 1) : 2;
+    const body = v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+    return cur === '원' ? body + cur : cur + body;
+  },
   pct: v => (v = fin(v)) == null ? '—' : v.toFixed(2) + '%',
 };
 const ratio = (a, b, k = 1) => b ? a / b * k : null;
@@ -231,7 +237,8 @@ PICKERS.forEach(([el, id, t]) => {
     e.target.checked ? pick[id].on.add(k) : pick[id].on.delete(k); savePick(); draw();
   });
 });
-document.addEventListener('click', e => { document.querySelectorAll('.lh-picker.is-open').forEach(pk => { if (!pk.contains(e.target)) pk.classList.remove('is-open'); }); });
+// 메뉴 안의 버튼은 누르면 메뉴를 다시 그려 e.target이 문서에서 떨어진다 — 누를 때의 경로(composedPath)로 안팎을 가린다
+document.addEventListener('click', e => { const path = e.composedPath(); document.querySelectorAll('.lh-picker.is-open').forEach(pk => { if (!path.includes(pk.parentElement)) pk.classList.remove('is-open'); }); });
 
 const visible = () => ALL_MEDIA.filter(m => !st.hidden.has(m));
 
