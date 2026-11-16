@@ -20,6 +20,8 @@
 | 스킬 | overall-summary-comment · -total · -tables · -history · -mix | 종합 리포트에서 섹션 하나만 뽑기(Comment / Total·Monthly Summary / Product·Target·Placement·Weekly·Daily 표 / Campaign History / Mix) |
 | 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
 | 스킬 | creative-report | 소재 성과 — 매체별 소재 TOP(광고비·CTR·ROAS 등)을 채팅 표로, 또는 썸네일 포함 보고서(HTML)로. 먼저 형태를 고르게 한다 |
+| 스킬 | naver-search · naver-news · naver-blog · weather-impact | 외부 요인 보고서(HTML, 날짜 범위) — 네이버 검색량·뉴스·블로그, 서울 날씨(+광고 클릭) |
+| 스킬 | media-mix-result | 월간 미디어믹스 결과 보고서(HTML) — 라이트하우스 웹 결과 화면과 같은 모양, 전용 킷(`assets/mm_view.*`) |
 | 스킬 | skill-catalog | 라이트하우스 스킬 목록(이름·명령어·설명·요청 예시)을 채팅에 표로 보여 준다 — "스킬 목록", "어떤 스킬 있어" |
 
 ## 사용법
@@ -35,6 +37,33 @@
 > "breezm 데일리 보고서" → `daily-report` (기준일 기본: 어제)
 > "breezm 주간 보고서" → `weekly-report` (기준일 = 데이터 마지막 날, 기본: 어제)
 > "breezm 9월 월간 보고서" → `monthly-report` (대상 월 기본: 지난달)
+
+### 미디어믹스 결과 (1.12.0~)
+
+> "다라세제 미디어믹스 결과 보여줘" → `media-mix-result` (내가 실행한 job 목록에서 골라 결과를 본다)
+> "다라세제 3월 실적으로 4월 예산 7천만 원 미디어믹스 돌려줘" → `media-mix-result` (조건을 확인받고 새로 실행 → 끝나면 보고서)
+
+MCP 도구 `get_media_mix_job`을 기본 인자로 부르고, 저장 훅이 남긴 응답을
+`assets/build_report.py`가 그대로 HTML에 넣는다. 계산·모양은 전용 킷 `assets/mm_view.js`·`mm_view.css`가 맡고,
+laighthouse-web 결과 화면(`src/pages/marketing/MediaMixResult.tsx`·`src/lib/mediaMix.ts`)을 옮긴 것이다 — 웹 화면이
+바뀌면 함께 고친다. 이 스킬(`build_report.py`의 응답 읽기 부분 제외)은 laighthouse-plugin(`laighthouse-analytics-prod`)과
+같은 파일이다 — 고칠 때는 양쪽을 함께 고친다. 자체 검사: `python3 tests/test_media_mix_result.py`(node 가 있으면 `mm_view.js` 계산도
+웹과 같은지 본다, 입력은 웹 목 데이터 사본 `tests/fixtures/media_mix/`).
+
+### 외부 요인 보고서 (1.9.0~)
+
+> "현대카드 최근 2주 네이버 검색량" → `naver-search`
+> "지난 2주 뉴스 얼마나 나왔고 주요 기사 뭐였어?" → `naver-news`
+> "블로그에서 얼마나 얘기 나와?" → `naver-blog`
+> "최근 2주 날씨가 광고 성과에 영향 줬는지" → `weather-impact`
+
+입력은 브랜드와 날짜 범위(기본 어제까지 14일)다. 스킬은 MCP 도구 `get_external_context`(report-backend가 laighthouse-elt의
+외부 맥락 데이터를 중계)를 1회 부르고(날씨는 `get_ad_performance`와 함께 2회), 저장 훅이 남긴 응답을 `assets/prepare.py`가
+읽어 집계한다. 집계·HTML은 공통 킷 `shared/assets/external_context/`가 한다. 이 폴더와 스킬 4개는 laighthouse-plugin
+(`laighthouse-analytics-prod`)과 같은 파일이다 — 고칠 때는 양쪽을 함께 고친다.
+외부 데이터 수집 대상이 아닌 브랜드는 도구가 "is not collected for external context"로 거절한다.
+수치 회귀 비교: `python3 tests/regress_external_context.py --responses <응답 폴더> --baseline <기준 폴더>`(기준은 같은 명령에 `--write`로 먼저 만든다),
+자체 검사: `python3 tests/test_weather_trend.py`·`tests/test_responses.py`·`tests/test_range_rules.py`·`tests/test_citations.py`.
 
 ### Daily · Weekly · Monthly 보고서 구성
 
@@ -72,15 +101,16 @@ HTML과 같은 폴더에 같은 이름의 `.xlsx`가 함께 생긴다(`~/Downloa
 | Raw | 표 데이터 원자 행(일 × 차원) — 필터·피벗용 |
 
 엑셀 생성이 실패해도(예: 같은 파일이 엑셀에 열려 있음) HTML 보고서는 그대로 만들어진다.
-예산에 수수료가 있는 브랜드는 Net 기준 엑셀 `…_net.xlsx`도 함께 생긴다(같은 이름의 `.xlsx`는 Gross 기준).
+수수료가 있는 브랜드는 Net 기준 엑셀 `…_net.xlsx`도 함께 생긴다(같은 이름의 `.xlsx`는 Gross 기준).
 
 ### 브랜드 비종속 동작
 
 - 실행 시작에 차원 목록을 확인하고, 지표 키는 첫 응답의 지표 목록에서 정한다(prepare.py가 같은 규칙으로 다시 확인). 브랜드가 제공하지 않는 차원(상품·노출 위치 등)은
   묻지 않고 보고서에서 조용히 빠진다.
 - 예산·목표는 `get_target_progress_v2`(전체·매체·캠페인 단위)에서 읽는다. 목표가 없으면 빈칸이다.
-- 광고비 실적은 항상 Net이다. 예산에 수수료가 있으면(cost ≠ cost_net) 종합·Weekly·Monthly 보고서 머리말에 `광고비·예산 기준 [Gross][Net]` 토글이 생긴다
-  (기본 Gross — 광고비·CPM·CPC·CPV를 수수료 비율로 환산, 수수료는 달마다 같다고 본다). 수수료가 없으면 토글 없이 예전 그대로다.
+- 광고비·예산은 서버가 알려 주는 브랜드 기준(`fee_basis` — Net 또는 Gross)으로 온다. 수수료가 있으면 종합·Weekly·Monthly 보고서 머리말에
+  `광고비·예산 기준 [Gross][Net]` 토글이 생긴다(처음 보기는 브랜드 기준). 환산 규칙과 옛 서버 규칙은 `shared/references/mcp-tools.md` 2절,
+  구현은 `shared/assets/fees.py`, 자체 검사는 `python3 tests/test_fees.py`·`tests/test_fee_builders.py`.
 - 렌더링 부품은 공용 킷 `shared/assets/report_kit.*`와 스킬의 `assets/overall_summary.js`에 있다.
 
 ## 요약 가이드 (비개발자 편집)
@@ -106,6 +136,15 @@ Daily·Weekly·Monthly·소재 요약 문단을 **무엇을 어떻게 쓸지**�
 4. 브랜치·PR을 만들고(PR 본문에 노션 변경 사항), 머지 후 노션의 `레포 반영 버전`을 새 버전으로 바꾼다.
 
 가이드에는 문구·작성 규칙만 둔다. 근거 데이터(`digest`)·빌더 입력 형식·실행 순서는 섹션 문서와 SKILL.md(개발자 담당)가 정한다.
+
+## 스킬 폴더 사본 (Cowork)
+
+Claude 데스크톱 Cowork는 스킬 폴더를 하나씩 따로 올린다(`/mnt/skills/plugins/laighthouse-agency:<스킬>`). 플러그인 루트의
+`shared/`와 옆 스킬 폴더는 함께 올라가지 않으므로, 스킬마다 필요한 공용 파일을 `skills/<스킬>/shared/`에 복사해 둔다
+(overall-summary-* 하위 스킬은 overall-summary의 `assets/`·문서도 `assets/`·`references/`로 넣는다). 원본은 플러그인 루트의
+`shared/`와 `skills/overall-summary/`이고 사본은 손으로 고치지 않는다 — 원본을 고친 뒤 `python3 scripts/bundle_skills.py`를 실행해
+사본까지 같은 커밋에 넣는다. 스킬 문서는 스킬 폴더 밖(`../`)을 가리키지 않는다. 검사: `python3 tests/test_skill_bundles.py`
+(사본이 원본과 같은지, 스킬 폴더만 따로 떼어 내도 스크립트가 공용 파일을 찾는지).
 
 ## MCP 서버
 

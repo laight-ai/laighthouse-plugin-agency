@@ -3,7 +3,7 @@
 ## MCP 호출
 
 이번주(E-6 ~ E)·전주(E-13 ~ E-7) **각 1회** — `time_grain:"total"`, `group_by` = FINE_DIMS(차원 확인 결과 —
-`shared/references/pivot-table.md`(이 스킬 폴더에서는 `../../shared/references/`) 1·2절, 크기 오류 시 `ad_name` → `ad_group_name` 순으로 빼고 다시), `metrics`·`filters` 생략.
+`shared/references/pivot-table.md` 1·2절, 크기 오류 시 `ad_name` → `ad_group_name` 순으로 빼고 다시), `metrics`·`filters` 생략.
 
 ## 빌더 입력 (`assets/prepare.py`가 채운다 — 저장 훅이 없을 때만 직접 만든다)
 

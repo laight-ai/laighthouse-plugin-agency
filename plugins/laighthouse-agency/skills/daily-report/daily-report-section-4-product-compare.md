@@ -1,6 +1,6 @@
 # section-4: 성과 비교 (피벗 표)
 
-규칙·호출·입력 형식은 `shared/references/pivot-table.md`(이 스킬 폴더에서는 `../../shared/references/`)가 단일 소스다.
+규칙·호출·입력 형식은 `shared/references/pivot-table.md`가 단일 소스다.
 
 ## MCP 호출
 

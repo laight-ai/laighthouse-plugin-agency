@@ -1,0 +1,650 @@
+#!/usr/bin/env python3
+"""종합 리포트 조립기 — 미리 검증된 asset 스크립트.
+
+MCP 응답 원문(봉투·목표 표)을 그대로 받아 Daily/Weekly Comment를 규칙으로 만들고, 표 데이터(일 × 가장 잘게 쪼갠 차원)를
+열 기반으로 HTML에 넣는다. Total/Monthly Summary와 Product·Target·Weekly·Daily 표는 브라우저(assets/overall_summary.js)가
+그 데이터로 묶어 그린다(월·미디어 필터, 디멘전·지표 설정, 접기).
+
+기간 (기준일 E = 데이터 마지막 날, 최대 어제): 집계 기간 = start_date ~ E (start_date를 안 주면 E의 전월 1일).
+집계 기간이 걸친 달마다 Monthly Summary·월 필터·Mix 월 칸이 생긴다(366일까지).
+
+사용법:
+  python3 assets/build_report.py <입력.json>      (또는 stdin으로 JSON)
+
+입력 (JSON):
+{
+  "out": "~/Downloads/laighthouse-reports/{브랜드}_overall_summary_2026-10-08.html",   # 필수
+  "brand": "{브랜드}",                                                     # 필수 (제목 = 브랜드명)
+  "target_date": "2026-10-08",                                           # 필수 (기준일 = 데이터 마지막 날 E)
+  "start_date": "2026-07-15",    # 선택 — 집계 시작일(사용자가 말한 날). 없으면 E의 전월 1일
+  "skeleton": true,              # 선택 — 데이터 없이 틀만
+  "metric_keys": {...}, "currency": "₩",          # discover.py 출력 그대로
+  "dims": "<차원 확인(group_by [\"__list_dimensions__\"]) 에러 메시지 원문>",   # 필수 — 빠진 차원이 있으면 멈춘다
+  "data": {"json_files": ["<첫 달 응답>", "<다음 달 응답>", ...]},
+        # day grain, group_by = FINE_DIMS, 집계 기간을 달마다 나눠(첫 달은 시작일부터, 마지막 달은 E까지) 받은 응답을 함께 넣는다
+  "media": {"json_files": [...]} 또는 {"json": "..."},
+        # day grain, group_by ["media"], 집계 기간 전체 — 대조 검증(매체별 일 합 = 표 데이터 합)
+  "budgets": [{"month": "2026-09", "target_progress": "<get_target_progress_v2(media 생략) 원문>"},
+              {"month": "2026-10", "target_progress": "<원문>"}]
+        # 첫째 표(metric|target|…) = 전체 합계, 둘째 표(media|campaign_name|included|metric|target|…) = 매체·캠페인 행.
+        # cost 행 = 예산, impression·click·views·ctr·vtr·cpm·cpc·cpv 행 = 목표 영역(e.*)·Mix 목표. 행이 없으면 빈칸.
+        # 수수료(Gross/Net)는 shared/assets/fees.py(현재 응답)·fees_legacy.py(fee_basis 없는 옛 응답).
+        # 항목에 범위 키(media·상품·campaign_name·ad_group_name)를 주면 첫째 표를 그 범위로 읽는다(그 인자로 부른 경우).
+  "place": {"json_files": ["<첫 달 응답>", ...]}
+        # 선택 — Placement 표. day grain, group_by = [media, (ad_type 또는 상품), 노출 위치 차원(PLACE_DIMS 중 브랜드가 주는 것)],
+        # 달마다 나눠 받는다. 표 데이터와 따로 받아(행 수가 적다) Placement 표만 그린다. 없거나 노출 위치 차원이 없으면 표가 빠진다.
+  "history": {"json_files": ["<변경 이력 items 파일>"]},
+        # 선택 — Campaign History. list_campaign_change_raw 페이지의 items를 모은 {"items": [...]} (prepare.py가 만든다).
+        # 없으면 섹션이 '데이터 준비 중', 있는데 비면 '변경 이력 없음'. 규칙은 assets/campaign_history.py.
+  "names": {"json_files": [...]},
+        # 선택 — 변경 이력 ID에 붙일 이름: get_ad_performance(total, group_by에 source·media·*_id·*_name) 봉투
+  "part": "mix",                 # 선택 — 하위 스킬: comment | total | tables | history | mix 중 그 섹션만 그린다(없으면 전부)
+  "tables": ["product", "daily"] # 선택 — part가 tables일 때 고른 표만(product·target·place·weekly·daily)
+}
+- 응답에 없는 차원(예: 상품)은 표·디멘전 설정에 나오지 않는다 — 조용히 빠진다.
+- 같은 실행에서 엑셀(.xlsx)도 만든다 — HTML과 같은 폴더·같은 이름(assets/overall_summary_xlsx.py, 표준 라이브러리만).
+  시트 = Summary · By Media · By Date · History · Mix · Raw. 엑셀이 실패해도 HTML은 그대로 남고 xlsx_error만 알린다.
+- part를 주면 엑셀도 그 섹션의 시트만 담는다(PARTS). comment는 엑셀을 만들지 않는다.
+- 출력(stdout): {"out", "bytes", "rows", "part"?, "sections": {"comment", "tables", "history"}: "ok"|"placeholder",
+                "xlsx": 경로|null, "xlsx_error"?: 실패 이유, "xlsx_note"?: 만들지 않은 이유(표 데이터 없음),
+                "xlsx_net"?: Net 기준 엑셀 경로(수수료가 있을 때만 — 이때 xlsx는 Gross 기준),
+                "xlsx_net_error"?·"xlsx_net_note"?: Net 엑셀을 못 만든 이유}
+"""
+import html as _html
+import io
+import json
+import os
+import re
+import sys
+from calendar import monthrange
+from datetime import date, timedelta
+
+if __name__ == "__main__":
+    sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
+ASSETS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, ASSETS_DIR)   # overall_summary_xlsx (python -I 등 스크립트 폴더를 경로에 넣지 않는 실행에서도)
+for cand in (os.path.join(ASSETS_DIR, "..", "shared", "assets"),
+             os.path.join(ASSETS_DIR, "..", "..", "..", "shared", "assets")):
+    if os.path.exists(os.path.join(cand, "report_kit.py")):
+        sys.path.insert(0, os.path.normpath(cand))
+        break
+else:
+    raise SystemExit("report_kit.py를 찾을 수 없다 (shared/assets)")
+import report_kit as kit  # noqa: E402
+import campaign_history  # noqa: E402
+import fees  # noqa: E402
+import fees_legacy  # noqa: E402
+from budget_targets import derive_targets, parse_budget  # noqa: E402
+
+P = kit.PRODUCT_DIM
+AD_TYPE = "ad_type"
+# 표 디멘전(미디어 아래): 서버 차원 → 짧은 키 · 라벨 (목업 순서).
+# 'p'(상품 / Ad Type) = 캠페인에 배정된 구분값 — 브랜드가 ad_type을 주면 그것, 없으면 상품(둘 다 있으면 ad_type).
+DIMS = [("campaign_name", "c", "캠페인"), (AD_TYPE, "p", "Ad Type"), (P, "p", "상품"), ("ad_group_name", "t", "광고 그룹"),
+        ("ad_name", "cr", "소재")]
+SHORT = {src: k for src, k, _ in DIMS}
+SHORT["media"] = "m"
+# Placement 표의 노출 위치 차원 — ELT가 붙일 이름 후보(먼저 나온 것을 쓴다)
+PLACE_DIMS = ("placement", "노출위치", "노출 위치", "노출_위치", "position")
+for _src in PLACE_DIMS:
+    SHORT[_src] = "pl"
+ATOMS = (("cost", "cost"), ("impression", "imp"), ("click", "click"), ("views", "view"))
+# 하위 스킬(part) → 보고서 머리 라벨 · 엑셀 시트. 화면에서 남길 섹션은 overall_summary.js의 PART_SECS.
+PARTS = {"comment": ("Comment", ()), "total": ("Summary", ("summary",)),
+         "tables": ("세부 성과", ("media", "date", "raw")), "history": ("History", ("history",)), "mix": ("Mix", ("mix",))}
+TABLES = ("product", "target", "place", "weekly", "daily")
+DROP_THRESHOLD = 20   # Daily Comment 급감 기준(%)
+TOP_LINES = 5         # Comment 하위 불릿: 매체마다 이만큼만 적고 나머지는 "외 N개"로 묶는다(실데이터는 광고그룹·상품이 수백 개)
+
+
+# ── 포맷 (목업과 같은 규칙) ─────────────────────────────────────────────────
+
+
+def n0(v):
+    return f"{round(v):,}"
+
+
+def sgn(v):
+    return ("+" if v > 0 else "−" if v < 0 else "±") + f"{abs(v):.1f}"
+
+
+def pct(c, p):
+    return (c - p) / p * 100 if p else 0.0
+
+
+def krdate(d):
+    return f"{d.month}월 {d.day}일"
+
+
+def money(v, currency):
+    return n0(v) + "원" if currency in ("₩", "원", "KRW") else kit.fmt_money(v, currency)
+
+
+# ── 입력 해석 ────────────────────────────────────────────────────────────────
+
+
+def load_rows(env, keys, dims, start, end):
+    """표 데이터 봉투 → 원자 행 [{"day": date, "m", <짧은 키>..., "cost", "imp", "click", "view"}] (집계 기간 밖 행은 버린다)."""
+    rows = []
+    for r in env.get("rows") or []:
+        p = kit.period_of(r)
+        try:
+            d = date.fromisoformat(p[:10])
+        except ValueError:
+            raise SystemExit("data: day grain 응답이 아니다(행에 date가 없다) — time_grain \"day\"로 다시 받는다.")
+        if not start <= d <= end:
+            continue
+        row = {"day": d, "m": kit._label(r.get("media"))}
+        for src in dims:
+            row[SHORT[src]] = kit._label(r.get(src))
+        for role, k in ATOMS:
+            v = r.get(keys.get(role)) if keys.get(role) else None
+            row[k] = v if isinstance(v, (int, float)) else 0
+        if not (row["cost"] or row["imp"] or row["click"] or row["view"]):
+            continue   # 실적이 전부 0인 행(집행 없는 광고그룹의 날) — 합계에 영향 없고 표만 길게 만든다
+        rows.append(row)
+    return rows
+
+
+# ── 묶기 ─────────────────────────────────────────────────────────────────────
+
+
+def agg(rows):
+    a = {"cost": 0, "imp": 0, "click": 0, "view": 0}
+    for r in rows:
+        for k in a:
+            a[k] += r[k]
+    return a
+
+
+def kpi(a):
+    imp, view = a["imp"], a["view"]
+    return dict(a, cpm=a["cost"] / imp * 1000 if imp else 0, cpv=a["cost"] / view if view else 0,
+                vtr=view / imp * 100 if imp else 0, ctr=a["click"] / imp * 100 if imp else 0)
+
+
+def uniq(seq):
+    return list(dict.fromkeys(seq))   # 나타난 순서 유지(행 수만 개에서도 빠르게)
+
+
+def live(rows):
+    return any(r["cost"] or r["imp"] for r in rows)
+
+
+# ── 예산 (Python: Weekly Comment의 당월 소진율용 — 전체 범위만) ────────────────
+
+
+def month_budget(budgets, mo, rows):
+    """그 달 전체 예산: 전체 범위 항목, 없으면 더 잘게 받은 범위(매체 → … → 광고그룹 순) 중 그 달 집행 단위를 모두 덮는 것의 합."""
+    es = [b for b in budgets if b["mo"] == mo and b["v"].get("cost")]
+    exact = [b for b in es if not b["scope"]]
+    if exact:
+        return exact[0]["v"]["cost"]
+    for ks in sorted({tuple(sorted(b["scope"])) for b in es}, key=len):
+        level = [b for b in es if tuple(sorted(b["scope"])) == ks]
+        have = {tuple(b["scope"][k] for k in ks) for b in level}
+        need = {tuple(r.get(k) for k in ks) for r in rows if live([r])}
+        if need and need <= have:
+            return sum(b["v"]["cost"] for b in level)
+    return None
+
+
+# ── Gross / Net (규칙은 shared/assets/fees.py) ──────────────────────────────────
+
+
+def basis_view(report, rows, basis):
+    """수수료가 있는 보고서(report["fee"]) → 한 기준(gross·net)만 담은 report·rows(엑셀용). 수수료가 없으면 그대로."""
+    if not report.get("fee"):
+        return report, rows
+    rep = dict(report, fee=None, comment=(report.get("comment") or {}).get(basis),
+               header=dict(report["header"], basis="Gross" if basis == "gross" else "Net"))
+    for k in ("table", "place"):
+        X = report.get(k)
+        if X and X.get("cols"):
+            cols = dict(X["cols"])
+            g = cols.pop("cost_g", None)
+            if basis == "gross" and g is not None:
+                cols["cost"] = g
+            rep[k] = dict(X, cols=cols)
+    if rep.get("table"):   # 엑셀은 한 기준의 예산만 본다
+        T = dict(rep["table"])
+        nb = T.pop("budgets_net", None)
+        if basis == "net":
+            T["budgets"] = nb
+        rep["table"] = T
+    return rep, ([dict(r, cost=r["cost_g"]) for r in rows] if basis == "gross" else rows)
+
+
+# ── Daily Comment (목업 buildDaily) ─────────────────────────────────────────
+
+
+def line_dims(dims):
+    """급감 판정 단위 = 매체 × (상품/Ad Type, 광고그룹 중 있는 것) — 없으면 캠페인."""
+    ld = [SHORT[d] for d in (AD_TYPE, P, "ad_group_name") if d in dims]
+    return ld or ([SHORT["campaign_name"]] if "campaign_name" in dims else [])
+
+
+def unit_word(ld):
+    return "광고그룹" if "t" in ld else "상품" if "p" in ld else "캠페인" if "c" in ld else "매체"
+
+
+def line_label(key, ld, lines_in_media):
+    """상품(광고그룹) — 같은 매체 안에서 상품이 여러 광고그룹으로 나뉠 때만 괄호를 붙인다(목업 lineName)."""
+    if not ld:
+        return key[0]
+    head = key[1]
+    if len(ld) > 1 and sum(1 for k in lines_in_media if k[1] == head) > 1:
+        return f"{head}({key[2]})"
+    return head
+
+
+def last_spend(rows, m):
+    ds = [r["day"] for r in rows if r["m"] == m and live([r])]
+    return max(ds) if ds else None
+
+
+def build_daily(rows, E, media, ld, threshold, currency):
+    prev = E - timedelta(days=1)
+    cur = [r for r in rows if r["day"] == E]
+    pre = [r for r in rows if r["day"] == prev]
+    a, b = agg(cur), agg(pre)
+    summary = (f"{krdate(E)} 기준 광고비 {money(a['cost'], currency)}({sgn(pct(a['cost'], b['cost']))}%), "
+               f"노출 {n0(a['imp'])}({sgn(pct(a['imp'], b['imp']))}%), 클릭 {n0(a['click'])}({sgn(pct(a['click'], b['click']))}%)"
+               f"로 전일({krdate(prev)}) 대비 집계되었습니다.")
+    lkey = lambda r: (r["m"],) + tuple(r[k] for k in ld)  # noqa: E731
+    keys = uniq(lkey(r) for r in sorted(rows, key=lambda r: r["day"]))
+    by_cur, by_pre, by_media = {}, {}, {}
+    for r in cur:
+        by_cur.setdefault(lkey(r), []).append(r)
+    for r in pre:
+        by_pre.setdefault(lkey(r), []).append(r)
+    for k in keys:
+        by_media.setdefault(k[0], []).append(k)
+    flagged = []
+    for k in keys:
+        c = agg(by_cur.get(k, []))
+        p = agg(by_pre.get(k, []))
+        if not p["cost"]:
+            continue
+        lab = line_label(k, ld, by_media[k[0]])
+        if not c["cost"]:
+            flagged.append({"m": k[0], "k": lab, "loss": p["cost"], "v": "전일 대비 광고비가 집행되지 않았습니다. 캠페인 상태 확인이 필요합니다."})
+            continue
+        drops = [(lb, pct(c[x], p[x]), p[x], c[x]) for lb, x in (("광고비", "cost"), ("노출", "imp"), ("클릭", "click"))]
+        drops = [x for x in drops if x[1] <= -threshold]
+        if drops:
+            flagged.append({"m": k[0], "k": lab, "loss": p["cost"] - c["cost"], "v": ", ".join(f"{lb} {n0(f)} → {n0(t)}({sgn(d)}%)" for lb, d, f, t in drops)
+                            + " 감소하였습니다. 입찰 및 소재 노출 상태 점검이 필요합니다."})
+    active = sum(1 for k in keys if live(by_cur.get(k, [])))
+    word = unit_word(ld)
+    items = []
+    for m in media:
+        fm = sorted((f for f in flagged if f["m"] == m), key=lambda f: -f["loss"])   # 광고비가 많이 줄어든 순
+        subs = [{"k": f["k"], "v": f["v"]} for f in fm[:TOP_LINES]]
+        if len(fm) > TOP_LINES:
+            rest = fm[TOP_LINES:]
+            subs.append({"k": f"외 {len(rest)}개 {unit_word(ld)}",
+                         "v": "광고비 감소 폭이 작은 순이라 생략했습니다(표에서 확인)."})
+        mc, mp = [r for r in cur if r["m"] == m], [r for r in pre if r["m"] == m]
+        if subs:
+            v = f"전일 대비 급감한 {word}이 {len(fm)}개 확인되었습니다." if word != "매체" else "전일 대비 급감이 확인되었습니다."
+        elif not live(mc):
+            ls = last_spend(rows, m)
+            v = ("특이사항 없음 (전일 대비 집행 중단)" if live(mp) else
+                 f"특이사항 없음 ({krdate(ls)} 집행 종료)" if ls else "특이사항 없음 (집행 없음)")
+        else:
+            x, y = agg(mc), agg(mp)
+            v = (f"특이사항 없음 (광고비 {sgn(pct(x['cost'], y['cost']))}%, 노출 {sgn(pct(x['imp'], y['imp']))}%, "
+                 f"클릭 {sgn(pct(x['click'], y['click']))}%)")
+        items.append({"k": m, "v": v, "subs": subs})
+    closing = ("급감 " + word + " 외에는 전일과 유사한 수준으로 정상 운영 중입니다." if flagged else
+               f"전 매체 모두 전일 대비 광고비·노출·클릭이 {threshold}% 이상 급감한 {word}은 없으며, 운영상 특이 이슈는 확인되지 않습니다.")
+    return {"meta": f"{krdate(E)} vs {krdate(prev)} · 집행 중 {word} {active}개 · 급감 기준 −{threshold}%",
+            "summary": summary, "items": items, "closing": closing}
+
+
+# ── Weekly Comment (목업 buildWeekly) ───────────────────────────────────────
+
+
+def _desc(c, p):
+    """상품 한 줄: 변화가 큰 단가·효율 지표 최대 2개(목업 desc)."""
+    d_cpm, d_cpv, d_vtr, d_ctr = pct(c["cpm"], p["cpm"]), pct(c["cpv"], p["cpv"]), c["vtr"] - p["vtr"], pct(c["ctr"], p["ctr"])
+    cpvf = (lambda x: f"{x:.1f}") if c["cpv"] < 20 else n0
+    cand = [
+        (abs(d_cpm), bool(c["imp"] and p["imp"]) and abs(d_cpm) >= 5, f"CPM {n0(p['cpm'])}원 → {n0(c['cpm'])}원({sgn(d_cpm)}%)으로 노출 단가가 "
+         + ("개선되었" if d_cpm < 0 else "상승하였")),
+        (abs(d_cpv), bool(c["cpv"] and p["cpv"]) and abs(d_cpv) >= 5,
+         f"CPV {cpvf(p['cpv'])}원 → {cpvf(c['cpv'])}원({sgn(d_cpv)}%)으로 조회 단가가 " + ("개선되었" if d_cpv < 0 else "상승하였")),
+        (abs(d_vtr) * 2, bool(c["imp"] and p["imp"] and (c["view"] or p["view"])) and abs(d_vtr) >= 3, f"VTR {round(c['vtr'])}%로 {sgn(d_vtr)}%p " + ("개선되었" if d_vtr > 0 else "하락하였")),
+        (abs(d_ctr) * 0.5, bool(c["imp"] and p["imp"] and p["click"]) and abs(d_ctr) >= 15, f"CTR {c['ctr']:.2f}%로 {sgn(d_ctr)}% " + ("상승하였" if d_ctr > 0 else "하락하였")),
+    ]
+    cand = sorted([x for x in cand if x[1]], key=lambda x: -x[0])[:2]
+    if not cand:
+        return "직전 주와 유사한 효율로 안정적으로 운영 중입니다."
+    return "".join(t + ("으며, " if i < len(cand) - 1 else "습니다.") for i, (_, _, t) in enumerate(cand))
+
+
+def build_weekly(rows, E, media, ld, budgets, months, currency, has_view=True):
+    ws = E - timedelta(days=E.weekday())            # ISO 주(월~일)의 월요일
+    pws, pwe = ws - timedelta(days=7), ws - timedelta(days=1)
+    W, Pw = E.isocalendar()[1], pws.isocalendar()[1]
+    cw = [r for r in rows if ws <= r["day"] <= E]
+    pw = [r for r in rows if pws <= r["day"] <= pwe]
+    lkey = lambda r: (r["m"],) + tuple(r[k] for k in ld)  # noqa: E731
+
+    def days(rs):
+        return len({r["day"] for r in rs}) or 1
+
+    def rng(rs):
+        ds = sorted({r["day"] for r in rs})
+        return f"{ds[0].month}.{ds[0].day}–{ds[-1].month}.{ds[-1].day}" if ds else "-"
+
+    active = {lkey(r) for r in cw if live([r])}
+    c_avg = agg(cw)["cost"] / days(cw)
+    pw_act = [r for r in pw if lkey(r) in active]
+    p_avg = agg(pw_act)["cost"] / days(pw_act)
+    dc = pct(c_avg, p_avg)
+    sections = []
+    if abs(dc) < 5:
+        spend = f"일평균 광고비 {money(c_avg, currency)}으로 직전 주({money(p_avg, currency)})와 유사하게 안정적으로 소진 진행 중입니다."
+    else:
+        spend = f"일평균 광고비 {money(c_avg, currency)}으로 직전 주 대비 {sgn(dc)}% {'증가' if dc > 0 else '감소'}하였습니다."
+    m0 = months[-1]
+    m0_rows = [r for r in rows if f"{r['day']:%Y-%m}" == m0["key"]]
+    bud = month_budget(budgets, m0["key"], m0_rows)
+    if bud:
+        burn, prog = agg(m0_rows)["cost"] / bud * 100, m0["elapsed"] / m0["days"] * 100
+        spend += (f" {int(m0['key'][5:])}월 예산 대비 소진율 {burn:.1f}%로 진행율({prog:.1f}%)에 "
+                  + ("맞춰 운영 중입니다." if abs(burn - prog) < 3 else
+                     "앞서 있어 일 예산 조정 검토가 필요합니다." if burn > prog else "미달하여 소진 속도 점검이 필요합니다."))
+    ended = [m for m in media if live([r for r in pw if r["m"] == m]) and not live([r for r in cw if r["m"] == m])]
+    if ended:
+        by_day = {}
+        for m in ended:
+            by_day.setdefault(last_spend(rows, m), []).append(m)
+        spend += " " + ", ".join(f"{', '.join(ms)}는 {krdate(d)}" for d, ms in by_day.items()) + " 집행 종료되었습니다."
+    sections.append({"h": "[소진]", "text": spend, "groups": []})
+
+    pk = ld[0] if ld else None
+    groups = []
+    for m in media:
+        mc, mp = [r for r in cw if r["m"] == m], [r for r in pw if r["m"] == m]
+        if not live(mc):
+            ls = last_spend(rows, m)
+            why = f"{krdate(ls)} 집행 종료로 {W}주차 집행 없음" if ls else "집행 없음"
+            groups.append({"media": m, "summary": f"특이사항 없음 ({why})", "bullets": []})
+            continue
+        c, p = kpi(agg(mc)), kpi(agg(mp))
+        d_cpm = pct(c["cpm"], p["cpm"])
+        view_part = (f", CPV {n0(c['cpv'])}원({sgn(pct(c['cpv'], p['cpv']))}%), VTR {round(c['vtr'])}%({sgn(c['vtr'] - p['vtr'])}%p)"
+                     if has_view else f", CTR {c['ctr']:.2f}%({sgn(c['ctr'] - p['ctr'])}%p)")   # 조회 지표가 없는 브랜드는 CTR
+        summary = (f"직전 주 대비 CPM {n0(c['cpm'])}원({sgn(d_cpm)}%){view_part}로 "
+                   + ("전반적으로 개선된 효율로 운영 중입니다." if d_cpm <= 0 and c["vtr"] >= p["vtr"] else
+                      "노출 단가가 다소 상승하였습니다." if d_cpm > 5 else "전반적으로 유사한 효율로 운영 중입니다."))
+        bullets = []
+        if pk:
+            by_c, by_p = {}, {}
+            for r in mc:
+                by_c.setdefault(r[pk], []).append(r)
+            for r in mp:
+                by_p.setdefault(r[pk], []).append(r)
+            names = [n for n in sorted(by_c, key=lambda n: -agg(by_c[n])["cost"]) if live(by_c[n])]
+            for name in names[:TOP_LINES]:
+                rc = by_c[name]
+                if not live(rc):
+                    continue
+                bullets.append({"k": name, "v": _desc(kpi(agg(rc)), kpi(agg(by_p.get(name, []))))})
+            if len(names) > TOP_LINES:
+                bullets.append({"k": f"외 {len(names) - TOP_LINES}개", "v": "광고비 상위 " + str(TOP_LINES) + "개만 적었습니다."})
+        groups.append({"media": m, "summary": summary, "bullets": bullets})
+    tc, tp = kpi(agg(cw)), kpi(agg(pw_act))
+    o_cpm, o_cpv = pct(tc["cpm"], tp["cpm"]), pct(tc["cpv"], tp["cpv"])
+    overall = ("전체 캠페인 모두 직전 주 대비 개선된 효율로 운영 중입니다." if o_cpm <= 0 and o_cpv <= 0 else
+               "전체 캠페인 모두 직전 주와 유사한 효율로 안정적으로 운영 중이며, 일부 상품에서 단가 변동이 확인됩니다."
+               if abs(o_cpm) < 5 and abs(o_cpv) < 5 else "일부 상품에서 단가 변동이 있어 상품별 효율 점검이 필요합니다.")
+    sections.append({"h": "[효율]", "text": overall, "groups": groups})
+    return {"meta": f"{W}주차({rng(cw)}, {days(cw)}일) vs {Pw}주차({rng(pw)}, {days(pw)}일) · 일평균/단가 기준",
+            "sections": sections}
+
+
+# ── 조립 ─────────────────────────────────────────────────────────────────────
+
+
+def encode(rows, dims, start, end):
+    """원자 행 → 열 기반 표 데이터(값 사전 + 코드). 날짜는 days 인덱스."""
+    ndays = (end - start).days + 1
+    day_list = [start + timedelta(days=i) for i in range(ndays)]
+    wk = sorted({d.isocalendar()[:2] for d in day_list})   # 주 정렬 키(연도 경계에서도 순서 유지)
+    days = [{"label": f"{d.year}.{d.month}.{d.day}", "mo": f"{d:%Y-%m}", "w": d.isocalendar()[1],
+             "ws": wk.index(d.isocalendar()[:2])} for d in day_list]
+    keys = ["m"] + [SHORT[d] for d in dims]
+    # 값 사전은 집계 기간 광고비 큰 순(표·필터의 기본 순서)
+    dic = {}
+    for k in keys:
+        tot = {}
+        for r in rows:
+            tot[r[k]] = tot.get(r[k], 0) + r["cost"]
+        dic[k] = sorted(tot, key=lambda v: (-tot[v], v))
+    pos = {k: {v: i for i, v in enumerate(dic[k])} for k in keys}
+    cols = {k: [pos[k][r[k]] for r in rows] for k in keys}
+    cols["d"] = [(r["day"] - start).days for r in rows]
+    for _, k in ATOMS:
+        cols[k] = [r[k] if not float(r[k]).is_integer() else int(r[k]) for r in rows]
+    if rows and "cost_g" in rows[0]:   # 수수료가 있을 때만 — Gross 광고비
+        cols["cost_g"] = [r["cost_g"] for r in rows]
+    return {"days": days, "dict": dic, "cols": cols, "n": len(rows)}
+
+
+def compute(payload):
+    target = date.fromisoformat(payload["target_date"])
+    E = target
+    if payload.get("start_date"):   # 사용자가 정한 시작일
+        start = date.fromisoformat(payload["start_date"])
+        if start > E:
+            raise SystemExit(f"start_date({start})가 데이터 마지막 날(기준일 {E})보다 늦다.")
+        if (E - start).days > 365:
+            raise SystemExit("집계 기간은 366일까지다(get_ad_performance 상한) — start_date를 줄인다.")
+    else:                           # 기본: E의 전월 1일
+        start = date(E.year, E.month, 1) - timedelta(days=1)
+        start = date(start.year, start.month, 1)
+    months = []
+    d = date(start.year, start.month, 1)
+    multi_year = start.year != E.year
+    while d <= E:
+        n = monthrange(d.year, d.month)[1]
+        months.append({"key": f"{d:%Y-%m}", "label": (f"{d.year % 100}년 " if multi_year else "") + f"{d.month}월", "days": n,
+                       "elapsed": E.day if (d.year, d.month) == (E.year, E.month) else n})
+        d = date(d.year + (d.month == 12), d.month % 12 + 1, 1)
+    keys = payload.get("metric_keys") or {}
+    currency = payload.get("currency") or "₩"
+    skeleton = bool(payload.get("skeleton"))
+    env = None if skeleton else kit.section_envelope(payload.get("data"))
+    header = {"period": f"{start:%Y.%m.%d} – {E:%Y.%m.%d}", "media": ""}
+    part = payload.get("part")
+    if part and part not in PARTS:
+        raise SystemExit(f"part는 {', '.join(PARTS)} 중 하나다 — 받은 값: {part}")
+    tables = [t for t in (payload.get("tables") or []) if t in TABLES] if part == "tables" else []
+    report = {"brand": payload["brand"], "currency": currency, "months": months, "header": header,
+              "comment": None, "table": None}
+    if part:
+        report.update(part=part, part_label=PARTS[part][0], tables=tables)
+    if part in (None, "history"):
+        report["history"] = build_history(payload.get("history"), payload.get("names"), start, E)
+    if part == "history":   # 변경 이력만 — 성과 데이터를 쓰지 않는다
+        header["media"] = " · ".join((report["history"] or {}).get("media") or [])
+        return report, []
+    if not env or not keys.get("cost"):
+        return report, []
+    # 노출 위치 차원은 Placement 데이터(place)로 따로 받는다 — 표 데이터에는 요구하지 않는다
+    need = [d for d in kit.fine_dims(kit.probe_dims(payload.get("dims")) or [])
+            if d not in kit.SIZE_FALLBACK_DIMS and d not in PLACE_DIMS]
+    valid = kit.require_dims(payload.get("dims"), [("data", env)], "data 표 데이터", need=need)
+    dims = [d for d, _, _ in DIMS if d in (env.get("dimensions") or []) and d in valid]
+    if AD_TYPE in dims and P in dims:
+        dims.remove(P)   # 같은 'p' 자리 — ad_type이 우선
+    rows = load_rows(env, keys, dims, start, E)
+    if not rows:
+        return report, []
+    menv = kit.section_envelope(payload.get("media"))
+    if menv:
+        kit.require_rollup([("매체 ↔ 표 데이터(일)", kit.check_rollup(menv, ["media"], env, ["media"], keys))])
+    tot = {}
+    for r in rows:
+        tot[r["m"]] = tot.get(r["m"], 0) + r["cost"]
+    media = sorted(tot, key=lambda m: (-tot[m], m))
+    header["media"] = " · ".join(media)
+    budgets = [b for e in (payload.get("budgets") or []) for b in parse_budget(e)]
+    # 목표 표의 매체·캠페인 표기를 데이터 표기에 맞춘다 — BE와 같은 기준(앞뒤 공백·대소문자 무시).
+    # 맞는 표기가 없으면 그대로 둔다(그 달 실적이 없는 매체·캠페인 → 어느 행에도 붙지 않는다).
+    canon = {k: {str(v).strip().lower(): v for v in {r[k] for r in rows if k in r}} for k in ("m", "c")}
+    for b in budgets:
+        for k in ("m", "c"):
+            if k in b["scope"]:
+                b["scope"][k] = canon[k].get(str(b["scope"][k]).strip().lower(), b["scope"][k])
+    ld = line_dims(dims)
+    texts = [e.get("target_progress") for e in payload.get("budgets") or []]
+    # Placement는 전체 보고서와 tables(표를 고르지 않았거나 place를 골랐을 때)에서만 쓴다
+    want_place = not part or (part == "tables" and (not tables or "place" in tables))
+    penv = kit.section_envelope(payload.get("place")) if want_place and payload.get("place") else None
+    served = fees.served_basis([env, menv, penv], texts)
+    if served:
+        table = fees.fee_table([env, menv, penv], texts)
+        fee = bool(table)
+        nb = None
+        if fee:
+            fees.add_cost_views(rows, table, served)
+            gb = fees.convert_budgets(budgets, table, served, "gross", derive_targets)
+            nb = fees.convert_budgets(budgets, table, served, "net", derive_targets)
+            budgets = gb
+            report["fee"] = fees.served_ui(served, fees.served_fee_note(table, served, [m["key"] for m in months]))
+    else:
+        ratios = fees_legacy.fee_ratios(budgets)
+        fee = fees_legacy.ratios_have_fee(ratios)
+        nb = fees_legacy.net_budgets(budgets, derive_targets) if fee else None
+        if fee:
+            fees_legacy.add_gross(rows, ratios)
+            report["fee"] = fees_legacy.basis_ui(fees_legacy.ratios_fee_note(ratios))
+
+    def comments(rs, bs):
+        return {"daily": build_daily(rs, E, media, ld, DROP_THRESHOLD, currency),
+                "weekly": build_weekly(rs, E, media, ld, bs, months, currency, has_view=bool(keys.get("views")))}
+    if fee:   # 수수료가 있다 — Gross/Net 두 보기(문장은 둘 다 만들고, 표는 Gross 광고비 열 cost_g를 더한다)
+        report["comment"] = {"gross": comments([dict(r, cost=r["cost_g"]) for r in rows], budgets),
+                             "net": comments(rows, nb)}
+    else:
+        report["comment"] = comments(rows, budgets)
+    has = {"imp": bool(keys.get("impression")), "click": bool(keys.get("click")), "view": bool(keys.get("views"))}
+    report["table"] = dict(encode(rows, dims, start, E), dims=[{"key": k, "label": lb} for src, k, lb in DIMS if src in dims],
+                           has=has, budgets=budgets)
+    if fee:   # Net 보기의 예산(cost = Net 예산) — 브라우저는 기준에 따라 고르기만 한다
+        report["table"]["budgets_net"] = nb
+    for b in budgets + (nb or []):   # srv(서버가 준 목표 키)·cost_net은 다른 보기 예산 계산에만 쓴다 — HTML에 넣지 않는다
+        b.pop("srv", None)
+        b["v"].pop("cost_net", None)
+    if want_place:
+        place_gross = None
+        if fee:
+            def place_gross(prow):
+                if served:
+                    fees.add_cost_views(prow, table, served)
+                else:
+                    fees_legacy.add_gross_like(prow, rows, ratios)
+        report["place"] = build_place(penv, menv, keys, start, E, place_gross)
+    if part == "comment":   # 문장은 위에서 만들었다 — 표 데이터는 HTML에 넣지 않는다(파일이 가벼워진다)
+        report["table"] = None
+    return report, rows
+
+
+def build_history(spec, names_spec, start, E):
+    """변경 이력 items 파일 → 표 줄(campaign_history.build). 호출하지 않았으면 None(섹션이 '데이터 준비 중')."""
+    if not spec:
+        return None
+    items = []
+    for path in spec.get("json_files") or []:
+        with open(os.path.expanduser(path), encoding="utf-8") as f:
+            obj = json.load(f)
+        items += obj.get("items") or [] if isinstance(obj, dict) else obj
+    for text in ([spec["json"]] if isinstance(spec.get("json"), str) else spec.get("json") or []):
+        obj = json.loads(text)
+        items += obj.get("items") or [] if isinstance(obj, dict) else obj
+    names = kit.section_envelope(names_spec) if names_spec else None
+    return campaign_history.build(items, names, start, E)
+
+
+def build_place(penv, menv, keys, start, E, gross=None):
+    """Placement 표 데이터: 미디어 × (Ad Type/상품) × 노출 위치 × 일. 노출 위치 차원이 없으면 None(표가 조용히 빠진다).
+    gross(행)(수수료가 있을 때)는 행에 Gross 광고비 열(cost_g)을 더한다 — 규칙은 compute가 고른다."""
+    if not penv:
+        return None
+    pdims_have = penv.get("dimensions") or []
+    pl = next((d for d in PLACE_DIMS if d in pdims_have), None)
+    if not pl:
+        return None
+    pd = [d for d in (AD_TYPE, P) if d in pdims_have][:1] + [pl]
+    if menv:   # 매체별 일 합 = Placement 데이터 합(표 데이터와 같은 대조)
+        kit.require_rollup([("매체 ↔ Placement 데이터(일)", kit.check_rollup(menv, ["media"], penv, ["media"], keys))])
+    prow = load_rows(penv, keys, pd, start, E)
+    if not prow:
+        return None
+    if gross:
+        gross(prow)
+    labels = {pl: "노출 위치", AD_TYPE: "Ad Type", P: "상품"}
+    return dict(encode(prow, pd, start, E), dims=[{"key": SHORT[d], "label": labels[d]} for d in pd])
+
+
+def build_html(report, out):
+    with open(os.path.join(ASSETS_DIR, "report-template.html"), encoding="utf-8") as f:
+        template = f.read()
+    js = kit._read_first(ASSETS_DIR, ["overall_summary.txt", "overall_summary.js"])
+    css = kit._read_first(kit.KIT_DIR, ["report_kit.css"])
+    values = {"__TITLE__": _html.escape(report["brand"]), "__REPORT_KIT_CSS__": css, "__OVERALL_SUMMARY_JS__": js,
+              "__REPORT_JSON__": kit.js_json(report)}
+    left = set(re.findall(r"__[A-Z0-9]+(?:_[A-Z0-9]+)*__", template)) - set(values)
+    if left:
+        raise SystemExit(f"치환되지 않은 placeholder: {sorted(left)}")
+    html = re.sub(r"__[A-Z0-9]+(?:_[A-Z0-9]+)*__", lambda m: values.get(m.group(0), m.group(0)), template)
+    path = os.path.abspath(os.path.expanduser(out))
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(html)
+    return path, os.path.getsize(path)
+
+
+def build_xlsx(report, rows, html_path):
+    """같은 데이터로 엑셀도 만든다 — HTML 옆 같은 이름(.xlsx). 실패해도 HTML은 그대로 두고 이유만 돌려준다.
+    수수료가 있으면(report["fee"]) 기준마다 한 파일: 같은 이름 .xlsx = Gross, `_net.xlsx` = Net(xlsx_net)."""
+    base = os.path.splitext(html_path)[0]
+    part = report.get("part")
+    if part and not PARTS[part][1]:
+        return {"xlsx": None, "xlsx_note": "Comment만 담은 보고서라 엑셀을 만들지 않았다"}
+    out = {}
+    for basis, key, path in (("gross", "xlsx", base + ".xlsx"), ("net", "xlsx_net", base + "_net.xlsx")):
+        if basis == "net" and not report.get("fee"):
+            break
+        rep, rs = basis_view(report, rows, basis)
+        try:
+            import overall_summary_xlsx
+            made = overall_summary_xlsx.write(rep, rs, path, PARTS[part][1] if part else None)
+        except Exception as e:  # noqa: BLE001 — 엑셀 실패가 HTML 보고서를 막지 않는다(예: 같은 파일이 엑셀에 열려 있음)
+            out.update({key: None, key + "_error": f"{type(e).__name__}: {e}"})
+            continue
+        out.update({key: made} if made else {key: None, key + "_note": "표 데이터가 없어 엑셀을 만들지 않았다"})
+    return out
+
+
+def main():
+    payload = kit.read_payload()
+    report, rows = compute(payload)
+    path, size = build_html(report, payload["out"])
+    result = {"out": path, "bytes": size, "rows": len(rows), **({"part": report["part"]} if report.get("part") else {}),
+              "sections": {"comment": "ok" if report["comment"] else "placeholder",
+                           "tables": "ok" if report["table"] else "placeholder",
+                           "history": "ok" if report.get("history") is not None else "placeholder"}}
+    result.update(build_xlsx(report, rows, path))
+    json.dump(result, sys.stdout, ensure_ascii=False)
+
+
+if __name__ == "__main__":
+    main()

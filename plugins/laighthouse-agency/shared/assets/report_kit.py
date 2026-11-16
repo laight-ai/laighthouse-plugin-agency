@@ -727,6 +727,13 @@ def merged_envelope(obj):
                     raise SystemExit(f"분할 응답의 기간이 겹친다({p}) — 겹치지 않게 나눠 다시 받는다.")
             seen |= {period_of(r) for r in e.get("rows") or []}
     out = dict(envs[0])
+    if len(envs) > 1:
+        for key in {k for e in envs for k in e} - {"rows", "row_count", "metrics", "metric_units"}:
+            vals = [e.get(key) for e in envs]
+            if key != "dimensions" and all(isinstance(v, list) for v in vals):
+                out[key] = list({json.dumps(i, sort_keys=True, ensure_ascii=False): i for v in vals for i in v}.values())
+            elif any(v != vals[0] for v in vals):
+                raise SystemExit(f"분할 응답마다 {key} 값이 다르다 — 같은 조건으로 한 번에 다시 받는다.")
     metrics, units = metrics_units(*envs)
     out.update(metrics=metrics, metric_units=units, rows=[r for e in envs for r in (e.get("rows") or [])])
     out["row_count"] = len(out["rows"])
