@@ -43,7 +43,7 @@ metadata:
    | 조건 | 인자 |
    |---|---|
    | 제안받을 달(예산을 배분할 달) | `target_month` (`YYYY-MM`). 그 전월(기준 달) 실적으로 계산한다 — 전월 데이터가 다 들어온 뒤에 돌려야 정확하다 |
-   | 비용 지표 · 성과 지표 | `cost_metric` 은 1번 `cost_metrics` 에서, `revenue_metric` 은 `outcome_metrics` 에서 하나씩(서로 다른 둘). 반대쪽 후보에만 있는 지표는 서버가 거절한다. 고를 수 있는 지표가 하나뿐인 쪽(반대쪽에서 고른 지표를 빼고 하나만 남을 때도)은 그 지표를 쓰고 묻지 않는다 — 대신 골랐다거나 후보가 하나뿐이라는 말도 하지 않는다 |
+   | 비용 지표 · 성과 지표 | `cost_metric` 은 1번 `cost_metrics` 에서, `outcome_metric` 은 `outcome_metrics` 에서 하나씩(서로 다른 둘. 도구 인자가 `revenue_metric` 인 예전 서버면 그 이름으로 넘긴다). 반대쪽 후보에만 있는 지표는 서버가 거절한다. 고를 수 있는 지표가 하나뿐인 쪽(반대쪽에서 고른 지표를 빼고 하나만 남을 때도)은 그 지표를 쓰고 묻지 않는다 — 대신 골랐다거나 후보가 하나뿐이라는 말도 하지 않는다 |
    | 제안받을 달의 예산(원, VAT 제외 Net) | `target_budget` |
 3. 확인받으면 `create_media_mix_job(...)` 1회 → `id`. `created: false` 면 내가 같은 조건으로 이미 돌리고 있는 job 을 받은 것이다(사용자에게 알린다).
    `status: "failed"` 와 `error` 가 오면 큐에 넣지 못한 것이다 — 사유를 전하고 멈춘다.
@@ -66,7 +66,7 @@ metadata:
 
      | 번호 | 제안받을 달 | 예산(원) | 비용 · 성과 지표 | 상태 | 실행 시각(KST) |
      |---|---|---|---|---|---|
-     | 1 | `request.target_month` | `request.target_budget`(천 단위 쉼표) | `request.cost_metric` · `request.revenue_metric` | `status` → `succeeded` 완료 · `running` 계산 중 · `pending` 대기 · `failed` 실패 · `canceled` 취소 | `created_at`(UTC)에 9시간을 더해 `MM-DD HH:mm`. 더해서 24시를 넘으면 날짜도 하루 넘긴다 |
+     | 1 | `request.target_month` | `request.target_budget`(천 단위 쉼표) | `request.cost_metric` · `request.outcome_metric`(예전 서버는 `request.revenue_metric`) | `status` → `succeeded` 완료 · `running` 계산 중 · `pending` 대기 · `failed` 실패 · `canceled` 취소 | `created_at`(UTC)에 9시간을 더해 `MM-DD HH:mm`. 더해서 24시를 넘으면 날짜도 하루 넘긴다 |
 
    - 상태를 본다. 목록에서 고른 job 이 완료 · 실패 · 취소면 바로 1번으로 간다. job id 를 직접 받았거나 고른 job 이 대기 · 계산 중이면
      `get_media_mix_job(brand_name, job_id)`(기본 인자)로 상태를 본다. 에러(없는 job · 다른 사람의 job · 권한 등)가 오면 원문을 전하고 멈춘다.
@@ -84,6 +84,7 @@ metadata:
    - `note` — 저장 훅이 없는 호스트다. 「저장 훅이 없을 때」대로 한다.
 3. 완성된 HTML 을 낸다 — 빌더가 위 경로에 저장했다. 채팅에서 보여 줄 수 있는 호스트(Artifact 등)면 그 파일로 게시한다.
 4. 완료 메시지는 아래 형식 그대로. 하이라이트는 보고서에 넣은 응답의 `summary`(kind `optimized` · `current` 의 `media: "*"` 합계, 매체별 행)만 근거로 쓴다.
+   성과(`outcome`)와 성과 ÷ 비용(`outcome_per_cost`)은 성과 지표 이름(`request.outcome_metric`)으로 부른다 — 성과 지표가 구매 수 같은 건수일 수 있으니 매출 · ROAS 라고 하지 않는다.
 
 > ℹ️ 이 호스트의 Bash 기본 셸은 `sh`(dash)일 수 있다 — bash 전용 문법은 쓰지 않는다. `python3`이 없으면 `python`으로 부른다.
 

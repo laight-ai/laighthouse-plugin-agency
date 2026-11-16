@@ -47,7 +47,14 @@
     )
     var get = function (kind, media) {
       var r = byKey.get(kind + '\u0000' + media)
-      return r ? { cost: r.cost, revenue: r.revenue, roas: r.roas == null ? null : r.roas } : null
+      if (!r) return null
+      /* 성과 합계는 outcome, 성과 ÷ 비용은 outcome_per_cost 로 온다. 예전 서버는 revenue · roas 로 준다 */
+      var perCost = 'outcome_per_cost' in r ? r.outcome_per_cost : r.roas
+      return {
+        cost: r.cost,
+        outcome: r.outcome != null ? r.outcome : r.revenue,
+        perCost: perCost == null ? null : perCost,
+      }
     }
     var names = Array.from(
       new Set(
@@ -84,13 +91,13 @@
   var won = function (v) {
     return v == null ? '–' : '₩' + Math.round(v).toLocaleString('ko-KR')
   }
-  /* ROAS 는 배수(매출 ÷ 비용)로 온다 — 보고서 화면처럼 ×100 한 정수 퍼센트로 보인다 */
-  var roasText = function (v) {
+  /* 금액 성과 ÷ 비용은 배수로 온다 — 보고서 화면처럼 ×100 한 정수 퍼센트로 보인다 */
+  var pctText = function (v) {
     return v == null ? '–' : Math.round(v * 100).toLocaleString('ko-KR') + '%'
   }
 
-  /* 성과 지표(revenue_metric) 표기 — job 의 revenue_unit 으로 가른다.
-     money: 매출처럼 금액 — ₩ 와 ROAS(%)
+  /* 성과 지표(outcome_metric) 표기 — job 의 outcome_unit 으로 가른다.
+     money: 금액 — ₩ 와 성과 ÷ 비용(%)
      count: 클릭 · 노출처럼 다른 단위 — 개수에 단위를 붙이고, 효율은 성과 하나당 비용(₩)
      unknown: 단위가 없어 금액인지 모른다 — 단위 없이 숫자, 효율은 성과 ÷ 비용 배수 그대로 */
   var MONEY_UNITS = ['₩', 'KRW', '원']
@@ -105,15 +112,15 @@
     var n = Math.round(v).toLocaleString('ko-KR')
     return kind === 'count' ? n + String(unit).trim() : n
   }
-  /* summary.roas 는 성과 ÷ 비용이다 — count 는 뒤집어 성과당 비용으로 본다(낮을수록 좋다) */
-  function efficiency(roas, unit) {
-    if (roas == null) return null
-    return outcomeKind(unit) === 'count' ? (roas > 0 ? 1 / roas : null) : roas
+  /* summary 의 outcome_per_cost 는 성과 ÷ 비용이다 — count 는 뒤집어 성과당 비용으로 본다(낮을수록 좋다) */
+  function efficiency(perCost, unit) {
+    if (perCost == null) return null
+    return outcomeKind(unit) === 'count' ? (perCost > 0 ? 1 / perCost : null) : perCost
   }
-  function efficiencyText(roas, unit) {
+  function efficiencyText(perCost, unit) {
     var kind = outcomeKind(unit)
-    if (kind === 'money') return roasText(roas)
-    var v = efficiency(roas, unit)
+    if (kind === 'money') return pctText(perCost)
+    var v = efficiency(perCost, unit)
     if (v == null) return '–'
     /* 배수는 자릿수가 들쭉날쭉하니 유효숫자 세 자리로 맞춘다 — 0.0100 · 0.00388 · 9.70 */
     return kind === 'count'
@@ -162,8 +169,6 @@
 
   /* ---------- 문구(ko) ---------- */
   var KIND_LABEL = { current: '현재(실적)', optimized: '제안(최적화)' }
-  /* optimized 매출은 실적이 아니라 GP 예측치다 */
-  var REVENUE_LABEL = { current: '매출', optimized: '예상 매출' }
   var STATUS = {
     pending: { label: '대기 중', badge: 'badge-info' },
     running: { label: '계산 중', badge: 'badge-info' },
@@ -172,29 +177,33 @@
     canceled: { label: '취소됨', badge: 'badge-muted' },
   }
 
-  /* 성과 지표 표기 — 금액(money)이면 매출 · ROAS, 아니면 지표 이름과 성과당 비용(count) 또는 성과 ÷ 비용(unknown) */
+  /* 성과 지표 이름과 단위. 예전 서버는 revenue_metric · revenue_unit 으로 준다 */
+  function outcomeMetric(req) {
+    return req.outcome_metric != null ? req.outcome_metric : req.revenue_metric
+  }
+  function outcomeUnit(job) {
+    return 'outcome_unit' in job ? job.outcome_unit : job.revenue_unit
+  }
+
+  /* 성과 지표 표기 — 지표 이름으로 부른다. 효율은 성과당 비용(count) 또는 성과 ÷ 비용(money · unknown) */
   function outcome(job) {
-    var unit = job.revenue_unit
+    var unit = outcomeUnit(job)
     var kind = outcomeKind(unit)
-    var metric = job.request.revenue_metric
+    var metric = outcomeMetric(job.request)
     return {
       kind: kind,
       label: function (k) {
-        return kind === 'money'
-          ? REVENUE_LABEL[k]
-          : k === 'current'
-            ? metric
-            : '예상 ' + metric
+        return k === 'current' ? metric : '예상 ' + metric
       },
-      eff: kind === 'money' ? 'ROAS' : kind === 'count' ? metric + '당 비용' : metric + ' ÷ 비용',
+      eff: kind === 'count' ? metric + '당 비용' : metric + ' ÷ 비용',
       value: function (v) {
         return outcomeText(v, unit)
       },
-      effText: function (roas) {
-        return efficiencyText(roas, unit)
+      effText: function (perCost) {
+        return efficiencyText(perCost, unit)
       },
-      effValue: function (roas) {
-        return efficiency(roas, unit)
+      effValue: function (perCost) {
+        return efficiency(perCost, unit)
       },
     }
   }
@@ -223,7 +232,7 @@
     summaryTable: summaryTable,
     changeRate: changeRate,
     won: won,
-    roasText: roasText,
+    pctText: pctText,
     outcomeKind: outcomeKind,
     outcomeText: outcomeText,
     efficiency: efficiency,
@@ -299,7 +308,7 @@
       '<dt>지표</dt><dd>' +
       esc(req.cost_metric) +
       ' · ' +
-      esc(req.revenue_metric) +
+      esc(outcomeMetric(req)) +
       '</dd>' +
       '<dt>요청 시각</dt><dd>' +
       esc(fmtDateTime(job.created_at)) +
@@ -339,15 +348,15 @@
     return out + '</div>'
   }
 
-  /* 요약 수치(총 예산 · 예상 총 매출 · ROAS)에 목표 예산 대비와 기준 달 실적 ROAS 를 곁들인다.
+  /* 요약 수치(총 예산 · 예상 성과 · 성과 효율)에 목표 예산 대비와 기준 달 실적 효율을 곁들인다.
      weight 모드는 제안 비용 합계가 목표 예산보다 적을 수 있다 */
   function kpis(job, table, o) {
     var opt = table.total('optimized')
     var cur = table.total('current')
     var target = job.request.target_budget
     var ofTarget = opt ? (opt.cost / target) * 100 : null
-    var roasChange = changeRate(o.effValue(opt && opt.roas), o.effValue(cur && cur.roas))
-    var roasDir = roasChange == null ? 'flat' : resolveChangeDirection(Number(roasChange.toFixed(1)))
+    var effChange = changeRate(o.effValue(opt && opt.perCost), o.effValue(cur && cur.perCost))
+    var effDir = effChange == null ? 'flat' : resolveChangeDirection(Number(effChange.toFixed(1)))
     var kpi = function (label, value, delta) {
       return (
         '<div class="kpi"><div class="k-label">' +
@@ -370,20 +379,20 @@
         mtd('목표 ' + won(target) + ' (Net)') +
           (ofTarget != null && ofTarget < 99.5 ? mtd(ofTarget.toFixed(1) + '% 배분') : ''),
       ) +
-      kpi(o.label('optimized'), o.value(opt && opt.revenue), mtd('모델 예측치')) +
+      kpi(o.label('optimized'), o.value(opt && opt.outcome), mtd('모델 예측치')) +
       kpi(
         '예상 ' + o.eff,
-        o.effText(opt && opt.roas),
-        roasChange == null
+        o.effText(opt && opt.perCost),
+        effChange == null
           ? null
           : '<span class="font-semibold ' +
-              CHANGE_CLASS[roasDir] +
+              CHANGE_CLASS[effDir] +
               '">' +
-              esc(markChange(roasDir, Math.abs(roasChange).toFixed(1) + '%')) +
+              esc(markChange(effDir, Math.abs(effChange).toFixed(1) + '%')) +
               '</span>' +
               mtd('기준 달 대비'),
       ) +
-      kpi('기준 달 실적 ' + o.eff, o.effText(cur && cur.roas), mtd('비용 ' + won(cur && cur.cost))) +
+      kpi('기준 달 실적 ' + o.eff, o.effText(cur && cur.perCost), mtd('비용 ' + won(cur && cur.cost))) +
       '</div>'
     )
   }
@@ -403,9 +412,9 @@
         esc(won(c && c.cost)) +
         share +
         '</td><td class="num">' +
-        esc(o.value(c && c.revenue)) +
+        esc(o.value(c && c.outcome)) +
         '</td><td class="num">' +
-        esc(o.effText(c && c.roas)) +
+        esc(o.effText(c && c.perCost)) +
         '</td>'
       )
     }
