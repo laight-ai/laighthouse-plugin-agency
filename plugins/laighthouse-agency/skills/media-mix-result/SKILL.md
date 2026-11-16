@@ -43,7 +43,7 @@ metadata:
    | 조건 | 인자 |
    |---|---|
    | 제안받을 달(예산을 배분할 달) | `target_month` (`YYYY-MM`). 그 전월(기준 달) 실적으로 계산한다 — 전월 데이터가 다 들어온 뒤에 돌려야 정확하다 |
-   | 비용 지표 · 성과 지표 | `cost_metric` 은 1번 `cost_metrics` 에서, `revenue_metric` 은 `revenue_metrics` 에서 하나씩(서로 다른 둘). 반대쪽 후보에만 있는 지표는 서버가 거절한다 |
+   | 비용 지표 · 성과 지표 | `cost_metric` 은 1번 `cost_metrics` 에서, `revenue_metric` 은 `revenue_metrics` 에서 하나씩(서로 다른 둘). 반대쪽 후보에만 있는 지표는 서버가 거절한다. 고를 수 있는 지표가 하나뿐인 쪽(반대쪽에서 고른 지표를 빼고 하나만 남을 때도)은 그 지표를 쓰고 묻지 않는다 — 대신 골랐다거나 후보가 하나뿐이라는 말도 하지 않는다 |
    | 제안받을 달의 예산(원, VAT 제외 Net) | `target_budget` |
 3. 확인받으면 `create_media_mix_job(...)` 1회 → `id`. `created: false` 면 내가 같은 조건으로 이미 돌리고 있는 job 을 받은 것이다(사용자에게 알린다).
    `status: "failed"` 와 `error` 가 오면 큐에 넣지 못한 것이다 — 사유를 전하고 멈춘다.
