@@ -52,7 +52,7 @@ SHARED_FILES = {
     "naver-blog": EXTERNAL,
     "weather-impact": EXTERNAL,
     "skill-catalog": (),
-    "app-guide": (),   # 화면 사용법 문서만 — 공용 파일 없음
+    "app-guide": (),
 }
 # overall-summary-* 하위 스킬: overall-summary의 스크립트·문서를 자기 폴더로 넣는다
 OVERALL_SUBSKILLS = ("overall-summary-comment", "overall-summary-history", "overall-summary-mix",
