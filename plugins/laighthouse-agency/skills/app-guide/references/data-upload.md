@@ -54,7 +54,6 @@ API 자동 연동이 안 되는 매체나 자체 리포트 데이터를 파일�
 ### 컬럼
 
 - **필수 컬럼이 빠지면 안 된다.** 필요한 컬럼은 업로드 창의 **어떤 형태의 파일이어야 하나요** 표에 나오며, 파일 첫 행이 이 표와 **정확히 일치**해야 한다. **양식 템플릿 내려받기**로 빈 양식을 받을 수 있다.
-  - 예) Naver NOSP: 일자(YYYY-MM-DD), 광고상품, 광고라인, 광고소재, 노출수, 클릭수, 광고비, 집행금액, 조회수 등
   - 예) 넷플릭스: Day(YYYY-MM-DD), IO/NAS Line Item ID·Name, Creative ID·Name, Delivered Net Impressions, Clicks, Delivered Amount, Video … Completes 등
 - **날짜 컬럼은 반드시 있어야** 하며, 형식은 표에 적힌 대로(보통 **YYYY-MM-DD**) 맞춘다. 한 번 정한 날짜 형식은 계속 같게 유지한다.
 - **컬럼 이름을 임의로 바꾸지 않는다.** (예: "노출수" → "Impressions" 금지, 띄어쓰기·괄호·단위 표기까지 그대로)
