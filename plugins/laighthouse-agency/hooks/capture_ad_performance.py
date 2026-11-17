@@ -266,7 +266,7 @@ def main(argv=None):
     # been saved to …\tool-results\….txt" — 안내문이 2,000자를 넘기도 한다, 2026-10-23 실측). 그래서 길이와 관계없이
     # JSON 봉투가 아닌 안내문이면 그 파일을 읽는다. Windows는 그 경로가 260자를 넘기 쉬워 긴 경로 접두사로 연다.
     # 저장 파일은 .txt나 .json이고, 내용이 [{"type":"text","text":…}] 블록 리스트일 수도 있다.
-    saved_match = re.search(r"saved to (\S+?\.(?:txt|json))", text)
+    saved_match = re.search(r"saved to (\S+\.(?:txt|json))", text)   # 경로 중간의 .json·.txt에서 끊지 않게 끝까지 본다
     if saved_match and not text.lstrip().startswith("{"):
         saved_path = saved_match.group(1)
         open_path = saved_path
