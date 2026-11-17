@@ -22,6 +22,7 @@
 | 스킬 | creative-report | 소재 성과 — 매체별 소재 TOP(광고비·CTR·ROAS 등)을 채팅 표로, 또는 썸네일 포함 보고서(HTML)로. 먼저 형태를 고르게 한다 |
 | 스킬 | naver-search · naver-news · naver-blog · weather-impact | 외부 요인 보고서(HTML, 날짜 범위) — 네이버 검색량·뉴스·블로그, 서울 날씨(+광고 클릭) |
 | 스킬 | nextmonth-budget-planning | 월간 미디어믹스 결과 보고서(HTML) — 라이트하우스 웹 결과 화면과 같은 모양, Claude 가 SKILL.md 의 뼈대대로 직접 작성 |
+| 스킬 | app-guide | 라이트하우스 웹 화면(app.laight.ai) 사용법 — 메뉴 위치, 매체 연동·파일 업로드·목표 설정 등 순서 안내(데이터 조회 없음) |
 | 스킬 | skill-catalog | 라이트하우스 스킬 목록(이름·명령어·설명·요청 예시)을 채팅에 표로 보여 준다 — "스킬 목록", "어떤 스킬 있어" |
 
 ## 사용법

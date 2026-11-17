@@ -1,5 +1,5 @@
 {
-  "version": "v4.0.5",
+  "version": "v4.1.0",
   "targets": [
     {
       "root": "plugins/laighthouse-agency",
@@ -10,6 +10,7 @@
         "skills/naver-search",
         "skills/weather-impact",
         "skills/nextmonth-budget-planning",
+        "skills/app-guide",
         "hooks/save_responses.py",
         "hooks/capture_ad_performance.py",
         "skills/overall-summary",

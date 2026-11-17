@@ -222,8 +222,8 @@ def run_entry(skill_dir, script, args, tmp):
 
 
 def test_each_entry_script_runs_to_its_no_responses_output_when_mounted_alone():
-    # skill-catalog · nextmonth-budget-planning 은 스크립트 없이 답한다
-    assert set(ENTRY) | {"skill-catalog", "nextmonth-budget-planning"} == set(skill_names()), "새 스킬은 ENTRY에 진입 스크립트를 더한다"
+    # skill-catalog · nextmonth-budget-planning · app-guide 는 스크립트 없이 답한다
+    assert set(ENTRY) | {"skill-catalog", "nextmonth-budget-planning", "app-guide"} == set(skill_names()), "새 스킬은 ENTRY에 진입 스크립트를 더한다"
     with tempfile.TemporaryDirectory() as tmp:
         for skill, (script, args, key) in sorted(ENTRY.items()):
             d = mount_alone(tmp, skill)
