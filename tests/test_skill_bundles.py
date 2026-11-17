@@ -209,6 +209,7 @@ ENTRY = {
     "naver-news": ("assets/prepare.py", RANGE, "missing"),
     "naver-blog": ("assets/prepare.py", RANGE, "missing"),
     "weather-impact": ("assets/prepare.py", RANGE, "missing"),
+    "creative-report": ("assets/creative_report.py", ["--start-date", "2026-01-01", "--end-date", "2026-01-05"], "note"),
 }
 
 
