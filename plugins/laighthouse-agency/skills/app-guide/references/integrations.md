@@ -1,4 +1,4 @@
-# 외부 연결: 데이터 연동 · MCP · 메신저 알림 (기준일 2026-11-11)
+# 외부 연결: 데이터 연동 · MCP · 메신저 알림 (기준일 2026-11-18)
 
 ## 데이터 연동 (들어오는 쪽)
 
@@ -25,33 +25,19 @@
 
 라이트하우스가 미리 준비한 명령어. 채팅창에 `/`를 입력해 고르거나 자연어로 요청한다. 브랜드명과 기간만 주면 정해진 절차·형식으로 결과가 나온다. **Skill로 기본 결과물을 받고, 대화로 다듬는 방식**을 권장한다.
 
-### Skill 목록 (화면 기준)
+### Skill 목록
 
-화면에 보이는 Skill 목록과 플러그인 저장소는 **브랜드 유형**에 따라 다르다. 아래는 대표적인 두 가지다.
+쓸 수 있는 Skill은 브랜드 유형과 설치한 플러그인에 따라 다르다. 정확한 목록은 채팅창에 `/`를 입력하거나 "스킬 목록 보여줘"라고 물어 확인한다. MCP 서비스 화면에 '준비 중'으로 표시된 묶음이라도 `/` 목록에 있으면 쓸 수 있다.
 
-일반 브랜드
+| 종류 | 하는 일 |
+|---|---|
+| 보고서 | 일간 · 주간 · MTD · 월간 · 소재 성과 보고서(HTML) |
+| 종합 리포트 | 기간 성과를 한 화면에 모은 리포트와 엑셀 (일부 플러그인) |
+| 외부 요인 | 네이버 검색량 · 뉴스 · 블로그 언급, 날씨와 광고 성과 |
+| 예산 조정 | 다음 달 매체별 예산 배분 제안 (월간 미디어믹스) |
+| 사용 안내 | 라이트하우스 웹 화면 사용법 |
 
-| 묶음 | Skill | 결과 |
-|---|---|---|
-| 보고서 생성 | /daily-detailed · /daily-summary · /mtd-detailed · /mtd-summary · /monthly-detailed · /monthly-summary · /creative-detailed · /creative-summary | 일간·MTD·월간·소재 보고서. detailed는 실무 상세, summary는 임원용 요약 |
-| 외부 요인 (준비 중) | 네이버 검색량 · 뉴스 · 블로그 · 날씨 | 광고 밖 요인 |
-| Owned Media 분석 (준비 중) | Facebook · Instagram · YouTube · TikTok 게시글 지표 | |
-| 예산 조정 (준비 중) | /ad-spend-optimization · /nextmonth-budget-planning | |
-
-대행사 브랜드
-
-| 묶음 | Skill | 결과 |
-|---|---|---|
-| 성과 요약 (표, 그래프) | /overall-summary [브랜드] [기간] | 종합 리포트 HTML + 엑셀 |
-| | /overall-summary-comment · -total · -tables · -history · -mix | 종합 리포트의 일부만 |
-| 보고서 생성 | /daily-report · /weekly-report · /monthly-report · /creative-report | 일간·주간·월간·소재 HTML 보고서 |
-| 외부 요인 (준비 중) | 네이버 검색량 · 뉴스 · 블로그 · 날씨 | 광고 밖 요인 |
-| Owned Media 분석 (준비 중) | Facebook · Instagram · YouTube · TikTok 게시글 지표 | |
-| 예산 조정 (준비 중) | /ad-spend-optimization · /nextmonth-budget-planning | |
-
-사용 예: `/daily-report 브랜드명 26년 7월 20일` 또는 "브랜드명의 26년 7월 20일 기준 일간 보고서를 만들어줘"
-
-설치된 플러그인 버전에 따라 실제로 쓸 수 있는 Skill은 다를 수 있다. Claude에서는 `/` 목록에 보이는 것이 기준이다.
+사용 예: "브랜드명의 26년 7월 20일 기준 일간 보고서를 만들어줘"처럼 자연어로 요청하거나, `/`를 입력해 Skill을 고른 뒤 브랜드명과 날짜를 붙인다.
 
 ### Claude 연결 방법
 
@@ -59,7 +45,7 @@ A. 플러그인 설치
 1. Claude 좌측 사이드바 **사용자 지정** → **플러그인** 탭
 2. 우측 상단 **+ 추가** → **마켓플레이스 추가** → **저장소에서 추가**
 3. MCP 서비스 화면에 있는 라이트하우스 저장소 URL을 붙여넣고, 자동 동기화를 켠 채 **동기화**
-4. 목록에 나타난 **Laighthouse Analytics**를 **추가**
+4. 목록에 나타난 라이트하우스 플러그인을 **추가**한다. 이름은 브랜드 유형에 따라 다르다 (예: Laighthouse Analytics, Laighthouse Agency)
 
 B. 커넥터 연결
 1. 플러그인 화면 **커넥터** 탭 → laighthouse 커넥터의 **연결**

@@ -1,4 +1,4 @@
-# 성과 분석 (기준일 2026-11-11)
+# 성과 분석 (기준일 2026-11-18)
 
 ## 프로모션 캘린더 — /m/calendar
 
@@ -46,8 +46,8 @@
 
 #### 어디에 쓰이나
 
-- `/overall-summary-total`, `/monthly-report`, `/weekly-report` 등의 목표 달성률·예산 소진율
-- Mix 계획표의 예산·CPM·CPC·VTR 초기값 (`/overall-summary-mix`)
+- 보고서 · Skill의 목표 달성률과 예산 소진율
+- 종합 리포트 Mix 계획표의 예산 · CPM · CPC · VTR 초기값
 - 목표를 입력하지 않은 지표는 보고서에서 달성률을 계산할 수 없다.
 
 ### 수수료
