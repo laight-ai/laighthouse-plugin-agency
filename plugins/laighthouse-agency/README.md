@@ -45,8 +45,8 @@
 
 MCP 도구 `get_media_mix_job`을 기본 인자로 부르고, Claude 가 응답의 `summary`로 증감률·비중을 `python3`로 계산한 뒤
 SKILL.md 의 「HTML 뼈대」대로 HTML 을 직접 쓴다(1.19.0~, 스크립트 없음). 표는 기준 달 「N월 현재까지」와 「M월 제안」을 나란히 두고,
-제안 칸마다 현재 대비 증감을 빨강(상승)·파랑(하락)으로 붙인다. SKILL.md 는 laighthouse-plugin(`laighthouse-analytics-prod`) · -external 과
-같은 파일이다 — 고칠 때는 함께 고친다. 이전 렌더러(`assets/build_report.py`·`mm_view.js`·`mm_view.css`와 그 테스트)는 git 태그
+제안 칸마다 현재 대비 증감을 빨강(상승)·파랑(하락)으로 붙인다. SKILL.md 의 원본은 laighthouse-plugin-common 레포다 —
+공통 레포에서 고친 뒤 `sync.py`로 가져온다. 이전 렌더러(`assets/build_report.py`·`mm_view.js`·`mm_view.css`와 그 테스트)는 git 태그
 `archive/media-mix-html-renderer`에 있다(되살리기: `git checkout archive/media-mix-html-renderer -- <경로>`).
 
 ### 외부 요인 보고서 (1.9.0~)
@@ -141,13 +141,13 @@ Claude 데스크톱 Cowork는 스킬 폴더를 하나씩 따로 올린다(`/mnt/
 `shared/`와 옆 스킬 폴더는 함께 올라가지 않으므로, 스킬마다 필요한 공용 파일을 `skills/<스킬>/shared/`에 복사해 둔다
 (overall-summary-* 하위 스킬은 overall-summary의 `assets/`·문서도 `assets/`·`references/`로 넣는다). 원본은 플러그인 루트의
 `shared/`와 `skills/overall-summary/`이고 사본은 손으로 고치지 않는다 — 원본을 고친 뒤 `python3 scripts/bundle_skills.py`를 실행해
-사본까지 같은 커밋에 넣는다. 스킬 문서는 스킬 폴더 밖(`../`)을 가리키지 않는다. 검사: `python3 tests/test_skill_bundles.py`
+사본까지 같은 커밋에 넣는다. 다만 `common.json`에 적힌 경로는 공통 레포의 사본이므로 공통 레포에서 고친다(아래 "공통 레포").
+스킬 문서는 스킬 폴더 밖(`../`)을 가리키지 않는다. 검사: `python3 tests/test_skill_bundles.py`
 (사본이 원본과 같은지, 스킬 폴더만 따로 떼어 내도 스크립트가 공용 파일을 찾는지).
 
 ## 공통 레포
 
-세 플러그인이 함께 쓰는 파일(외부 요인 킷과 스킬 4개, nextmonth-budget-planning, overall-summary와 하위 스킬 SKILL.md,
-`mcp-tools.md`·`pivot-table.md`, 훅 두 개)의 원본은 laighthouse-plugin-common 레포다. 어느 파일을 어느 태그로 가져오는지는
+레포 루트 `common.json`에 적힌 파일의 원본은 laighthouse-plugin-common 레포다. 어느 파일을 어느 태그로 가져오는지는
 레포 루트 `common.json`에 적혀 있다. 공통 레포에서 고치고 태그를 붙인 뒤 `common.json`의 `version`을 바꾸고, 레포 루트에서
 `python3 ../laighthouse-plugin-common/sync.py`로 가져온 다음 `python3 scripts/bundle_skills.py`를 실행한다.
 사본이 어긋나면 CI(`.github/workflows/common-check.yml`)가 실패한다.

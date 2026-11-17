@@ -17,6 +17,8 @@ jobs:
           repository: laight-ai/laighthouse-plugin-common
           path: _common
           fetch-depth: 0   # sync.py가 common.json의 태그를 읽는다
+      - name: 공통 레포를 common.json의 태그로 맞춘다
+        run: git -C _common checkout -q "$(python3 -c 'import json; print(json.load(open("common.json"))["version"])')"
       - name: 공통 레포 사본 검사
         run: python3 _common/sync.py --check
       - name: 스킬 폴더 사본 검사

@@ -11,22 +11,20 @@ heredoc으로 **다시 타이핑**해야 했다 — 보고서 생성 시간의 �
 1. stdin으로 받은 훅 입력(JSON)에서 `tool_input.group_by`(문자열 리스트)에 캠페인/광고그룹/
    광고 차원이 하나라도 있고 응답 텍스트가 충분히 크면(MIN_CHARS 초과), 응답 원본(JSON 봉투
    문자열)을 임시 디렉터리에 .json 파일로 저장한다.
-   `--any-group-by`를 주면 group_by가 있기만 하면 차원과 관계없이 캡처한다 — 종합 리포트는 몇 달치
-   매체별 일별(`["media"]`)·Placement(`["media","ad_type","placement"]`) 응답도 크다.
+   `--any-group-by`를 주면 group_by가 있기만 하면 차원과 관계없이(`["media"]`만 있어도) 캡처한다.
 2. `hookSpecificOutput.updatedToolOutput`으로 모델에게 보이는 응답을 "저장 경로 + 행 통계 +
    사용법 + 미리보기" 스텁으로 교체한다 — 원본은 컨텍스트에 들어가지 않는다.
-3. 조건에 안 맞으면(작은 응답, group_by 생략/["media"]뿐, 파싱 실패 등) 아무것도 출력하지
-   않고 종료한다 → 원본이 그대로 모델에게 전달된다 (안전한 폴백).
+3. 조건에 안 맞으면(작은 응답, group_by 생략, `--any-group-by` 없이 캠페인/광고그룹/광고 차원이 없음,
+   파싱 실패 등) 아무것도 출력하지 않고 종료한다 → 원본이 그대로 모델에게 전달된다 (안전한 폴백).
 
 응답 형식 참고: `get_ad_performance`는 마크다운 표가 아니라 **JSON 봉투**를 반환한다 —
 `{"source": "elt", "tenant": ..., "time_grain": ..., "dimensions": [...], "metrics": [...],
 "metric_units": {...}, "row_count": N, "rows": [ {...}, ... ]}`. 저장 파일에도 이 봉투가 그대로 담긴다.
 스텁 미리보기에는 `metric_units`(지표별 단위 기호)와 첫 행도 넣는다 — 원본이 컨텍스트에서 빠지는 만큼,
 모델이 지표명으로 단위를 추측하지 않도록 남겨 둔다.
-`--short-stub`을 주면 스텁을 짧게 쓴다(차원·지표 이름만) — 저장 훅과 prepare.py가 원본 파일을 읽는
-플러그인용이다. 호출이 많을 때 이 스텁이 매 턴 컨텍스트에 쌓이기 때문이다.
+`--short-stub`을 주면 미리보기에 차원·지표 이름만 남기고, 원본은 저장 응답을 읽는 스크립트가 다룬다고 안내한다.
 
-플러그인마다 다른 동작은 hooks/hooks.json의 명령 인자(`--any-group-by`, `--short-stub`)로 고른다.
+인자는 hooks/hooks.json의 명령에서 넘긴다. 모르는 인자는 무시하고 hook.log에 남긴다.
 
 이 훅이 실패해도 보고서 생성은 깨지지 않는다 — 응답이 예전처럼 원본 그대로 전달될 뿐이고,
 스킬들은 기존 heredoc(`json` 배열) 경로로 동작한다.
@@ -127,6 +125,8 @@ def unwrap_json_result(text):
 
 def block_text(text):
     """호스트 저장 파일이 [{"type":"text","text":…}] 블록 리스트면 본문만 꺼낸다."""
+    if not text.lstrip().startswith("["):
+        return text  # 흔한 경우(JSON 봉투)는 파싱하지 않는다 — 큰 응답을 여러 번 파싱하지 않게
     try:
         obj = json.loads(text)
     except (json.JSONDecodeError, ValueError):
@@ -184,19 +184,19 @@ def _breadcrumb(message):
         pass
 
 
-def short_stub_text(text, path, n_rows, media, grain, dims, start, end, media_summary, dimensions, metrics):
+def short_stub_text(*, chars, path, n_rows, media, grain, dims, start, end, media_summary, dimensions, metrics, **_):
     """저장 훅 + prepare.py가 데이터를 다루므로 모델은 차원·지표 이름만 알면 된다(cost_metric 고르기)."""
     preview = (f"dimensions={json.dumps(dimensions, ensure_ascii=False)} metrics={json.dumps(metrics, ensure_ascii=False)}"
                if metrics is not None else "(JSON 봉투 파싱 실패 — 파일에 원본 그대로 저장됨)")
     return (
-        f"[laighthouse-capture-hook] 응답 원본({len(text):,}자, {n_rows}행; media={media}, time_grain={grain}, "
+        f"[laighthouse-capture-hook] 응답 원본({chars:,}자, {n_rows}행; media={media}, time_grain={grain}, "
         f"group_by={dims}, {start}~{end}, media별 행 수: {media_summary}) 저장됨:\n{path}\n"
         f"원본을 옮겨 적지 않는다 — prepare.py가 저장된 응답을 읽는다(훅이 없는 호스트에서는 이 경로를 json_files에 넣는다).\n"
         f"{preview}"
     )
 
 
-def full_stub_text(text, path, n_rows, media, grain, dims, start, end, media_summary,
+def full_stub_text(*, chars, path, n_rows, media, grain, dims, start, end, media_summary,
                    dimensions, metrics, metric_units, first_row):
     """모델이 저장 경로를 asset 스크립트에 json_files로 넘기는 플러그인용 — 단위 맵과 첫 행까지 보여 준다."""
     preview_parts = []
@@ -210,7 +210,7 @@ def full_stub_text(text, path, n_rows, media, grain, dims, start, end, media_sum
         preview_parts.append(f"첫 행={json.dumps(first_row, ensure_ascii=False)[:400]}")
     preview = "\n".join(preview_parts) or "(JSON 봉투 파싱 실패 — 파일에 원본 그대로 저장됨)"
     return (
-        f"[laighthouse-capture-hook] 이 도구 응답 원본({len(text):,}자, 데이터 {n_rows}행; "
+        f"[laighthouse-capture-hook] 이 도구 응답 원본({chars:,}자, 데이터 {n_rows}행; "
         f"media={media}, time_grain={grain}, group_by={dims}, {start}~{end})은 아래 파일에 전문 저장됨:\n"
         f"{path}\n"
         f"media별 행 수: {media_summary}\n"
@@ -226,6 +226,9 @@ def main(argv=None):
     flags = set(sys.argv[1:] if argv is None else argv)
     any_group_by = "--any-group-by" in flags
     short_stub = "--short-stub" in flags
+    unknown = flags - {"--any-group-by", "--short-stub"}
+    if unknown:
+        _breadcrumb(f"unknown args ignored: {sorted(unknown)}")
     try:
         data = json.load(sys.stdin)
     except (json.JSONDecodeError, UnicodeDecodeError):
@@ -311,9 +314,10 @@ def main(argv=None):
 
     dimensions, metrics, metric_units, n_rows, by_media, first_row = envelope_stats(text)
     media_summary = ", ".join(f"{k}={v}" for k, v in sorted(by_media.items())) or "n/a"
-    stub = short_stub_text(text, path, n_rows, media, grain, dims, start, end, media_summary, dimensions, metrics) \
-        if short_stub else full_stub_text(text, path, n_rows, media, grain, dims, start, end, media_summary,
-                                          dimensions, metrics, metric_units, first_row)
+    info = dict(chars=len(text), path=path, n_rows=n_rows, media=media, grain=grain, dims=dims, start=start,
+                end=end, media_summary=media_summary, dimensions=dimensions, metrics=metrics,
+                metric_units=metric_units, first_row=first_row)
+    stub = short_stub_text(**info) if short_stub else full_stub_text(**info)
 
     print(
         json.dumps(

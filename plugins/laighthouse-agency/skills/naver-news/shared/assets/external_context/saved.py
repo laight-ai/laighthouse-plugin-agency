@@ -1,14 +1,12 @@
 """저장 훅 응답 읽기 — 이 폴더가 플러그인마다 다른 ``prepare_kit``·``report_kit`` 없이 동작하게 하는 최소 부품.
 
-laighthouse-plugin(``laighthouse-analytics-prod``)과 laighthouse-plugin-agency(``laighthouse-agency``)가
-``shared/assets/external_context/``를 같은 파일로 나눠 쓴다. 저장 위치·형식은 두 플러그인의
-``hooks/save_responses.py``가 같다: ``<tmp>/laighthouse_mcp_responses/<session>/<ms>_<도구>.json``에
+저장 위치·형식은 ``hooks/save_responses.py``와 같다: ``<tmp>/laighthouse_mcp_responses/<session>/<ms>_<도구>.json``에
 ``{tool_name, tool_input, saved_at, response}``.
 
 - :func:`response_text`: 레코드 → 응답 본문(호스트가 잘라 둔 파일·``{"result": …}`` 래퍼 처리).
 - :func:`work_dir`: 보고서 중간 JSON을 둘 작업 폴더.
 - :func:`daily_ad_envelope`: 브랜드·기간의 ``get_ad_performance``(day, group_by media) 응답.
-- :func:`metric_keys`: 지표 이름 → 클릭·전환·매출 키(laighthouse-plugin ``report_kit`` 역할 규칙과 같다).
+- :func:`metric_keys`: 지표 이름 → 클릭·전환·매출 키.
 """
 
 from __future__ import annotations
