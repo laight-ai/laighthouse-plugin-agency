@@ -6,6 +6,8 @@
   media   get_ad_performance(S~E, day, group_by ["media"], metrics·filters 생략)
   data    get_ad_performance(day, 표 데이터 group_by) — 걸친 달마다(첫 달 S부터, 마지막 달 E까지) 가장 최근 응답
   place   get_ad_performance(day, group_by에 노출 위치 차원) — 걸친 달마다(있을 때만)
+          달 응답이 호스트 크기 상한(16MB)으로 읽히지 않았으면(저장 훅의 failed 줄) 그 달을 반으로 나눈 두 응답을, 반쪽도
+          실패했으면 다시 반으로(1/4 …) 나눈 응답을 모아 합친다. 빠진 조각은 missing(note에 받는 법)으로 낸다.
   budgets get_target_progress_v2(month = 걸친 달, media 생략) 원문 — 달마다 가장 최근 응답
   history list_campaign_change_raw(date_from S, date_to E) — cursor 없는 첫 응답부터 next_cursor를 따라간 페이지 전부
   names   get_ad_performance(S~E, total, group_by에 *_id) — 변경 이력의 ID에 이름을 붙인다(차원에 *_id가 있을 때만 필요)
@@ -63,6 +65,44 @@ def day_perf(recs, s, e, keep):
                 and sr.pick([r], "get_ad_performance", time_grain="day", start_date=s, end_date=e)):
             return r
     return None
+
+
+def too_large(fails, s, e, keep):
+    """[s, e] day 호출이 호스트 크기 상한(16MB)으로 읽히지 않았나(저장 훅이 남긴 실패 줄)."""
+    for r in fails:
+        ti = r.get("tool_input") or {}
+        if (r["_tool"] == "get_ad_performance" and keep(ti.get("group_by") or []) and (ti.get("time_grain") or "day") == "day"
+                and str(ti.get("start_date"))[:10] == str(s) and str(ti.get("end_date"))[:10] == str(e)):
+            return True
+    return False
+
+
+def covering(recs, fails, s, e, keep):
+    """[s, e]를 채우는 응답들. 그 기간 응답이 있으면 그것 하나, 크기 상한으로 실패했으면 반으로 나눈 두 기간을
+    각각 다시 채운다(반쪽도 실패면 1/4 …, 하루까지). → (찾은 [(기록, 시작, 끝)], 빈 [(시작, 끝, 받는 법)])
+    받는 법: "split" = 크기 상한 때문에 나눈 조각, "drop" = 하루도 크기 상한 — 차원을 줄여 받는다, None = 그대로 받는다."""
+    rec = day_perf(recs, s, e, keep)
+    if rec:
+        return [(rec, s, e)], []
+    if not too_large(fails, s, e, keep):
+        return [], [(s, e, None)]
+    if s == e:
+        return [], [(s, e, "drop")]
+    found, gaps = [], []
+    for hs, he in sr.halves(s, e):
+        f, g = covering(recs, fails, hs, he, keep)
+        found += f
+        gaps += [(gs, ge, how or "split") for gs, ge, how in g]
+    return found, gaps
+
+
+def gap_call(s, e, group_by, how):
+    call = {"tool": "get_ad_performance", "range": f"{s}~{e}", "time_grain": "day", "group_by": group_by}
+    if how == "split":
+        call["note"] = "크기 상한(16MB)으로 나눠 받는 조각 — 이 기간 그대로 부른다(group_by는 원래대로)"
+    elif how == "drop":
+        call["note"] = "하루치도 크기 상한(16MB) — ad_name을 빼고(그래도 넘으면 ad_group_name까지) 이 날짜로 부른다"
+    return call
 
 
 def change_pages(recs, S, E, w):
@@ -167,18 +207,28 @@ def main():
         result["discover"] = {"metric_keys": disc.get("metric_keys"), "currency": disc.get("currency"),
                               "metrics_absent": disc.get("missing") or []}
 
+    fails = sr.load_failures(a.brand)
+    is_place = lambda gb: bool(set(gb) & set(PLACE_DIMS))  # noqa: E731
+    is_data = lambda gb: gb != ["media"] and bool(gb) and not is_place(gb)  # noqa: E731
     data_files, place_files = [], []
     for s, e in month_segments(S, E):
-        is_place = lambda gb: bool(set(gb) & set(PLACE_DIMS))  # noqa: E731
-        t = w.envelope(day_perf(recs, s, e, lambda gb: gb != ["media"] and bool(gb) and not is_place(gb)), f"data_{s}.json",
-                       {"tool": "get_ad_performance", "range": f"{s}~{e}", "time_grain": "day", "group_by": "FINE_DIMS"})
-        if t:
-            data_files += t["json_files"]
-        place = day_perf(recs, s, e, is_place) if want_place else None
-        if place:   # 노출 위치 차원이 없는 브랜드는 부르지 않는다 — 없어도 missing이 아니다
-            p = w.envelope(place, f"place_{s}.json", {"tool": "get_ad_performance", "range": f"{s}~{e}", "group_by": "PLACE"})
+        found, gaps = covering(recs, fails, s, e, is_data)
+        for r, ps, pe in found:
+            t = w.envelope(r, f"data_{ps}.json", {"tool": "get_ad_performance", "range": f"{ps}~{pe}", "time_grain": "day",
+                                                 "group_by": "FINE_DIMS"})
+            if t:
+                data_files += t["json_files"]
+        w.missing += [gap_call(ps, pe, "FINE_DIMS", how) for ps, pe, how in gaps]
+        if not want_place:
+            continue
+        found, gaps = covering(recs, fails, s, e, is_place)
+        for r, ps, pe in found:
+            p = w.envelope(r, f"place_{ps}.json", {"tool": "get_ad_performance", "range": f"{ps}~{pe}", "group_by": "PLACE"})
             if p:
                 place_files += p["json_files"]
+        # 노출 위치 차원이 없는 브랜드는 부르지 않는다 — 받은 게 없으면 missing이 아니다. 크기 상한으로 나눠 받던 중이면 빈 조각만 낸다
+        if found or len(gaps) > 1 or any(how for _, _, how in gaps):
+            w.missing += [gap_call(ps, pe, "PLACE", how) for ps, pe, how in gaps]
     if data_files:
         base["data"] = {"json_files": data_files}
     if place_files:

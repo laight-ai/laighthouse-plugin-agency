@@ -6,6 +6,8 @@
 
 부품:
 - `load_records(brand)`      이 브랜드의 가장 최근 세션 응답(24시간 이내, 저장 순, 본문은 고를 때 읽는다)
+- `load_failures(brand)`     같은 세션에서 호스트가 크기 상한(16MB)으로 읽지 못한 호출(저장 훅이 `failed`로 남긴 줄)
+- `halves(s, e)`             기간을 반으로 나눈 두 기간 — 크기 상한에 걸린 호출을 나눠 받을 때(저장 훅과 같은 규칙)
 - `pick(recs, tool, **args)` 인자가 맞는 가장 최근 응답 (args 값이 None이면 "인자 생략"과 같다)
 - `response_text(rec)`       응답 본문(래퍼·호스트 저장 파일 안내문을 푼 것)
 - `Workdir`                  봉투를 작업 폴더에 저장하고 missing·errors를 모은다
@@ -91,9 +93,8 @@ def _session_records(folder, now):
     return [r for r in out if now - (r.get("saved_at") or 0) <= MAX_AGE]
 
 
-def load_records(brand):
-    """이 브랜드의 응답이 있는 세션 중 **가장 최근 세션**의 기록만(저장 순). 다른 실행의 응답을 섞지 않는다 —
-    이번 실행에서 빠진 호출은 옛 응답으로 채워지지 않고 missing으로 드러난다."""
+def _latest_session(brand):
+    """이 브랜드의 기록이 있는 세션 중 **가장 최근 세션**의 기록 전부(응답 + 크기 상한 실패, 저장 순)."""
     now, latest = time.time(), []
     try:
         sessions = os.listdir(ROOT)
@@ -111,6 +112,24 @@ def load_records(brand):
         r["_tool"] = str(r.get("tool_name") or "").rsplit("__", 1)[-1]
     latest.sort(key=lambda r: r.get("saved_at") or 0)
     return latest
+
+
+def load_records(brand):
+    """이 브랜드의 응답이 있는 세션 중 **가장 최근 세션**의 응답만(저장 순). 다른 실행의 응답을 섞지 않는다 —
+    이번 실행에서 빠진 호출은 옛 응답으로 채워지지 않고 missing으로 드러난다."""
+    return [r for r in _latest_session(brand) if not r.get("failed")]
+
+
+def load_failures(brand):
+    """같은 세션에서 호스트가 크기 상한으로 읽지 못한 호출(응답 본문 없음, `failed: "too_large"`)."""
+    return [r for r in _latest_session(brand) if r.get("failed")]
+
+
+def halves(s, e):
+    """[s, e](date)를 반으로 — 앞쪽이 하루 더 길다. 저장 훅(hooks/save_responses.py)의 안내와 같은 규칙이다."""
+    from datetime import timedelta
+    mid = s + timedelta(days=((e - s).days) // 2)
+    return (s, mid), (mid + timedelta(days=1), e)
 
 
 def _norm(key, value):

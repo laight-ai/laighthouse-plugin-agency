@@ -7,7 +7,7 @@ description: >
   (디멘전·지표 설정, 접기), 매체 변경 기록으로 만든 캠페인 변경 이력(Campaign History), 예산·단가를 입력해 예상 성과를 보는 Mix 계획표를
   담은 HTML 보고서와, 같은 내용을 시트로 나눈 엑셀(.xlsx — Summary·By Media·By Date·History·Mix·Raw)을 함께 만든다. 사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
-  version: "1.6.0"
+  version: "1.7.0"
 ---
 
 > ⚡ **thinking 지침**: thinking은 최대한 짧게 유지한다. 바로 MCP 호출 → 스크립트 실행 → 완료 순서로 진행한다.
@@ -84,8 +84,11 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
    처음 있는 것(대소문자 무시, 정확히 같은 이름만). 없을 때만 사용자에게 묻는다 — 스크립트를 따로 돌리지 않는다.
 3. **데이터 호출을 한 메시지에 동시 발사** (`metrics`·`filters` 생략):
    - 표 데이터: `time_grain:"day"`, `group_by` = FINE_DIMS — **달마다 1회**(첫 달은 S부터, 마지막 달은 E까지 — 겹치지 않게 나눠 받는다).
-     크기 오류면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절). 서버의 5만 행 오류뿐 아니라
-     호스트가 응답을 못 읽었다는 오류(예: "larger than 16MB")도 크기 오류다 — 그 응답은 저장되지 않으므로 바로 다시 받는다.
+     서버의 5만 행 오류면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절).
+     **호스트가 응답을 못 읽었다는 오류("… was larger than 16MB, so it was not read")는 차원을 빼지 않는다** — 저장 훅이
+     그 실패를 기록해 두므로 다시 보내지 말고 4단계 prepare.py를 돌린다. prepare.py가 그 달을 **반으로 나눈 두 기간**을
+     `missing`(note: 나눠 받는 조각)으로 낸다 → 그 기간들로 다시 부르고 prepare.py를 다시 돌린다. 반쪽도 16MB를 넘으면 다시
+     반으로(1/4 …) 나눈 기간이 나온다. prepare.py가 받은 조각들을 합쳐 빌더에 넘긴다(Placement 데이터도 같다).
    - Placement 데이터: **차원 목록에 노출 위치 차원(`placement`·`노출위치`·`노출 위치`·`노출_위치`·`position` 중 처음 것)이 있을 때만** —
      `time_grain:"day"`, `group_by` = `["media", (ad_type 또는 상품 중 있는 것), 노출 위치 차원]`, 달마다 1회(표 데이터와 같은 기간 나눔).
      없으면 부르지 않는다(Placement 자리에 '노출 위치 데이터 준비 중' 안내가 나온다 — 사용자에게 묻지 않는다).
@@ -107,6 +110,7 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
    PYEOF
    ```
    → 출력의 `build`가 빌더 출력이다. `missing`(다시 보낼 호출)이 있으면 빌드하지 않는다 — 그 호출만 다시 보내고 재실행한다
+   (`note`가 있으면 그대로 따른다 — 16MB로 나눠 받는 조각은 `range` 기간 그대로, 하루치도 넘으면 차원을 줄여서)
    (변경 이력 `missing`에 `cursor`가 있으면 그 페이지부터 이어 부른다)
    (`errors`는 그 응답이 에러였다는 뜻). `build_error`는 빌더가 멈춘 이유다. `date_error`(기준일이 오늘 이후)면 그 문구를 사용자에게 알리고 멈춘다. `discover.metrics_absent`는 브랜드가 주지 않는 지표라 묻지 않는다.
    `out`은 `~/Downloads/laighthouse-reports/{브랜드명}_overall_summary_{기준_일자}.html`(base에 들어 있다 — 바꿀 때만 `"out"`을 함께 넣는다).

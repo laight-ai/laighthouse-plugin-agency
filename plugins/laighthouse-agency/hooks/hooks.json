@@ -31,6 +31,18 @@
           }
         ]
       }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "^mcp__.+__get_ad_performance$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/save_responses.py\"",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }

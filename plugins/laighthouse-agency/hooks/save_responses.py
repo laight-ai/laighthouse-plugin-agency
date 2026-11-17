@@ -16,6 +16,9 @@ get_ad_creative_info / get_ad_creative_image)을 원본 그대로 파일로 남�
 - 모델에게 보이는 응답은 바꾸지 않는다(stdout 없음). 실패해도 도구 호출을 깨지 않는다(예외 무시).
 - 같은 폴더의 index.jsonl에 응답 본문을 뺀 한 줄(도구·인자·저장 시각·파일명)을 덧붙인다.
 - 24시간 지난 세션 폴더는 정리한다.
+- 호스트가 응답을 크기 상한으로 읽지 못하면("… was larger than 16MB, so it was not read" — MCP 에러 결과라
+  PostToolUseFailure로 온다) 응답 파일 없이 index.jsonl에 `failed: "too_large"` 줄만 남긴다. 종합 리포트
+  prepare.py가 이 줄을 보고 그 기간을 반으로 나눈 호출을 missing으로 낸다(반쪽도 실패하면 다시 반으로 → 1/4 …).
 """
 
 import io
@@ -32,6 +35,7 @@ STALE_SECS = 24 * 3600
 SPILL_RE = re.compile(r"Output has been saved to (\S+?)\.?\s*$", re.M)
 SPILL_MAX = 5000      # 안내문은 짧다 — 이보다 긴 텍스트는 데이터로 본다
 SPILL_WAIT = 5.0
+TOO_LARGE_RE = re.compile(r"larger than \d+\s*MB", re.I)   # 호스트의 응답 크기 상한 오류(실측 문구: "was larger than 16MB, so it was not read")
 
 
 def extract_text(resp):
@@ -84,6 +88,15 @@ def prune():
         pass
 
 
+def record_failure(folder, tool_name, tool_input, error):
+    """크기 상한으로 읽지 못한 호출 — 응답 파일 없이 색인에 한 줄만 남긴다."""
+    os.makedirs(folder, exist_ok=True)
+    line = {"tool_name": tool_name, "tool_input": tool_input, "saved_at": time.time(), "failed": "too_large",
+            "error": error.strip()[:300]}
+    with open(os.path.join(folder, "index.jsonl"), "a", encoding="utf-8") as f:
+        f.write(json.dumps(line, ensure_ascii=False) + "\n")
+
+
 def main():
     try:
         data = json.load(io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8"))
@@ -92,11 +105,23 @@ def main():
     tool_input = data.get("tool_input") or {}
     if not isinstance(tool_input, dict) or "brand_name" not in tool_input:
         return
+    session = "".join(c for c in str(data.get("session_id") or "nosession") if c.isalnum() or c in "-_") or "nosession"
+    folder = os.path.join(ROOT, session)
+    tool_name = str(data.get("tool_name") or "")
+    if data.get("hook_event_name") == "PostToolUseFailure":
+        error = data.get("error")
+        error = error if isinstance(error, str) else extract_text(error) or ""
+        if TOO_LARGE_RE.search(error):   # 그 밖의 실패는 남기지 않는다 — prepare.py가 missing으로 다시 부르게 한다
+            record_failure(folder, tool_name, tool_input, error)
+        return
     resp = next((data[k] for k in ("tool_response", "tool_output", "tool_result") if data.get(k) is not None), None)
     text = extract_text(resp)
     if not text:
         return
-    rec = {"tool_name": str(data.get("tool_name") or ""), "tool_input": tool_input, "saved_at": time.time(), "response": text}
+    if len(text) < SPILL_MAX and TOO_LARGE_RE.search(text):   # 호스트가 실패를 일반 응답으로 넘긴 경우도 같다
+        record_failure(folder, tool_name, tool_input, text)
+        return
+    rec = {"tool_name": tool_name, "tool_input": tool_input, "saved_at": time.time(), "response": text}
     m = SPILL_RE.search(text) if len(text) < SPILL_MAX else None
     if m:
         full = read_spilled(m.group(1))
@@ -104,8 +129,6 @@ def main():
             rec["response"] = full
         else:
             rec["spilled_path"] = m.group(1)
-    session = "".join(c for c in str(data.get("session_id") or "nosession") if c.isalnum() or c in "-_") or "nosession"
-    folder = os.path.join(ROOT, session)
     os.makedirs(folder, exist_ok=True)
     name = "%d_%s.json" % (int(time.time() * 1000), rec["tool_name"].rsplit("__", 1)[-1])
     with open(os.path.join(folder, name), "w", encoding="utf-8") as f:
