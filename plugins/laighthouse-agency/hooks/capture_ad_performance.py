@@ -184,8 +184,9 @@ def _breadcrumb(message):
         pass
 
 
-def short_stub_text(*, chars, path, n_rows, media, grain, dims, start, end, media_summary, dimensions, metrics, **_):
-    """저장 훅 + prepare.py가 데이터를 다루므로 모델은 차원·지표 이름만 알면 된다(cost_metric 고르기)."""
+def short_stub_text(*, chars, path, n_rows, media, grain, dims, start, end, media_summary, dimensions, metrics,
+                    metric_units, first_row):
+    """차원·지표 이름만 담은 짧은 스텁. metric_units·first_row는 받기만 하고 쓰지 않는다(full_stub_text와 같은 인자)."""
     preview = (f"dimensions={json.dumps(dimensions, ensure_ascii=False)} metrics={json.dumps(metrics, ensure_ascii=False)}"
                if metrics is not None else "(JSON 봉투 파싱 실패 — 파일에 원본 그대로 저장됨)")
     return (
@@ -198,7 +199,7 @@ def short_stub_text(*, chars, path, n_rows, media, grain, dims, start, end, medi
 
 def full_stub_text(*, chars, path, n_rows, media, grain, dims, start, end, media_summary,
                    dimensions, metrics, metric_units, first_row):
-    """모델이 저장 경로를 asset 스크립트에 json_files로 넘기는 플러그인용 — 단위 맵과 첫 행까지 보여 준다."""
+    """단위 맵과 첫 행까지 담은 스텁. 저장 경로를 asset 스크립트에 json_files로 넘기라고 안내한다."""
     preview_parts = []
     if dimensions is not None:
         preview_parts.append(f"dimensions={json.dumps(dimensions, ensure_ascii=False)}")
@@ -239,7 +240,7 @@ def main(argv=None):
     group_by = tool_input.get("group_by")
     _breadcrumb(f"ran: tool={data.get('tool_name')} group_by={group_by} session={data.get('session_id')}")
     if not isinstance(group_by, list) or not group_by:
-        return  # group_by 생략(총계)은 통과 — 크기는 아래 MIN_CHARS로 거른다
+        return  # group_by 생략(총계)은 통과
     if not any_group_by and not (set(map(str, group_by)) & CAPTURE_DIMENSIONS):
         return  # ["media"] 같은 저카디널리티 호출은 통과
 

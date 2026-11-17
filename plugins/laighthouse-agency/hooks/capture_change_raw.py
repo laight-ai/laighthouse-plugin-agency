@@ -18,12 +18,12 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from capture_ad_performance import extract_text, rebuild_like, unwrap_json_result  # noqa: E402  (stdin/stdout을 UTF-8로 맞춘다)
+from capture_ad_performance import block_text, extract_text, rebuild_like, unwrap_json_result  # noqa: E402  (stdin/stdout을 UTF-8로 맞춘다)
 
 
 def read_saved(text):
     """호스트가 큰 응답을 파일로 빼고 'saved to <경로>' 안내만 넘기면 그 파일을 읽는다."""
-    m = re.search(r"saved to (\S+?\.(?:txt|json))", text)
+    m = re.search(r"saved to (\S+\.(?:txt|json))", text)   # 경로 중간의 .json·.txt에서 끊지 않게 끝까지 본다
     if not m or text.lstrip().startswith("{"):
         return text
     path = m.group(1)
@@ -34,13 +34,7 @@ def read_saved(text):
             body = f.read()
     except OSError:
         return text
-    try:   # 블록 리스트로 저장된 경우
-        obj = json.loads(body)
-        if isinstance(obj, list) and obj and all(isinstance(b, dict) and isinstance(b.get("text"), str) for b in obj):
-            body = "\n".join(b["text"] for b in obj)
-    except ValueError:
-        pass
-    return unwrap_json_result(body)
+    return unwrap_json_result(block_text(body))   # 블록 리스트로 저장된 경우도 푼다
 
 
 def main():

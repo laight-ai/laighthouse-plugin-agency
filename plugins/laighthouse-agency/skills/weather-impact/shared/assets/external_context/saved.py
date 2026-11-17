@@ -1,4 +1,4 @@
-"""저장 훅 응답 읽기 — 이 폴더가 플러그인마다 다른 ``prepare_kit``·``report_kit`` 없이 동작하게 하는 최소 부품.
+"""저장 훅 응답 읽기 — 이 폴더 밖 모듈 없이 동작하는 최소 부품.
 
 저장 위치·형식은 ``hooks/save_responses.py``와 같다: ``<tmp>/laighthouse_mcp_responses/<session>/<ms>_<도구>.json``에
 ``{tool_name, tool_input, saved_at, response}``.

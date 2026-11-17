@@ -8,7 +8,8 @@
 
 단일 소스는 플러그인 루트의 `shared/`와 `skills/overall-summary/`다. 이 스크립트가 만드는 사본
 (`skills/<스킬>/shared/`, overall-summary-* 하위 스킬의 `assets/`·`references/`)은 손으로 고치지 않는다.
-원본을 고친 뒤 다시 실행해 사본까지 같은 커밋에 넣는다:
+원본을 고친 뒤 다시 실행해 사본까지 같은 커밋에 넣는다. 다만 레포 루트 common.json에 적힌 경로는 laighthouse-plugin-common
+레포의 사본이므로 공통 레포에서 고치고 `python3 ../laighthouse-plugin-common/sync.py`로 가져온다:
 
     python3 scripts/bundle_skills.py           # 사본을 다시 만든다
     python3 scripts/bundle_skills.py --check   # 사본이 원본과 다르거나 빠지거나 남는 파일이 있으면 목록을 내고 1로 끝난다

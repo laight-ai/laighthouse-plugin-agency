@@ -1,5 +1,5 @@
 {
-  "version": "v4.0.3",
+  "version": "v4.0.4",
   "targets": [
     {
       "root": "plugins/laighthouse-agency",
@@ -19,7 +19,13 @@
         "skills/overall-summary-tables",
         "skills/overall-summary-total",
         "shared/references/mcp-tools.md",
-        "shared/references/pivot-table.md"
+        "shared/references/pivot-table.md",
+        "shared/assets/report_kit.py",
+        "shared/assets/report_kit.css",
+        "shared/assets/fees.py",
+        "shared/assets/fees_legacy.py",
+        "shared/assets/saved_responses.py",
+        "hooks/capture_change_raw.py"
       ]
     }
   ]

@@ -2,6 +2,9 @@
 # 공통 레포는 공개 레포라 토큰 없이 받는다.
 name: common-check
 
+permissions:
+  contents: read
+
 on:
   pull_request:
   push:
