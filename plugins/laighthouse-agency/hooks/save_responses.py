@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""PostToolUse 저장 훅: laighthouse MCP 응답(get_ad_performance / get_target_progress_v2 /
-list_promotions / list_campaign_change_raw / get_external_context /
-get_ad_creative_info / get_ad_creative_image)을 원본 그대로 파일로 남긴다.
+"""PostToolUse 저장 훅: laighthouse MCP 응답을 원본 그대로 파일로 남긴다.
+어떤 도구의 응답을 남길지는 플러그인마다 hooks/hooks.json의 matcher가 정한다.
 
 왜 존재하나: 보고서 스킬은 MCP 호출을 한 메시지에 모두 보낸 뒤 `assets/prepare.py`로 빌더 입력과
 요약 근거를 한 번에 만든다. prepare.py는 이 훅이 남긴 파일을 (도구 + 인자)로 골라 읽는다 — 모델이
 응답 원문을 읽거나 옮겨 적을 필요가 없다.
 
 - 저장 위치: <tmp>/laighthouse_mcp_responses/<session_id>/<ms>_<도구>.json
-- 저장 형식: {tool_name, tool_input, saved_at, response} — laighthouse-plugin-external의 저장 훅
-  (save_mcp_response.py)과 같다. 둘 중 어느 훅이 있어도 prepare.py가 동작한다.
+- 저장 형식: {tool_name, tool_input, saved_at, response}
 - 호스트가 큰 응답을 잘라 "… Output has been saved to <경로>" 안내만 넘기면 그 파일을 읽어 원본을
   저장한다. 읽지 못하면 안내문과 `spilled_path`를 남겨 prepare.py가 다시 시도하게 한다.
 - `brand_name` 인자가 없는 같은 이름의 다른 서버 도구는 무시한다.

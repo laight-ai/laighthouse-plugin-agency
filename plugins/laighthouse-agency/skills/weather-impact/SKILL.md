@@ -6,7 +6,7 @@ description: >
   "날씨 영향", "날씨", "불쾌지수", "비 온 날 성과" 요청 시 사용. 입력은 브랜드와 날짜 범위(시작~끝, 기본 어제까지 14일).
   출력 형식(HTML·표 등)을 말하지 않아도 이 요청이면 항상 이 스킬로 HTML 보고서를 만든다 — `get_external_context`(kind `weather`)를 직접 불러 채팅 표·글로만 답하지 않는다.
 metadata:
-  version: "1.10.0"
+  version: "4.0.0"
 ---
 
 > ⚡ thinking은 짧게. MCP 2회(동시) → `prepare.py` → 요약 + `build_report.py` → 게시, 이 순서로만 진행한다.

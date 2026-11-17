@@ -4,7 +4,7 @@ description: >
   종합 리포트의 Campaign History(캠페인 변경 이력)만 뽑는 스킬. "종합 리포트 history", "변경 이력", "캠페인 변경 히스토리", "overall summary history" 요청 시 사용. 매체(Google·Meta·TikTok·네이버·카카오)가 남긴 캠페인·광고그룹·광고 변경 기록을 일 · 미디어 · 단계 · 대상 · 변경 사항(ON/OFF·예산 증액/감액·소재·타겟팅 등) · 상세 표로 정리한 HTML과 History 시트 엑셀을 만든다.
   사용자가 말한 브랜드의 차원을 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
-  version: "1.0.0"
+  version: "4.0.0"
 ---
 
 > ⚡ **thinking 지침**: thinking은 최대한 짧게 유지한다. 바로 MCP 호출 → 스크립트 실행 → 완료 순서로 진행한다.

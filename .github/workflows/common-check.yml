@@ -1,0 +1,24 @@
+# 공통 레포(laighthouse-plugin-common)에서 가져온 사본과 스킬 폴더 사본이 원본과 맞는지 검사한다.
+# 공통 레포는 비공개라 기본 GITHUB_TOKEN으로는 읽지 못한다 — 읽기 권한이 있는 토큰을 COMMON_REPO_TOKEN 시크릿에 넣는다.
+name: common-check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: laight-ai/laighthouse-plugin-common
+          token: ${{ secrets.COMMON_REPO_TOKEN }}
+          path: _common
+          fetch-depth: 0   # sync.py가 common.json의 태그를 읽는다
+      - name: 공통 레포 사본 검사
+        run: python3 _common/sync.py --check
+      - name: 스킬 폴더 사본 검사
+        run: python3 scripts/bundle_skills.py --check

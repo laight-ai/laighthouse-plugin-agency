@@ -4,7 +4,7 @@ description: >
   종합 리포트의 세부 성과 표만 뽑는 스킬. "종합 리포트 표만", "Product·Target·Placement·Weekly·Daily 표", "overall summary tables" 요청 시 사용. 월·미디어 필터와 Product·Target·Placement·Weekly·Daily 표(디멘전·지표 설정, 접기)만 담은 HTML과 By Media·By Date·Raw 시트 엑셀을 만든다. 표를 골라 달라고 하면 그 표만 담는다.
   사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
-  version: "1.0.0"
+  version: "4.0.0"
 ---
 
 > ⚡ **thinking 지침**: thinking은 최대한 짧게 유지한다. 바로 MCP 호출 → 스크립트 실행 → 완료 순서로 진행한다.

@@ -58,11 +58,10 @@ SKILL.md 의 「HTML 뼈대」대로 HTML 을 직접 쓴다(1.19.0~, 스크립�
 
 입력은 브랜드와 날짜 범위(기본 어제까지 14일)다. 스킬은 MCP 도구 `get_external_context`(report-backend가 laighthouse-elt의
 외부 맥락 데이터를 중계)를 1회 부르고(날씨는 `get_ad_performance`와 함께 2회), 저장 훅이 남긴 응답을 `assets/prepare.py`가
-읽어 집계한다. 집계·HTML은 공통 킷 `shared/assets/external_context/`가 한다. 이 폴더와 스킬 4개는 laighthouse-plugin
-(`laighthouse-analytics-prod`)과 같은 파일이다 — 고칠 때는 양쪽을 함께 고친다.
+읽어 집계한다. 집계·HTML은 공통 킷 `shared/assets/external_context/`가 한다. 이 폴더와 스킬 4개의 원본은
+laighthouse-plugin-common 레포다 — 여기서 고치지 말고 공통 레포에서 고친 뒤 가져온다(아래 "공통 레포" 참고).
 외부 데이터 수집 대상이 아닌 브랜드는 도구가 "is not collected for external context"로 거절한다.
-수치 회귀 비교: `python3 tests/regress_external_context.py --responses <응답 폴더> --baseline <기준 폴더>`(기준은 같은 명령에 `--write`로 먼저 만든다),
-자체 검사: `python3 tests/test_weather_trend.py`·`tests/test_responses.py`·`tests/test_range_rules.py`·`tests/test_citations.py`.
+수치 회귀 비교와 자체 검사는 공통 레포의 `tests/`에 있다.
 
 ### Daily · Weekly · Monthly 보고서 구성
 
@@ -144,6 +143,14 @@ Claude 데스크톱 Cowork는 스킬 폴더를 하나씩 따로 올린다(`/mnt/
 `shared/`와 `skills/overall-summary/`이고 사본은 손으로 고치지 않는다 — 원본을 고친 뒤 `python3 scripts/bundle_skills.py`를 실행해
 사본까지 같은 커밋에 넣는다. 스킬 문서는 스킬 폴더 밖(`../`)을 가리키지 않는다. 검사: `python3 tests/test_skill_bundles.py`
 (사본이 원본과 같은지, 스킬 폴더만 따로 떼어 내도 스크립트가 공용 파일을 찾는지).
+
+## 공통 레포
+
+세 플러그인이 함께 쓰는 파일(외부 요인 킷과 스킬 4개, nextmonth-budget-planning, overall-summary와 하위 스킬 SKILL.md,
+`mcp-tools.md`·`pivot-table.md`, 훅 두 개)의 원본은 laighthouse-plugin-common 레포다. 어느 파일을 어느 태그로 가져오는지는
+레포 루트 `common.json`에 적혀 있다. 공통 레포에서 고치고 태그를 붙인 뒤 `common.json`의 `version`을 바꾸고, 레포 루트에서
+`python3 ../laighthouse-plugin-common/sync.py`로 가져온 다음 `python3 scripts/bundle_skills.py`를 실행한다.
+사본이 어긋나면 CI(`.github/workflows/common-check.yml`)가 실패한다.
 
 ## MCP 서버
 

@@ -4,7 +4,7 @@ description: >
   종합 리포트의 Comment만 뽑는 스킬. "종합 리포트 코멘트", "Daily/Weekly Comment만", "overall summary comment" 요청 시 사용. 전일 대비 급감 광고그룹을 짚는 Daily Comment와 소진·효율 관점의 Weekly Comment(빌더가 규칙으로 작성)만 담은 HTML을 만든다(엑셀 없음).
   사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
-  version: "1.0.0"
+  version: "4.0.0"
 ---
 
 > ⚡ **thinking 지침**: thinking은 최대한 짧게 유지한다. 바로 MCP 호출 → 스크립트 실행 → 완료 순서로 진행한다.
