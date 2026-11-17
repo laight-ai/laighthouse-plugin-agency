@@ -8,7 +8,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-for cand in (os.path.join(HERE, "..", "shared", "assets"),          # ChatGPT 번들
+for cand in (os.path.join(HERE, "..", "shared", "assets"),          # 스킬 폴더 안 사본(Cowork·ChatGPT)
              os.path.join(HERE, "..", "..", "..", "shared", "assets")):  # 플러그인 루트
     if os.path.exists(os.path.join(cand, "external_context", "range_report.py")):
         sys.path[:0] = [os.path.normpath(os.path.join(cand, "external_context")), os.path.normpath(cand)]

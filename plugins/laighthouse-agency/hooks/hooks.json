@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/capture_ad_performance.py\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/capture_ad_performance.py\" --any-group-by --short-stub",
             "timeout": 30
           }
         ]

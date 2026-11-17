@@ -7,7 +7,7 @@ description: >
   (디멘전·지표 설정, 접기), 매체 변경 기록으로 만든 캠페인 변경 이력(Campaign History), 예산·단가를 입력해 예상 성과를 보는 Mix 계획표를
   담은 HTML 보고서와, 같은 내용을 시트로 나눈 엑셀(.xlsx — Summary·By Media·By Date·History·Mix·Raw)을 함께 만든다. 사용자가 말한 브랜드의 차원·지표를 실행 시작에 디스커버리해서 어떤 브랜드에도 같은 방식으로 동작한다.
 metadata:
-  version: "1.6.0"
+  version: "4.0.0"
 ---
 
 > ⚡ **thinking 지침**: thinking은 최대한 짧게 유지한다. 바로 MCP 호출 → 스크립트 실행 → 완료 순서로 진행한다.

@@ -8,19 +8,23 @@ heredoc으로 **다시 타이핑**해야 했다 — 보고서 생성 시간의 �
 대체/추정하겠다"는 데이터 무결성 사고의 반복 원인이었다.
 
 무엇을 하나 (Claude Code가 이 훅을 도구 응답 직후, 모델이 보기 전에 실행한다):
-1. stdin으로 받은 훅 입력(JSON)에 `tool_input.group_by`(문자열 리스트)가 있고 응답 텍스트가 충분히
-   크면(MIN_CHARS 초과), 응답 원본(JSON 봉투 문자열)을 임시 디렉터리에 .json 파일로 저장한다.
-   (agency판: 종합 리포트는 몇 달치 매체별 일별(`["media"]`)·Placement(`["media","ad_type","placement"]`)
-   응답도 커서 group_by가 있으면 차원과 관계없이 캡처한다.)
+1. stdin으로 받은 훅 입력(JSON)에서 `tool_input.group_by`(문자열 리스트)에 캠페인/광고그룹/
+   광고 차원이 하나라도 있고 응답 텍스트가 충분히 크면(MIN_CHARS 초과), 응답 원본(JSON 봉투
+   문자열)을 임시 디렉터리에 .json 파일로 저장한다.
+   `--any-group-by`를 주면 group_by가 있기만 하면 차원과 관계없이(`["media"]`만 있어도) 캡처한다.
 2. `hookSpecificOutput.updatedToolOutput`으로 모델에게 보이는 응답을 "저장 경로 + 행 통계 +
    사용법 + 미리보기" 스텁으로 교체한다 — 원본은 컨텍스트에 들어가지 않는다.
-3. 조건에 안 맞으면(작은 응답, group_by 생략/["media"]뿐, 파싱 실패 등) 아무것도 출력하지
-   않고 종료한다 → 원본이 그대로 모델에게 전달된다 (안전한 폴백).
+3. 조건에 안 맞으면(작은 응답, group_by 생략, `--any-group-by` 없이 캠페인/광고그룹/광고 차원이 없음,
+   파싱 실패 등) 아무것도 출력하지 않고 종료한다 → 원본이 그대로 모델에게 전달된다 (안전한 폴백).
 
 응답 형식 참고: `get_ad_performance`는 마크다운 표가 아니라 **JSON 봉투**를 반환한다 —
 `{"source": "elt", "tenant": ..., "time_grain": ..., "dimensions": [...], "metrics": [...],
 "metric_units": {...}, "row_count": N, "rows": [ {...}, ... ]}`. 저장 파일에도 이 봉투가 그대로 담긴다.
-스텁 미리보기는 차원·지표 이름만 담는다 — 수치·단위는 prepare.py·빌더가 원본 파일에서 읽는다.
+스텁 미리보기에는 `metric_units`(지표별 단위 기호)와 첫 행도 넣는다 — 원본이 컨텍스트에서 빠지는 만큼,
+모델이 지표명으로 단위를 추측하지 않도록 남겨 둔다.
+`--short-stub`을 주면 미리보기에 차원·지표 이름만 남기고, 원본은 저장 응답을 읽는 스크립트가 다룬다고 안내한다.
+
+인자는 hooks/hooks.json의 명령에서 넘긴다. 모르는 인자는 무시하고 hook.log에 남긴다.
 
 이 훅이 실패해도 보고서 생성은 깨지지 않는다 — 응답이 예전처럼 원본 그대로 전달될 뿐이고,
 스킬들은 기존 heredoc(`json` 배열) 경로로 동작한다.
@@ -43,6 +47,16 @@ MIN_CHARS = 1500  # 이보다 작은 응답은 스텁으로 바꿀 실익이 없
 STALE_SECS = 3 * 24 * 3600  # 3일 지난 세션 캡처 디렉터리는 정리
 
 CAPTURE_ROOT = os.path.join(tempfile.gettempdir(), "laighthouse_mcp_capture")
+
+# group_by 리스트에 이 차원이 하나라도 있으면 고카디널리티 응답으로 간주한다(--any-group-by가 없을 때)
+CAPTURE_DIMENSIONS = {
+    "campaign_id",
+    "campaign_name",
+    "ad_group_id",
+    "ad_group_name",
+    "ad_id",
+    "ad_name",
+}
 
 
 def extract_text(resp):
@@ -109,6 +123,19 @@ def unwrap_json_result(text):
     return text
 
 
+def block_text(text):
+    """호스트 저장 파일이 [{"type":"text","text":…}] 블록 리스트면 본문만 꺼낸다."""
+    if not text.lstrip().startswith("["):
+        return text  # 흔한 경우(JSON 봉투)는 파싱하지 않는다 — 큰 응답을 여러 번 파싱하지 않게
+    try:
+        obj = json.loads(text)
+    except (json.JSONDecodeError, ValueError):
+        return text
+    if isinstance(obj, list) and obj and all(isinstance(b, dict) and isinstance(b.get("text"), str) for b in obj):
+        return "\n".join(b["text"] for b in obj)
+    return text
+
+
 def envelope_stats(text):
     """JSON 봉투에서 (dimensions, metrics, metric_units, row_count, media별 행 수, 첫 행)을 뽑는다.
     봉투가 아니면 전부 None/빈 값."""
@@ -157,7 +184,52 @@ def _breadcrumb(message):
         pass
 
 
-def main():
+def short_stub_text(*, chars, path, n_rows, media, grain, dims, start, end, media_summary, dimensions, metrics,
+                    metric_units, first_row):
+    """차원·지표 이름만 담은 짧은 스텁. metric_units·first_row는 받기만 하고 쓰지 않는다(full_stub_text와 같은 인자)."""
+    preview = (f"dimensions={json.dumps(dimensions, ensure_ascii=False)} metrics={json.dumps(metrics, ensure_ascii=False)}"
+               if metrics is not None else "(JSON 봉투 파싱 실패 — 파일에 원본 그대로 저장됨)")
+    return (
+        f"[laighthouse-capture-hook] 응답 원본({chars:,}자, {n_rows}행; media={media}, time_grain={grain}, "
+        f"group_by={dims}, {start}~{end}, media별 행 수: {media_summary}) 저장됨:\n{path}\n"
+        f"원본을 옮겨 적지 않는다 — prepare.py가 저장된 응답을 읽는다(훅이 없는 호스트에서는 이 경로를 json_files에 넣는다).\n"
+        f"{preview}"
+    )
+
+
+def full_stub_text(*, chars, path, n_rows, media, grain, dims, start, end, media_summary,
+                   dimensions, metrics, metric_units, first_row):
+    """단위 맵과 첫 행까지 담은 스텁. 저장 경로를 asset 스크립트에 json_files로 넘기라고 안내한다."""
+    preview_parts = []
+    if dimensions is not None:
+        preview_parts.append(f"dimensions={json.dumps(dimensions, ensure_ascii=False)}")
+    if metrics is not None:
+        preview_parts.append(f"metrics={json.dumps(metrics, ensure_ascii=False)}")
+    if metric_units is not None:
+        preview_parts.append(f"metric_units={json.dumps(metric_units, ensure_ascii=False)}")
+    if first_row is not None:
+        preview_parts.append(f"첫 행={json.dumps(first_row, ensure_ascii=False)[:400]}")
+    preview = "\n".join(preview_parts) or "(JSON 봉투 파싱 실패 — 파일에 원본 그대로 저장됨)"
+    return (
+        f"[laighthouse-capture-hook] 이 도구 응답 원본({chars:,}자, 데이터 {n_rows}행; "
+        f"media={media}, time_grain={grain}, group_by={dims}, {start}~{end})은 아래 파일에 전문 저장됨:\n"
+        f"{path}\n"
+        f"media별 행 수: {media_summary}\n"
+        f"⚠️ 원본을 컨텍스트에 다시 타이핑하지 말 것. asset 스크립트(build_report.py 등)에 넘길 때는 "
+        f'{{"json_files": ["{path}", ...]}} 입력 형태(경로 배열)를 heredoc으로 넘기고, '
+        f"그 외 집계가 필요하면 Bash(python)에서 이 파일을 직접 읽어 처리한다. "
+        f"수치를 요약·추정으로 대체하지 않는다.\n"
+        f"미리보기:\n{preview}"
+    )
+
+
+def main(argv=None):
+    flags = set(sys.argv[1:] if argv is None else argv)
+    any_group_by = "--any-group-by" in flags
+    short_stub = "--short-stub" in flags
+    unknown = flags - {"--any-group-by", "--short-stub"}
+    if unknown:
+        _breadcrumb(f"unknown args ignored: {sorted(unknown)}")
     try:
         data = json.load(sys.stdin)
     except (json.JSONDecodeError, UnicodeDecodeError):
@@ -168,7 +240,9 @@ def main():
     group_by = tool_input.get("group_by")
     _breadcrumb(f"ran: tool={data.get('tool_name')} group_by={group_by} session={data.get('session_id')}")
     if not isinstance(group_by, list) or not group_by:
-        return  # group_by 생략(총계)은 통과 — 크기는 아래 MIN_CHARS로 거른다
+        return  # group_by 생략(총계)은 통과
+    if not any_group_by and not (set(map(str, group_by)) & CAPTURE_DIMENSIONS):
+        return  # ["media"] 같은 저카디널리티 호출은 통과
 
     # 호스트마다 응답 필드명이 다를 수 있다 (Claude Code: tool_response; 다른 호스트 방어)
     resp = None
@@ -195,7 +269,8 @@ def main():
     # Claude Code CLI도 같은 방식이다("Error: result (53,584 characters) exceeds maximum allowed tokens. Output has
     # been saved to …\tool-results\….txt" — 안내문이 2,000자를 넘기도 한다, 2026-10-23 실측). 그래서 길이와 관계없이
     # JSON 봉투가 아닌 안내문이면 그 파일을 읽는다. Windows는 그 경로가 260자를 넘기 쉬워 긴 경로 접두사로 연다.
-    saved_match = re.search(r"saved to (\S+?\.txt)", text)
+    # 저장 파일은 .txt나 .json이고, 내용이 [{"type":"text","text":…}] 블록 리스트일 수도 있다.
+    saved_match = re.search(r"saved to (\S+\.(?:txt|json))", text)   # 경로 중간의 .json·.txt에서 끊지 않게 끝까지 본다
     if saved_match and not text.lstrip().startswith("{"):
         saved_path = saved_match.group(1)
         open_path = saved_path
@@ -203,7 +278,7 @@ def main():
             open_path = "\\\\?\\" + os.path.abspath(open_path)
         try:
             with open(open_path, encoding="utf-8-sig") as f:
-                redirected = unwrap_json_result(f.read())
+                redirected = unwrap_json_result(block_text(f.read()))
         except OSError:
             _breadcrumb(f"skip: oversized notice but cannot read {saved_path} — pass-through")
             return
@@ -238,19 +313,12 @@ def main():
         f.write(text)
     _breadcrumb(f"captured: {path} chars={len(text)}")
 
-    dimensions, metrics, _, n_rows, by_media, _ = envelope_stats(text)
+    dimensions, metrics, metric_units, n_rows, by_media, first_row = envelope_stats(text)
     media_summary = ", ".join(f"{k}={v}" for k, v in sorted(by_media.items())) or "n/a"
-    # 미리보기는 짧게: 저장 훅 + prepare.py가 데이터를 다루므로 모델은 차원·지표 이름만 알면 된다(cost_metric 고르기).
-    # 첫 행·단위 맵은 넣지 않는다 — 호출이 많을 때 이 스텁이 매 턴 컨텍스트에 쌓인다.
-    preview = (f"dimensions={json.dumps(dimensions, ensure_ascii=False)} metrics={json.dumps(metrics, ensure_ascii=False)}"
-               if metrics is not None else "(JSON 봉투 파싱 실패 — 파일에 원본 그대로 저장됨)")
-
-    stub = (
-        f"[laighthouse-capture-hook] 응답 원본({len(text):,}자, {n_rows}행; media={media}, time_grain={grain}, "
-        f"group_by={dims}, {start}~{end}, media별 행 수: {media_summary}) 저장됨:\n{path}\n"
-        f"원본을 옮겨 적지 않는다 — prepare.py가 저장된 응답을 읽는다(훅이 없는 호스트에서는 이 경로를 json_files에 넣는다).\n"
-        f"{preview}"
-    )
+    info = dict(chars=len(text), path=path, n_rows=n_rows, media=media, grain=grain, dims=dims, start=start,
+                end=end, media_summary=media_summary, dimensions=dimensions, metrics=metrics,
+                metric_units=metric_units, first_row=first_row)
+    stub = short_stub_text(**info) if short_stub else full_stub_text(**info)
 
     print(
         json.dumps(

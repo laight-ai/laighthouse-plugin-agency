@@ -1,0 +1,32 @@
+{
+  "version": "v4.0.5",
+  "targets": [
+    {
+      "root": "plugins/laighthouse-agency",
+      "include": [
+        "shared/assets/external_context",
+        "skills/naver-blog",
+        "skills/naver-news",
+        "skills/naver-search",
+        "skills/weather-impact",
+        "skills/nextmonth-budget-planning",
+        "hooks/save_responses.py",
+        "hooks/capture_ad_performance.py",
+        "skills/overall-summary",
+        "skills/overall-summary-comment",
+        "skills/overall-summary-history",
+        "skills/overall-summary-mix",
+        "skills/overall-summary-tables",
+        "skills/overall-summary-total",
+        "shared/references/mcp-tools.md",
+        "shared/references/pivot-table.md",
+        "shared/assets/report_kit.py",
+        "shared/assets/report_kit.css",
+        "shared/assets/fees.py",
+        "shared/assets/fees_legacy.py",
+        "shared/assets/saved_responses.py",
+        "hooks/capture_change_raw.py"
+      ]
+    }
+  ]
+}
