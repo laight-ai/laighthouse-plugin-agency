@@ -151,6 +151,8 @@ Claude 데스크톱 Cowork는 스킬 폴더를 하나씩 따로 올린다(`/mnt/
 레포 루트 `common.json`에 적혀 있다. 공통 레포에서 고치고 태그를 붙인 뒤 `common.json`의 `version`을 바꾸고, 레포 루트에서
 `python3 ../laighthouse-plugin-common/sync.py`로 가져온 다음 `python3 scripts/bundle_skills.py`를 실행한다.
 사본이 어긋나면 CI(`.github/workflows/common-check.yml`)가 실패한다.
+공통 레포에서 받는 스킬의 SKILL.md `metadata.version`은 그 스킬이 마지막으로 바뀐 공통 레포 태그를 따르므로 이 레포에서 올리지 않는다.
+플러그인 릴리스 버전(`plugin.json`·`marketplace.json`)은 공통 레포 태그를 새로 받을 때도 올린다.
 
 ## MCP 서버
 
