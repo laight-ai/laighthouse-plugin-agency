@@ -1,11 +1,11 @@
-# 데이터 관리 (기준일 2026-11-18)
+# 데이터 관리
 
 ## 매체 API 연동 — /m/media
 
 API로 자동 수집하는 매체를 연결하는 화면.
 
 - 상단 필터 탭: 전체 · 광고 매체 · 소셜 채널 및 온드 미디어 · 트래커/MMP · 판매자 어드민 · POS, 그리고 매체 이름 검색창
-- 매체 카드 (브랜드에 개통된 매체만 보인다)
+- 매체 카드 (브랜드에 연결된 매체만 보인다)
   - 광고 매체: Google Ads, Meta Ads, TikTok Ads, Kakao Moment, Kakao 키워드광고, Criteo, 네이버 검색 광고, 네이버 GFA, Coupang Ads(준비 중)
   - 소셜 채널 및 온드 미디어: YouTube Organic, TikTok Organic, 네이버 검색량·뉴스·블로그, Meta Insights(준비 중)
   - 트래커/MMP: Google Analytics, Airbridge
@@ -89,7 +89,7 @@ API가 없는 매체의 성과 파일을 올리는 화면.
 
 ### 열 설정
 
-- **열 설정**에서 엑셀에 넣을 열(분류: 매체·일·캠페인·광고그룹·광고 / 지표: clicks, impressions, spending, revenue, roas, ctr, cpc, cpm, cpa, cvr, 영상 지표 등)을 고르고 끌어서 순서를 바꾼다. 최소 1개, 최대 100개.
+- **열 설정**에서 엑셀에 넣을 열(분류: 매체·일·캠페인·광고그룹·광고 / 지표: 클릭, 노출, 광고비, 매출, ROAS, CTR, CPC, CPM, CPA, CVR, 영상 지표 등)을 고르고 끌어서 순서를 바꾼다. 최소 1개, 최대 100개.
 - **브랜드 전체에 적용**된다 — 다른 사용자와 자동 생성 파일에도 같은 열이 쓰인다.
 
 ### 자동 생성 관리 — /m/raw-data/schedules
