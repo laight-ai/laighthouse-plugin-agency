@@ -168,6 +168,26 @@ def test_placement_missing_only_when_split_or_partly_received():
             assert len(json.load(f)["place"]["json_files"]) == 3   # 9월 + 10월 반쪽 둘
 
 
+def test_placement_day_over_16mb_is_skipped_without_blocking_build():
+    with tempfile.TemporaryDirectory() as tmp:
+        ok(tmp, D("2026-09-01"), D("2026-10-31"), ["media"])
+        ok(tmp, D("2026-09-01"), D("2026-09-30"))
+        ok(tmp, D("2026-10-01"), D("2026-10-31"))
+        ok(tmp, D("2026-09-01"), D("2026-09-30"), PLACE)
+        fail(tmp, D("2026-10-01"), D("2026-10-31"), group_by=PLACE)
+        ok(tmp, D("2026-10-17"), D("2026-10-31"), PLACE)
+        for s, e in (("2026-10-01", "2026-10-16"), ("2026-10-01", "2026-10-08"), ("2026-10-01", "2026-10-04"),
+                     ("2026-10-01", "2026-10-02"), ("2026-10-01", "2026-10-01")):
+            fail(tmp, D(s), D(e), group_by=PLACE)
+        for s, e in (("2026-10-09", "2026-10-16"), ("2026-10-05", "2026-10-08"), ("2026-10-03", "2026-10-04"),
+                     ("2026-10-02", "2026-10-02")):
+            ok(tmp, D(s), D(e), PLACE)
+        result = prepare(tmp, "place")
+        # Placement는 줄일 차원이 없다 — 하루치 초과는 missing으로 빌드를 막지 않고 그날만 건너뛴다
+        assert result["missing"] == [], result["missing"]
+        assert result["place_skipped"] == ["2026-10-01"]
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

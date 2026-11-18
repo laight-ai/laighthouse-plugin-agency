@@ -80,18 +80,6 @@ def halves(s, e):
     return (s, mid), (mid + timedelta(days=1), e)
 
 
-def too_large(fails, s, e, keep):
-    """[s, e] 표 데이터 호출(day, metrics·filters 생략)이 호스트 크기 상한(16MB)으로 읽히지 않았나(저장 훅의 실패 줄)."""
-    for r in fails:
-        ti = r.get("tool_input") or {}
-        gb = ti.get("group_by") or []
-        if (r["_tool"] == "get_ad_performance" and "__list_dimensions__" not in gb and keep(gb)
-                and ti.get("metrics") is None and not ti.get("filters") and (ti.get("time_grain") or "day") == "day"
-                and str(ti.get("start_date"))[:10] == str(s) and str(ti.get("end_date"))[:10] == str(e)):
-            return True
-    return False
-
-
 def covering(recs, fails, s, e, keep):
     """[s, e]를 채우는 응답들. 그 기간 응답이 있으면 그것 하나, 크기 상한으로 실패했으면 반으로 나눈 두 기간을
     각각 다시 채운다(반쪽도 실패면 1/4 …, 하루까지). → (찾은 [(기록, 시작, 끝)], 빈 [(시작, 끝, 받는 법)])
@@ -99,7 +87,7 @@ def covering(recs, fails, s, e, keep):
     rec = day_perf(recs, s, e, keep)
     if rec:
         return [(rec, s, e)], []
-    if not too_large(fails, s, e, keep):
+    if day_perf(fails, s, e, keep) is None:   # 그 기간이 크기 상한(16MB)으로 실패한 기록이 없다
         return [], [(s, e, None)]
     if s == e:
         return [], [(s, e, "drop")]
@@ -111,16 +99,12 @@ def covering(recs, fails, s, e, keep):
     return found, gaps
 
 
-DROP_NOTE = {"FINE_DIMS": "하루치도 크기 상한(16MB) — ad_name을 빼고(그래도 넘으면 ad_group_name까지) 이 날짜로 부른다",
-             "PLACE": "하루치도 크기 상한(16MB) — 더 줄일 차원이 없다. 이 날짜는 Placement 없이 진행한다"}
-
-
 def gap_call(s, e, group_by, how):
     call = {"tool": "get_ad_performance", "range": f"{s}~{e}", "time_grain": "day", "group_by": group_by}
     if how == "split":
         call["note"] = "크기 상한(16MB)으로 나눠 받는 조각 — 이 기간 그대로 부른다(group_by는 원래대로)"
     elif how == "drop":
-        call["note"] = DROP_NOTE[group_by]
+        call["note"] = "하루치도 크기 상한(16MB) — ad_name을 빼고(그래도 넘으면 ad_group_name까지) 이 날짜로 부른다"
     return call
 
 
@@ -183,7 +167,7 @@ def main():
         return
     S = date.fromisoformat(a.start_date) if a.start_date else (E.replace(day=1) - timedelta(days=1)).replace(day=1)
     recs, fails = sr.load_session(a.brand)
-    if not recs:
+    if not recs and not fails:
         sr.emit({"note": sr.no_records_note()})
         return
 
@@ -226,7 +210,7 @@ def main():
         result["discover"] = {"metric_keys": disc.get("metric_keys"), "currency": disc.get("currency"),
                               "metrics_absent": disc.get("missing") or []}
 
-    data_files, place_files = [], []
+    data_files, place_files, place_skipped = [], [], []
     for s, e in month_segments(S, E):
         found, gaps = covering(recs, fails, s, e, is_data)
         for r, ps, pe in found:
@@ -242,13 +226,15 @@ def main():
             p = w.envelope(r, f"place_{ps}.json", {"tool": "get_ad_performance", "range": f"{ps}~{pe}", "group_by": "PLACE"})
             if p:
                 place_files += p["json_files"]
-        # 노출 위치 차원이 없는 브랜드는 부르지 않는다 — 받은 게 없으면 missing이 아니다. 크기 상한으로 나눠 받던 중이면 빈 조각만 낸다
-        if found or len(gaps) > 1 or any(how for _, _, how in gaps):
-            w.missing += [gap_call(ps, pe, "PLACE", how) for ps, pe, how in gaps]
+        # 노출 위치 차원이 없는 브랜드는 부르지 않는다 — 나눠 받는 조각만 missing이다. 하루치도 넘으면 줄일 차원이 없어 그날은 건너뛴다
+        w.missing += [gap_call(ps, pe, "PLACE", how) for ps, pe, how in gaps if how == "split"]
+        place_skipped += [str(ps) for ps, _, how in gaps if how == "drop"]
     if data_files:
         base["data"] = {"json_files": data_files}
     if place_files:
         base["place"] = {"json_files": place_files}
+    if place_skipped:   # 빌드는 막지 않는다 — 그날 Placement 행만 빠진다
+        result["place_skipped"] = place_skipped
 
     budgets = []
     for s, e in month_segments(S, E) if a.part != "tables" else ():   # 표만 그리는 tables는 목표를 쓰지 않는다

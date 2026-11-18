@@ -34,7 +34,7 @@ STALE_SECS = 24 * 3600
 SPILL_RE = re.compile(r"Output has been saved to (\S+?)\.?\s*$", re.M)
 SPILL_MAX = 5000      # 안내문은 짧다 — 이보다 긴 텍스트는 데이터로 본다
 SPILL_WAIT = 5.0
-TOO_LARGE_RE = re.compile(r"larger than \d+\s*MB", re.I)   # 호스트의 응답 크기 상한 오류(실측 문구: "was larger than 16MB, so it was not read")
+TOO_LARGE_RE = re.compile(r"larger than \d+\s*MB", re.I)
 
 
 def extract_text(resp):
@@ -91,9 +91,10 @@ def record_failure(folder, tool_name, tool_input, error):
     """크기 상한으로 읽지 못한 호출 — 응답 파일 없이 색인에 한 줄만 남긴다."""
     os.makedirs(folder, exist_ok=True)
     line = {"tool_name": tool_name, "tool_input": tool_input, "saved_at": time.time(), "failed": "too_large",
-            "error": error.strip()[:300]}
+            "error": error.strip()[:300]}   # 진단용 — prepare.py는 failed만 본다
     with open(os.path.join(folder, "index.jsonl"), "a", encoding="utf-8") as f:
         f.write(json.dumps(line, ensure_ascii=False) + "\n")
+    prune()
 
 
 def main():

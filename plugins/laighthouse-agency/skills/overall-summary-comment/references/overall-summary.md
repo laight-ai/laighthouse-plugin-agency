@@ -112,7 +112,7 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
    → 출력의 `build`가 빌더 출력이다. `missing`(다시 보낼 호출)이 있으면 빌드하지 않는다 — 그 호출만 다시 보내고 재실행한다
    (`note`가 있으면 그대로 따른다 — 16MB로 나눠 받는 조각은 `range` 기간 그대로, 하루치도 넘으면 차원을 줄여서)
    (변경 이력 `missing`에 `cursor`가 있으면 그 페이지부터 이어 부른다)
-   (`errors`는 그 응답이 에러였다는 뜻). `build_error`는 빌더가 멈춘 이유다. `date_error`(기준일이 오늘 이후)면 그 문구를 사용자에게 알리고 멈춘다. `discover.metrics_absent`는 브랜드가 주지 않는 지표라 묻지 않는다.
+   (`errors`는 그 응답이 에러였다는 뜻). `build_error`는 빌더가 멈춘 이유다. `date_error`(기준일이 오늘 이후)면 그 문구를 사용자에게 알리고 멈춘다. `discover.metrics_absent`는 브랜드가 주지 않는 지표라 묻지 않는다. `place_skipped`(하루치도 16MB를 넘은 날짜)는 그날 Placement 행만 빠진다는 뜻이다 — 다시 부르지 않고, 완료 메시지에 한 줄로 알린다.
    `out`은 `~/Downloads/laighthouse-reports/{브랜드명}_overall_summary_{기준_일자}.html`(base에 들어 있다 — 바꿀 때만 `"out"`을 함께 넣는다).
    엑셀은 같은 폴더의 `{브랜드명}_overall_summary_{기준_일자}.xlsx` — 출력의 `xlsx`가 그 경로다. 수수료가 있는 브랜드면 Net 기준 엑셀
    `…_net.xlsx`도 만들고 출력의 `xlsx_net`이 그 경로다(`xlsx`는 Gross 기준). `xlsx_error`(예: 같은 파일이 엑셀에 열려 있음)면
