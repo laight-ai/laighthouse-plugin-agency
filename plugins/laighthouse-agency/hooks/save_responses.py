@@ -18,7 +18,7 @@ get_ad_creative_info / get_ad_creative_image)을 원본 그대로 파일로 남�
 - 24시간 지난 세션 폴더는 정리한다.
 - 호스트가 응답을 크기 상한으로 읽지 못하면("… was larger than 16MB, so it was not read" — MCP 에러 결과라
   PostToolUseFailure로 온다) 같은 폴더의 failures.jsonl에 한 줄(도구·인자·시각·에러 앞부분)만 남긴다. index.jsonl에는
-  넣지 않는다 — 그 색인을 응답 기록으로만 읽는 다른 reader(external 플러그인 등)가 깨지지 않게.
+  넣지 않는다 — 그 색인을 응답 기록으로만 읽는 다른 reader(같은 폴더를 읽는 다른 laighthouse 플러그인)가 깨지지 않게.
 """
 
 import io

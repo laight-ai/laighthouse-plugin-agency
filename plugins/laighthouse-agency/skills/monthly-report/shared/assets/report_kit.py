@@ -717,8 +717,9 @@ def merged_envelope(obj):
     if not envs:
         return None
     if len(envs) > 1:
-        if any(e.get("time_grain") == "total" or not any(("date" in r or "month" in r) for r in e.get("rows") or [{}])
-               for e in envs):
+        # 행이 없는 조각(그 기간 데이터 없음)은 기간 열 여부를 판단할 수 없다 — total grain으로 보지 않는다
+        if any(e.get("time_grain") == "total"
+               or (e.get("rows") and not any(("date" in r or "month" in r) for r in e["rows"])) for e in envs):
             raise SystemExit("total grain 응답은 나눠 받을 수 없다 — 기간 합계가 조각마다 따로 온다. 한 번에 다시 받는다.")
         seen = set()
         for e in envs:

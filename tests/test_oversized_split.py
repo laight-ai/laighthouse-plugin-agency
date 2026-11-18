@@ -147,6 +147,45 @@ def test_other_failures_are_not_split_and_one_day_over_16mb_asks_to_drop_dims():
         assert sorted(r["date"] for r in merged["rows"]) == [str(D("2026-09-01") + timedelta(days=i)) for i in range(61)]
 
 
+
+def test_after_one_day_is_reduced_unreceived_pieces_are_asked_with_reduced_dims():
+    with tempfile.TemporaryDirectory() as tmp:
+        ok(tmp, D("2026-09-01"), D("2026-10-31"), ["media"])
+        for s, e in (("2026-10-01", "2026-10-31"), ("2026-10-01", "2026-10-16"), ("2026-10-01", "2026-10-08"),
+                     ("2026-10-01", "2026-10-04"), ("2026-10-01", "2026-10-02"), ("2026-10-01", "2026-10-01")):
+            fail(tmp, D(s), D(e))
+        ok(tmp, D("2026-10-01"), D("2026-10-01"), REDUCED)   # 하루치 초과로 차원을 줄여 받은 날만 있다
+        missing = prepare(tmp)["missing"]
+        # 아직 안 받은 조각(9월·10월 나머지)은 처음부터 줄인 group_by로 — 원래 차원으로 받으면 합치려고 또 받는다
+        assert sorted((m["range"], tuple(m["group_by"])) for m in missing) == sorted(
+            (r, tuple(REDUCED)) for r in ("2026-09-01~2026-09-30", "2026-10-02~2026-10-02", "2026-10-03~2026-10-04",
+                                          "2026-10-05~2026-10-08", "2026-10-09~2026-10-16", "2026-10-17~2026-10-31")), missing
+
+
+def test_pieces_reduced_to_different_dims_stop_with_error_not_refetch_loop():
+    with tempfile.TemporaryDirectory() as tmp:
+        ok(tmp, D("2026-09-01"), D("2026-10-31"), ["media"])
+        ok(tmp, D("2026-09-01"), D("2026-09-30"), ["media", "campaign_name"])
+        ok(tmp, D("2026-10-01"), D("2026-10-31"), ["media", "ad_group_name"])
+        result = prepare(tmp)
+        # 공통 차원 ["media"]는 표 데이터가 못 된다 — 그 group_by로 다시 받으라고 하면 영영 채워지지 않는다
+        assert not [m for m in result["missing"] if m.get("group_by") == ["media"]], result["missing"]
+        assert len(result["errors"]) == 1 and "엇갈린다" in result["errors"][0]["response"], result["errors"]
+
+
+def test_merging_pieces_keeps_a_piece_with_no_rows():
+    full = {"dimensions": REDUCED, "metrics": ["cost"], "rows": [{"media": "meta", "campaign_name": "c1",
+                                                                  "date": "2026-10-01", "cost": 1}]}
+    empty = {"dimensions": REDUCED, "metrics": ["cost"], "rows": []}   # 그 기간 데이터가 없는 조각
+    merged = report_kit.merged_envelope([full, empty])
+    assert [r["date"] for r in merged["rows"]] == ["2026-10-01"] and merged["row_count"] == 1
+    try:
+        report_kit.merged_envelope([full, dict(empty, rows=[{"media": "meta", "cost": 2}])])   # 기간 열이 없는 조각은 여전히 막는다
+    except SystemExit as exc:
+        assert "total grain" in str(exc)
+    else:
+        raise AssertionError("기간 열이 없는 조각을 합쳤다")
+
 PLACE = ["media", "ad_type", "placement"]
 
 

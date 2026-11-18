@@ -102,20 +102,27 @@ def covering(recs, fails, s, e, keep):
 def gap_call(s, e, group_by, how):
     call = {"tool": "get_ad_performance", "range": f"{s}~{e}", "time_grain": "day", "group_by": group_by}
     if how == "split":
-        call["note"] = "크기 상한(16MB)으로 나눠 받는 조각 — 이 기간 그대로 부른다(group_by는 원래대로)"
+        call["note"] = "크기 상한(16MB)으로 나눠 받는 조각 — 이 기간 그대로 부른다(group_by는 이 호출에 적힌 대로)"
     elif how == "drop":
         call["note"] = "하루치도 크기 상한(16MB) — ad_name을 빼고(그래도 넘으면 ad_group_name까지) 이 날짜로 부른다"
     return call
 
 
-def align_dims(pieces):
-    """표 데이터 조각들의 dimensions를 맞춘다 — 빌더는 차원이 다른 조각을 합치지 못한다(하루치 16MB·5만 행으로 차원을
-    줄여 받은 조각이 섞일 때). → (그대로 쓸 파일, 줄인 차원으로 다시 받을 호출). 조각: [(경로, 시작, 끝)]."""
-    dims = []
-    for path, _, _ in pieces:
-        with open(path, encoding="utf-8") as f:
-            dims.append(list(json.load(f).get("dimensions") or []))
+def reduced(rec, fails):
+    """크기 상한으로 실패한 표 데이터 호출보다 차원을 줄여 받은 응답인가(하루치 16MB로 ad_name 등을 뺀 조각)."""
+    gb = set((rec.get("tool_input") or {}).get("group_by") or [])
+    return any(gb < set(f["tool_input"].get("group_by") or []) for f in fails
+               if is_data(f["tool_input"].get("group_by") or []))
+
+
+def align_dims(pieces, dims_of, any_reduced):
+    """표 데이터 조각들의 dimensions를 맞춘다 — 빌더는 차원이 다른 조각을 합치지 못한다(하루치 16MB로 차원을 줄여 받은
+    조각이 섞일 때). 조각: [(경로, 시작, 끝)], dims_of: 경로 → dimensions.
+    → (그대로 쓸 파일, 다시 받을 호출, 아직 안 받은 조각에 쓸 group_by — 줄인 조각이 없으면 None, 공통 차원)."""
+    dims = [dims_of[path] for path, _, _ in pieces]
     common = [d for d in min(dims, key=len) if all(d in ds for ds in dims)] if dims else []
+    if not dims or not (any_reduced or any(ds != common for ds in dims)):
+        return [path for path, _, _ in pieces], [], None, common
     keep, again = [], []
     for (path, s, e), ds in zip(pieces, dims):
         if ds == common:
@@ -123,7 +130,7 @@ def align_dims(pieces):
         else:
             again.append({"tool": "get_ad_performance", "range": f"{s}~{e}", "time_grain": "day", "group_by": common,
                           "note": "다른 조각이 차원을 줄여 받았다 — 합칠 수 있게 이 기간을 이 group_by로 다시 부른다"})
-    return keep, again
+    return keep, again, common, common
 
 
 def change_pages(recs, S, E, w):
@@ -228,7 +235,7 @@ def main():
         result["discover"] = {"metric_keys": disc.get("metric_keys"), "currency": disc.get("currency"),
                               "metrics_absent": disc.get("missing") or []}
 
-    data_pieces, place_files, place_skipped = [], [], []
+    data_pieces, data_gaps, any_reduced, place_files, place_skipped = [], [], False, [], []
     for s, e in month_segments(S, E):
         found, gaps = covering(recs, fails, s, e, is_data)
         for r, ps, pe in found:
@@ -236,7 +243,8 @@ def main():
                                                  "group_by": "FINE_DIMS"})
             if t:
                 data_pieces.append((t["json_files"][0], ps, pe))
-        w.missing += [gap_call(ps, pe, "FINE_DIMS", how) for ps, pe, how in gaps]
+                any_reduced = any_reduced or reduced(r, fails)
+        data_gaps += gaps
         if not want_place:
             continue
         found, gaps = covering(recs, fails, s, e, is_place)
@@ -247,8 +255,13 @@ def main():
         # 노출 위치 차원이 없는 브랜드는 부르지 않는다 — 나눠 받는 조각만 missing이다. 하루치도 넘으면 줄일 차원이 없어 그날은 건너뛴다
         w.missing += [gap_call(ps, pe, "PLACE", how) for ps, pe, how in gaps if how == "split"]
         place_skipped += [str(ps) for ps, _, how in gaps if how == "drop"]
-    data_files, again = align_dims(data_pieces)
-    w.missing += again
+    data_files, again, target, common = align_dims(data_pieces, w.dimensions, any_reduced)
+    if target is not None and not is_data(target):   # 조각마다 다른 차원을 뺐다 — 공통 차원이 표 데이터가 못 된다
+        w.errors.append({"call": {"tool": "get_ad_performance", "range": f"{S}~{E}", "group_by": "FINE_DIMS"},
+                         "response": f"표 데이터 조각의 차원이 엇갈린다(공통 {common}) — 모든 조각을 같은 group_by로 다시 받는다"})
+    else:
+        # 줄여 받은 조각이 있으면 아직 안 받은 조각도 그 group_by로 — 원래 차원으로 받으면 합치려고 또 받게 된다
+        w.missing += [gap_call(ps, pe, target or "FINE_DIMS", how) for ps, pe, how in data_gaps] + again
     if data_files:
         base["data"] = {"json_files": data_files}
     if place_files:

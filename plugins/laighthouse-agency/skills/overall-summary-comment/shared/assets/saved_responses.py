@@ -116,8 +116,10 @@ def load_session(brand, with_failures=True):
         sessions = os.listdir(ROOT)
     except OSError:
         return best
-    mine = lambda rows: [r for r in rows if isinstance(r.get("tool_input"), dict)  # noqa: E731
-                         and r["tool_input"].get("brand_name") == brand]
+
+    def mine(rows):
+        return [r for r in rows if isinstance(r.get("tool_input"), dict) and r["tool_input"].get("brand_name") == brand]
+
     for s in sessions:
         folder = os.path.join(ROOT, s)
         if not os.path.isdir(folder):
@@ -185,6 +187,7 @@ class Workdir:
         self.folder = os.path.join(WORK_ROOT, re.sub(r"[^\w.-]", "_", name))
         os.makedirs(self.folder, exist_ok=True)
         self.missing, self.errors = [], []
+        self.dimensions = {}   # 저장한 봉투 경로 → dimensions (조각 차원을 맞출 때 파일을 다시 읽지 않게)
 
     def envelope(self, rec, name, call):
         """기록 → {"json_files": [경로]} (봉투가 아니면 errors에 남기고 None). rec이 None이면 missing."""
@@ -199,10 +202,11 @@ class Workdir:
         if not isinstance(env, dict) or not isinstance(env.get("rows"), list):
             self.errors.append({"call": call, "response": str(text).strip().split("\n", 1)[0][:300]})
             return None
-        path = os.path.join(self.folder, name)
+        path = os.path.join(self.folder, name).replace("\\", "/")
         with open(path, "w", encoding="utf-8") as f:
             json.dump(env, f, ensure_ascii=False)
-        return {"json_files": [path.replace("\\", "/")]}
+        self.dimensions[path] = list(env.get("dimensions") or [])
+        return {"json_files": [path]}
 
     def text(self, rec, call):
         """목표 응답 원문(한 줄 '목표 없음' 메시지도 그대로). rec이 None이면 missing."""
