@@ -6,8 +6,7 @@
   media   get_ad_performance(S~E, day, group_by ["media"], metrics·filters 생략)
   data    get_ad_performance(day, 표 데이터 group_by) — 걸친 달마다(첫 달 S부터, 마지막 달 E까지) 가장 최근 응답
   place   get_ad_performance(day, group_by에 노출 위치 차원) — 걸친 달마다(있을 때만)
-          달 응답이 호스트 크기 상한(16MB)으로 읽히지 않았으면(저장 훅의 failed 줄) 그 달을 반으로 나눈 두 응답을, 반쪽도
-          실패했으면 다시 반으로(1/4 …) 나눈 응답을 모아 합친다. 빠진 조각은 missing(note에 받는 법)으로 낸다.
+          data·place는 16MB로 읽히지 않은 달을 반씩 나눠 받은 조각을 합친다(covering).
   budgets get_target_progress_v2(month = 걸친 달, media 생략) 원문 — 달마다 가장 최근 응답
   history list_campaign_change_raw(date_from S, date_to E) — cursor 없는 첫 응답부터 next_cursor를 따라간 페이지 전부
   names   get_ad_performance(S~E, total, group_by에 *_id) — 변경 이력의 ID에 이름을 붙인다(차원에 *_id가 있을 때만 필요)
@@ -67,11 +66,27 @@ def day_perf(recs, s, e, keep):
     return None
 
 
+def is_place(gb):
+    return bool(set(gb) & set(PLACE_DIMS))
+
+
+def is_data(gb):
+    return gb != ["media"] and bool(gb) and not is_place(gb)
+
+
+def halves(s, e):
+    """[s, e]를 반으로 — 날 수가 홀수면 앞쪽이 하루 더 길다."""
+    mid = s + timedelta(days=(e - s).days // 2)
+    return (s, mid), (mid + timedelta(days=1), e)
+
+
 def too_large(fails, s, e, keep):
-    """[s, e] day 호출이 호스트 크기 상한(16MB)으로 읽히지 않았나(저장 훅이 남긴 실패 줄)."""
+    """[s, e] 표 데이터 호출(day, metrics·filters 생략)이 호스트 크기 상한(16MB)으로 읽히지 않았나(저장 훅의 실패 줄)."""
     for r in fails:
         ti = r.get("tool_input") or {}
-        if (r["_tool"] == "get_ad_performance" and keep(ti.get("group_by") or []) and (ti.get("time_grain") or "day") == "day"
+        gb = ti.get("group_by") or []
+        if (r["_tool"] == "get_ad_performance" and "__list_dimensions__" not in gb and keep(gb)
+                and ti.get("metrics") is None and not ti.get("filters") and (ti.get("time_grain") or "day") == "day"
                 and str(ti.get("start_date"))[:10] == str(s) and str(ti.get("end_date"))[:10] == str(e)):
             return True
     return False
@@ -89,11 +104,15 @@ def covering(recs, fails, s, e, keep):
     if s == e:
         return [], [(s, e, "drop")]
     found, gaps = [], []
-    for hs, he in sr.halves(s, e):
+    for hs, he in halves(s, e):
         f, g = covering(recs, fails, hs, he, keep)
         found += f
         gaps += [(gs, ge, how or "split") for gs, ge, how in g]
     return found, gaps
+
+
+DROP_NOTE = {"FINE_DIMS": "하루치도 크기 상한(16MB) — ad_name을 빼고(그래도 넘으면 ad_group_name까지) 이 날짜로 부른다",
+             "PLACE": "하루치도 크기 상한(16MB) — 더 줄일 차원이 없다. 이 날짜는 Placement 없이 진행한다"}
 
 
 def gap_call(s, e, group_by, how):
@@ -101,7 +120,7 @@ def gap_call(s, e, group_by, how):
     if how == "split":
         call["note"] = "크기 상한(16MB)으로 나눠 받는 조각 — 이 기간 그대로 부른다(group_by는 원래대로)"
     elif how == "drop":
-        call["note"] = "하루치도 크기 상한(16MB) — ad_name을 빼고(그래도 넘으면 ad_group_name까지) 이 날짜로 부른다"
+        call["note"] = DROP_NOTE[group_by]
     return call
 
 
@@ -163,7 +182,7 @@ def main():
         sr.emit({"date_error": sr.future_date_error(E)})
         return
     S = date.fromisoformat(a.start_date) if a.start_date else (E.replace(day=1) - timedelta(days=1)).replace(day=1)
-    recs = sr.load_records(a.brand)
+    recs, fails = sr.load_session(a.brand)
     if not recs:
         sr.emit({"note": sr.no_records_note()})
         return
@@ -207,9 +226,6 @@ def main():
         result["discover"] = {"metric_keys": disc.get("metric_keys"), "currency": disc.get("currency"),
                               "metrics_absent": disc.get("missing") or []}
 
-    fails = sr.load_failures(a.brand)
-    is_place = lambda gb: bool(set(gb) & set(PLACE_DIMS))  # noqa: E731
-    is_data = lambda gb: gb != ["media"] and bool(gb) and not is_place(gb)  # noqa: E731
     data_files, place_files = [], []
     for s, e in month_segments(S, E):
         found, gaps = covering(recs, fails, s, e, is_data)

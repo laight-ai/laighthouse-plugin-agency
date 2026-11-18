@@ -85,10 +85,10 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
 3. **데이터 호출을 한 메시지에 동시 발사** (`metrics`·`filters` 생략):
    - 표 데이터: `time_grain:"day"`, `group_by` = FINE_DIMS — **달마다 1회**(첫 달은 S부터, 마지막 달은 E까지 — 겹치지 않게 나눠 받는다).
      서버의 5만 행 오류면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절).
-     **호스트가 응답을 못 읽었다는 오류("… was larger than 16MB, so it was not read")는 차원을 빼지 않는다** — 저장 훅이
-     그 실패를 기록해 두므로 다시 보내지 말고 4단계 prepare.py를 돌린다. prepare.py가 그 달을 **반으로 나눈 두 기간**을
-     `missing`(note: 나눠 받는 조각)으로 낸다 → 그 기간들로 다시 부르고 prepare.py를 다시 돌린다. 반쪽도 16MB를 넘으면 다시
-     반으로(1/4 …) 나눈 기간이 나온다. prepare.py가 받은 조각들을 합쳐 빌더에 넘긴다(Placement 데이터도 같다).
+     **호스트가 응답을 못 읽었다는 오류("… was larger than 16MB, so it was not read")는** 다시 보내지 말고 4단계 prepare.py를
+     돌려 `missing`의 기간·`note`대로 부른다(저장 훅이 실패를 기록해 두면 prepare.py가 그 달을 반씩 나눈 기간을 내고, 받은 조각을 합친다).
+     16MB 오류를 받은 기간이 `note` 없이 그대로 `missing`에 다시 나오면(실패를 기록하지 못한 호스트) 예전처럼
+     `ad_name` → `ad_group_name` 순으로 빼고 그 기간을 다시 받는다.
    - Placement 데이터: **차원 목록에 노출 위치 차원(`placement`·`노출위치`·`노출 위치`·`노출_위치`·`position` 중 처음 것)이 있을 때만** —
      `time_grain:"day"`, `group_by` = `["media", (ad_type 또는 상품 중 있는 것), 노출 위치 차원]`, 달마다 1회(표 데이터와 같은 기간 나눔).
      없으면 부르지 않는다(Placement 자리에 '노출 위치 데이터 준비 중' 안내가 나온다 — 사용자에게 묻지 않는다).

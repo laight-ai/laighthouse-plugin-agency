@@ -17,8 +17,7 @@ get_ad_creative_info / get_ad_creative_image)을 원본 그대로 파일로 남�
 - 같은 폴더의 index.jsonl에 응답 본문을 뺀 한 줄(도구·인자·저장 시각·파일명)을 덧붙인다.
 - 24시간 지난 세션 폴더는 정리한다.
 - 호스트가 응답을 크기 상한으로 읽지 못하면("… was larger than 16MB, so it was not read" — MCP 에러 결과라
-  PostToolUseFailure로 온다) 응답 파일 없이 index.jsonl에 `failed: "too_large"` 줄만 남긴다. 종합 리포트
-  prepare.py가 이 줄을 보고 그 기간을 반으로 나눈 호출을 missing으로 낸다(반쪽도 실패하면 다시 반으로 → 1/4 …).
+  PostToolUseFailure로 온다) 응답 파일 없이 index.jsonl에 `failed: "too_large"` 줄만 남긴다.
 """
 
 import io
@@ -111,14 +110,15 @@ def main():
     if data.get("hook_event_name") == "PostToolUseFailure":
         error = data.get("error")
         error = error if isinstance(error, str) else extract_text(error) or ""
-        if TOO_LARGE_RE.search(error):   # 그 밖의 실패는 남기지 않는다 — prepare.py가 missing으로 다시 부르게 한다
+        if TOO_LARGE_RE.search(error):   # 그 밖의 실패는 남기지 않는다
             record_failure(folder, tool_name, tool_input, error)
         return
     resp = next((data[k] for k in ("tool_response", "tool_output", "tool_result") if data.get(k) is not None), None)
     text = extract_text(resp)
     if not text:
         return
-    if len(text) < SPILL_MAX and TOO_LARGE_RE.search(text):   # 호스트가 실패를 일반 응답으로 넘긴 경우도 같다
+    # 호스트가 크기 상한 실패를 일반 응답으로 넘긴 경우도 같다 — 성과 응답만 본다(다른 도구의 짧은 본문을 오판하지 않게)
+    if tool_name.endswith("get_ad_performance") and len(text) < SPILL_MAX and TOO_LARGE_RE.search(text):
         record_failure(folder, tool_name, tool_input, text)
         return
     rec = {"tool_name": tool_name, "tool_input": tool_input, "saved_at": time.time(), "response": text}

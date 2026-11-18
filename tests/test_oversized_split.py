@@ -51,13 +51,13 @@ def ok(tmp, s, e, group_by=FINE):
                "tool_response": [{"type": "text", "text": envelope(s, e, group_by)}]})
 
 
-def fail(tmp, s, e, error=TOO_LARGE):
-    hook(tmp, {"hook_event_name": "PostToolUseFailure", "tool_input": call(s, e), "error": error})
+def fail(tmp, s, e, error=TOO_LARGE, group_by=FINE):
+    hook(tmp, {"hook_event_name": "PostToolUseFailure", "tool_input": call(s, e, group_by), "error": error})
 
 
-def prepare(tmp):
+def prepare(tmp, tables="product"):
     out = subprocess.run([sys.executable, PREPARE, "--brand", "acme", "--target-date", "2026-10-31", "--part", "tables",
-                          "--tables", "product"], env=env_for(tmp), capture_output=True, check=True)
+                          "--tables", tables], env=env_for(tmp), capture_output=True, check=True)
     return json.loads(out.stdout.decode("utf-8"))
 
 
@@ -122,8 +122,50 @@ def test_other_failures_are_not_split_and_one_day_over_16mb_asks_to_drop_dims():
         assert [m["range"] for m in missing] == ["2026-10-01~2026-10-01"], missing
         assert "ad_name" in missing[0]["note"]
 
-        ok(tmp, D("2026-10-01"), D("2026-10-01"), ["media"] + ["ad_type"])   # 차원을 줄여 받은 그날
+        ok(tmp, D("2026-10-01"), D("2026-10-01"), ["media", "ad_type"])   # 차원을 줄여 받은 그날
         assert data_missing(prepare(tmp)) == []
+
+
+PLACE = ["media", "ad_type", "placement"]
+
+
+def test_too_large_text_in_a_normal_response_is_recorded_as_failure_not_saved():
+    with tempfile.TemporaryDirectory() as tmp:
+        ok(tmp, D("2026-09-01"), D("2026-10-31"), ["media"])
+        ok(tmp, D("2026-09-01"), D("2026-09-30"))
+        # 호스트가 실패를 에러 이벤트가 아니라 일반 응답 텍스트로 넘겨도 같은 실패로 기록한다 — 안내문을 응답으로 저장하지 않는다
+        hook(tmp, {"hook_event_name": "PostToolUse", "tool_input": call(D("2026-10-01"), D("2026-10-31")),
+                   "tool_response": [{"type": "text", "text": TOO_LARGE}]})
+        result = prepare(tmp)
+        assert result["errors"] == [], result["errors"]
+        assert data_missing(result) == [("2026-10-01~2026-10-16", True), ("2026-10-17~2026-10-31", True)]
+
+
+def place_missing(result):
+    return [(m["range"], m.get("note", "")) for m in result["missing"] if m.get("group_by") == "PLACE"]
+
+
+def test_placement_missing_only_when_split_or_partly_received():
+    with tempfile.TemporaryDirectory() as tmp:
+        ok(tmp, D("2026-09-01"), D("2026-10-31"), ["media"])
+        ok(tmp, D("2026-09-01"), D("2026-09-30"))
+        ok(tmp, D("2026-10-01"), D("2026-10-31"))
+        # 노출 위치 차원이 없는 브랜드는 Placement를 부르지 않는다 — missing을 내지 않는다
+        assert place_missing(prepare(tmp, "place")) == []
+
+        ok(tmp, D("2026-09-01"), D("2026-09-30"), PLACE)
+        fail(tmp, D("2026-10-01"), D("2026-10-31"), group_by=PLACE)
+        # 10월 Placement가 16MB로 실패 → 반쪽 두 기간을 낸다
+        got = place_missing(prepare(tmp, "place"))
+        assert [r for r, _ in got] == ["2026-10-01~2026-10-16", "2026-10-17~2026-10-31"], got
+        assert all("나눠 받는" in n for _, n in got), got
+
+        ok(tmp, D("2026-10-01"), D("2026-10-16"), PLACE)
+        ok(tmp, D("2026-10-17"), D("2026-10-31"), PLACE)
+        result = prepare(tmp, "place")
+        assert result["missing"] == [] and result["errors"] == [], result
+        with open(result["base"], encoding="utf-8") as f:
+            assert len(json.load(f)["place"]["json_files"]) == 3   # 9월 + 10월 반쪽 둘
 
 
 if __name__ == "__main__":
