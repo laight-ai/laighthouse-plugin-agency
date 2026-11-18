@@ -5,13 +5,13 @@
 API로 자동 수집하는 매체를 연결하는 화면.
 
 - 상단 필터 탭: 전체 · 광고 매체 · 소셜 채널 및 온드 미디어 · 트래커/MMP · 판매자 어드민 · POS, 그리고 매체 이름 검색창
-- 매체 카드 (브랜드에 연결된 매체만 보인다)
-  - 광고 매체: Google Ads, Meta Ads, TikTok Ads, Kakao Moment, Kakao 키워드광고, Criteo, 네이버 검색 광고, 네이버 GFA, Coupang Ads(준비 중)
-  - 소셜 채널 및 온드 미디어: YouTube Organic, TikTok Organic, 네이버 검색량·뉴스·블로그, Meta Insights(준비 중)
+- 연결할 수 있는 매체
+  - 광고 매체: Google Ads, Meta Ads, TikTok Ads, Kakao Moment, Kakao 키워드광고, Criteo, 네이버 검색 광고, 네이버 GFA
+  - 소셜 채널 및 온드 미디어: TikTok Organic, 네이버 검색량·뉴스·블로그
   - 트래커/MMP: Google Analytics, Airbridge
   - 판매자 어드민: Coupang Wing
   - POS: Toss Place
-- 카드에 상태가 표시된다: "연결 전" 또는 "연결 N개"
+- 위 목록에 없는 매체는 API로 연결할 수 없다. [데이터 관리] > 데이터 수동 업로드로 올리거나 support@laight.ai 로 문의한다.
 - 하단 **다른 방식으로 연결된 계정**: 파일 업로드·담당자 연동으로 연결했거나 직접 추가한 계정. 여기서 연결 이름을 바꾸거나 해제할 수 있다. 단 직접 추가한 데이터 출처는 해제할 수 없다.
 
 ### 연결 방법
@@ -20,8 +20,9 @@ API로 자동 수집하는 매체를 연결하는 화면.
 
 | 방식 | 매체 | 순서 |
 |---|---|---|
-| **계정 로그인** | Google Ads, Meta Ads, TikTok Ads, Kakao Moment, Kakao 키워드광고, Criteo, Google Analytics, YouTube Organic, TikTok Organic | 계정 로그인 → 계정 선택 → 완료 |
+| **계정 로그인** | Google Ads, Meta Ads, TikTok Ads, Kakao Moment, Kakao 키워드광고, Criteo, Google Analytics, TikTok Organic | 계정 로그인 → 계정 선택 → 완료 |
 | **API 키 입력** | 네이버 검색 광고(CUSTOMER_ID·API 키·비밀키), Airbridge(앱 이름·API 토큰), Coupang Wing(업체코드·Access Key·Secret Key) | 키 입력 → 완료 |
+| **키워드 설정** | 네이버 검색량·뉴스·블로그 | 카드를 누르면 키워드 설정 화면이 열린다. 자사·경쟁사 키워드를 넣는다 |
 | **담당자 설정** | 네이버 GFA, Toss Place | 카드를 누르면 "자동 연동은 당사 담당자가 직접 설정합니다" 안내가 뜬다. support@laight.ai 로 문의한다 |
 
 계정 로그인 예 (Meta Ads)
@@ -39,10 +40,12 @@ API가 없는 매체의 성과 파일을 올리는 화면.
 
 - 필터 탭: 전체 · 광고 매체 · 판매자 어드민 · 기타 연결
 - 화면은 위에서부터 광고 매체 → 판매자 어드민 → 기타 연결 → 자동 연동 지원 매체 순서로 묶여 있다.
-- 수동 업로드 매체 예: 네이버 GFA 디스플레이, 네이버 GFA 애드부스트, 쿠팡 애즈, 넷플릭스, 아파트너, 타겟픽, 티빙, 블라인드, 네이버 비즈어드바이저 (브랜드마다 다를 수 있음)
-- Naver NOSP, CTV, SMR, CJ YouTube, JTBC YouTube처럼 위 목록에 없는 매체는 표준 카드가 없다. 브랜드 전용 **기타 연결** 항목으로 올린다.
-- **기타 연결**: 브랜드 전용으로 만들어 둔 업로드 항목(예: 대행사 통합 Rawdata용 "Master raw", "기타(메타)" 등). 표준 양식이 아닌 데이터는 여기에 올린다.
-- 맨 아래 **자동 연동 지원 매체**(Google Ads, Meta Ads, TikTok Ads, Kakao, 네이버 검색 광고 등)도 업로드는 가능하지만, API 연동을 권장하며 수동 업로드는 불가피할 때만 쓴다.
+- 업로드할 수 있는 매체
+  - 광고 매체: 네이버 GFA 디스플레이, 네이버 GFA 애드부스트, 쿠팡 애즈, 넷플릭스, 아파트너, 타겟픽, 티빙, 블라인드
+  - 판매자 어드민: 네이버 비즈어드바이저
+  - 자동 연동 지원 매체: Google Ads, Meta Ads, TikTok Ads, Kakao Moment, Kakao 키워드광고, 네이버 검색 광고. 업로드는 가능하지만 API 연동을 권장하며, 수동 업로드는 불가피할 때만 쓴다.
+- **기타 연결**: 브랜드 전용으로 만들어 둔 업로드 항목이다(예: "기타(메타)", "기타(네이버GFA)"). 대행사 통합 Rawdata처럼 표준 양식이 아닌 데이터는 여기에 올린다.
+- 위 목록에 없는 매체(예: Naver NOSP, CTV, SMR)는 표준 카드가 없다. 브랜드 전용 **기타 연결** 항목으로 올리고, 항목이 없으면 support@laight.ai 로 요청한다.
 
 ### 매체 카드를 누르면 나오는 창
 
