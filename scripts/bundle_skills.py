@@ -53,6 +53,7 @@ SHARED_FILES = {
     "weather-impact": EXTERNAL,
     "skill-catalog": (),
     "app-guide": (),
+    "owned-media-data": (),
 }
 # overall-summary-* 하위 스킬: overall-summary의 스크립트·문서를 자기 폴더로 넣는다
 OVERALL_SUBSKILLS = ("overall-summary-comment", "overall-summary-history", "overall-summary-mix",
