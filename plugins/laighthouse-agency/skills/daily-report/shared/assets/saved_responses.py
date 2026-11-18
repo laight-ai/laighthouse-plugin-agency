@@ -6,7 +6,7 @@
 
 부품:
 - `load_records(brand)`      이 브랜드의 가장 최근 세션 응답(24시간 이내, 저장 순, 본문은 고를 때 읽는다)
-- `load_session(brand)`      같은 세션의 (응답, 크기 상한 실패) — 실패는 저장 훅이 `failed`로 남긴 줄(응답 본문 없음)
+- `load_session(brand)`      같은 세션의 (응답, 크기 상한 실패) — 실패는 저장 훅이 failures.jsonl에 따로 남긴 줄
 - `pick(recs, tool, **args)` 인자가 맞는 가장 최근 응답 (args 값이 None이면 "인자 생략"과 같다)
 - `response_text(rec)`       응답 본문(래퍼·호스트 저장 파일 안내문을 푼 것)
 - `Workdir`                  봉투를 작업 폴더에 저장하고 missing·errors를 모은다
@@ -92,37 +92,51 @@ def _session_records(folder, now):
     return [r for r in out if now - (r.get("saved_at") or 0) <= MAX_AGE]
 
 
-def _latest_session(brand):
-    """이 브랜드의 기록이 있는 세션 중 **가장 최근 세션**의 기록 전부(응답 + 크기 상한 실패, 저장 순)."""
-    now, latest = time.time(), []
+def _session_failures(folder, now):
+    """세션 폴더의 failures.jsonl — 저장 훅이 크기 상한(16MB)으로 읽지 못한 호출을 응답과 따로 남긴 줄(본문 없음)."""
+    out = []
+    try:
+        with open(os.path.join(folder, "failures.jsonl"), encoding="utf-8") as f:
+            for line in f:
+                try:
+                    out.append(json.loads(line))
+                except ValueError:
+                    continue
+    except OSError:
+        return []
+    return [r for r in out if isinstance(r, dict) and now - (r.get("saved_at") or 0) <= MAX_AGE]
+
+
+def load_session(brand, with_failures=True):
+    """이 브랜드의 기록이 있는 세션 중 **가장 최근 세션**의 (응답, 크기 상한 실패) — 둘 다 저장 순. 다른 실행의
+    응답을 섞지 않는다 — 이번 실행에서 빠진 호출은 옛 응답으로 채워지지 않고 missing으로 드러난다.
+    with_failures=False면 실패는 읽지 않고 응답이 있는 세션만 고른다."""
+    now, best, best_at = time.time(), ([], []), 0
     try:
         sessions = os.listdir(ROOT)
     except OSError:
-        return []
+        return best
+    mine = lambda rows: [r for r in rows if isinstance(r.get("tool_input"), dict)  # noqa: E731
+                         and r["tool_input"].get("brand_name") == brand]
     for s in sessions:
         folder = os.path.join(ROOT, s)
         if not os.path.isdir(folder):
             continue
-        recs = [r for r in _session_records(folder, now)
-                if isinstance(r.get("tool_input"), dict) and r["tool_input"].get("brand_name") == brand]
-        if recs and max(r.get("saved_at") or 0 for r in recs) > max((r.get("saved_at") or 0 for r in latest), default=0):
-            latest = recs
-    for r in latest:
-        r["_tool"] = str(r.get("tool_name") or "").rsplit("__", 1)[-1]
-    latest.sort(key=lambda r: r.get("saved_at") or 0)
-    return latest
-
-
-def load_session(brand):
-    """이 브랜드의 기록이 있는 세션 중 **가장 최근 세션**의 (응답, 크기 상한 실패) — 둘 다 저장 순. 다른 실행의
-    응답을 섞지 않는다 — 이번 실행에서 빠진 호출은 옛 응답으로 채워지지 않고 missing으로 드러난다."""
-    recs = _latest_session(brand)
-    return [r for r in recs if not r.get("failed")], [r for r in recs if r.get("failed")]
+        recs = mine(_session_records(folder, now))
+        fails = mine(_session_failures(folder, now)) if with_failures else []
+        at = max((r.get("saved_at") or 0 for r in recs + fails), default=0)
+        if at > best_at:
+            best, best_at = (recs, fails), at
+    for rows in best:
+        for r in rows:
+            r["_tool"] = str(r.get("tool_name") or "").rsplit("__", 1)[-1]
+        rows.sort(key=lambda r: r.get("saved_at") or 0)
+    return best
 
 
 def load_records(brand):
-    """이 브랜드의 기록이 있는 세션 중 **가장 최근 세션**의 응답만(저장 순, 크기 상한 실패 줄은 뺀다)."""
-    return load_session(brand)[0]
+    """이 브랜드의 응답이 있는 세션 중 **가장 최근 세션**의 기록만(저장 순)."""
+    return load_session(brand, with_failures=False)[0]
 
 
 def _norm(key, value):

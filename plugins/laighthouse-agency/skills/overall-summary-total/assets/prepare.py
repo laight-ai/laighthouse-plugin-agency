@@ -108,6 +108,24 @@ def gap_call(s, e, group_by, how):
     return call
 
 
+def align_dims(pieces):
+    """표 데이터 조각들의 dimensions를 맞춘다 — 빌더는 차원이 다른 조각을 합치지 못한다(하루치 16MB·5만 행으로 차원을
+    줄여 받은 조각이 섞일 때). → (그대로 쓸 파일, 줄인 차원으로 다시 받을 호출). 조각: [(경로, 시작, 끝)]."""
+    dims = []
+    for path, _, _ in pieces:
+        with open(path, encoding="utf-8") as f:
+            dims.append(list(json.load(f).get("dimensions") or []))
+    common = [d for d in min(dims, key=len) if all(d in ds for ds in dims)] if dims else []
+    keep, again = [], []
+    for (path, s, e), ds in zip(pieces, dims):
+        if ds == common:
+            keep.append(path)
+        else:
+            again.append({"tool": "get_ad_performance", "range": f"{s}~{e}", "time_grain": "day", "group_by": common,
+                          "note": "다른 조각이 차원을 줄여 받았다 — 합칠 수 있게 이 기간을 이 group_by로 다시 부른다"})
+    return keep, again
+
+
 def change_pages(recs, S, E, w):
     """변경 이력: cursor 없는 가장 최근 응답부터 next_cursor를 따라 페이지를 모은다 → items 파일 경로.
     빠진 페이지는 missing(그 cursor로 다시 부른다), 에러 응답은 errors."""
@@ -210,14 +228,14 @@ def main():
         result["discover"] = {"metric_keys": disc.get("metric_keys"), "currency": disc.get("currency"),
                               "metrics_absent": disc.get("missing") or []}
 
-    data_files, place_files, place_skipped = [], [], []
+    data_pieces, place_files, place_skipped = [], [], []
     for s, e in month_segments(S, E):
         found, gaps = covering(recs, fails, s, e, is_data)
         for r, ps, pe in found:
             t = w.envelope(r, f"data_{ps}.json", {"tool": "get_ad_performance", "range": f"{ps}~{pe}", "time_grain": "day",
                                                  "group_by": "FINE_DIMS"})
             if t:
-                data_files += t["json_files"]
+                data_pieces.append((t["json_files"][0], ps, pe))
         w.missing += [gap_call(ps, pe, "FINE_DIMS", how) for ps, pe, how in gaps]
         if not want_place:
             continue
@@ -229,6 +247,8 @@ def main():
         # 노출 위치 차원이 없는 브랜드는 부르지 않는다 — 나눠 받는 조각만 missing이다. 하루치도 넘으면 줄일 차원이 없어 그날은 건너뛴다
         w.missing += [gap_call(ps, pe, "PLACE", how) for ps, pe, how in gaps if how == "split"]
         place_skipped += [str(ps) for ps, _, how in gaps if how == "drop"]
+    data_files, again = align_dims(data_pieces)
+    w.missing += again
     if data_files:
         base["data"] = {"json_files": data_files}
     if place_files:

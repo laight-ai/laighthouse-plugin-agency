@@ -87,8 +87,9 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
      서버의 5만 행 오류면 `ad_name` → `ad_group_name` 순으로 빼고 다시 받는다(`pivot-table.md` 2절).
      **호스트가 응답을 못 읽었다는 오류("… was larger than 16MB, so it was not read")는** 다시 보내지 말고 4단계 prepare.py를
      돌려 `missing`의 기간·`note`대로 부른다(저장 훅이 실패를 기록해 두면 prepare.py가 그 달을 반씩 나눈 기간을 내고, 받은 조각을 합친다).
-     16MB 오류를 받은 기간이 `note` 없이 그대로 `missing`에 다시 나오면(실패를 기록하지 못한 호스트) 예전처럼
-     `ad_name` → `ad_group_name` 순으로 빼고 그 기간을 다시 받는다.
+     16MB 오류를 받은 기간이 `note` 없이 그대로 `missing`에 다시 나오면(실패를 기록하지 못한 호스트)
+     `ad_name` → `ad_group_name` 순으로 빼고 그 기간을 다시 받는다. 차원을 줄여 받은 조각이 생기면 prepare.py가 나머지 조각도
+     같은 `group_by`로 다시 받으라고 `missing`에 낸다(차원이 다른 조각은 합칠 수 없다).
    - Placement 데이터: **차원 목록에 노출 위치 차원(`placement`·`노출위치`·`노출 위치`·`노출_위치`·`position` 중 처음 것)이 있을 때만** —
      `time_grain:"day"`, `group_by` = `["media", (ad_type 또는 상품 중 있는 것), 노출 위치 차원]`, 달마다 1회(표 데이터와 같은 기간 나눔).
      없으면 부르지 않는다(Placement 자리에 '노출 위치 데이터 준비 중' 안내가 나온다 — 사용자에게 묻지 않는다).
@@ -110,7 +111,7 @@ MCP 데이터를 받아 **종합 리포트**(HTML 한 파일 + 같은 폴더·�
    PYEOF
    ```
    → 출력의 `build`가 빌더 출력이다. `missing`(다시 보낼 호출)이 있으면 빌드하지 않는다 — 그 호출만 다시 보내고 재실행한다
-   (`note`가 있으면 그대로 따른다 — 16MB로 나눠 받는 조각은 `range` 기간 그대로, 하루치도 넘으면 차원을 줄여서)
+   (`note`가 있으면 그대로 따른다)
    (변경 이력 `missing`에 `cursor`가 있으면 그 페이지부터 이어 부른다)
    (`errors`는 그 응답이 에러였다는 뜻). `build_error`는 빌더가 멈춘 이유다. `date_error`(기준일이 오늘 이후)면 그 문구를 사용자에게 알리고 멈춘다. `discover.metrics_absent`는 브랜드가 주지 않는 지표라 묻지 않는다. `place_skipped`(하루치도 16MB를 넘은 날짜)는 그날 Placement 행만 빠진다는 뜻이다 — 다시 부르지 않고, 완료 메시지에 한 줄로 알린다.
    `out`은 `~/Downloads/laighthouse-reports/{브랜드명}_overall_summary_{기준_일자}.html`(base에 들어 있다 — 바꿀 때만 `"out"`을 함께 넣는다).

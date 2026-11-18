@@ -18,10 +18,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PLUGIN = os.path.normpath(os.path.join(HERE, "..", "plugins", "laighthouse-agency"))
 HOOK = os.path.join(PLUGIN, "hooks", "save_responses.py")
 PREPARE = os.path.join(PLUGIN, "skills", "overall-summary", "assets", "prepare.py")
+sys.path.insert(0, os.path.join(PLUGIN, "shared", "assets"))
+import report_kit  # noqa: E402
 TOO_LARGE = ('The response from MCP server "plugin:laighthouse-agency:laighthouse" for tool "get_ad_performance" was larger '
              'than 16MB, so it was not read. The tool may have run: check whether it did before running it again, and when '
              'you run it again, ask for less data.')
-FINE = ["media", "campaign_name"]
+FINE = ["media", "campaign_name", "ad_name"]
+REDUCED = ["media", "campaign_name"]   # 하루치도 16MB를 넘어 ad_name을 뺀 group_by
 
 
 def env_for(tmp):
@@ -93,6 +96,12 @@ def test_month_over_16mb_is_split_in_halves_then_quarters_and_merged():
         # 9/1~10/31 하루도 빠지거나 겹치지 않는다(조각 3개 + 9월)
         assert sorted(dates) == [str(D("2026-09-01") + timedelta(days=i)) for i in range(61)], dates
         assert len(files) == 4, files
+        # 실패는 응답 색인(index.jsonl)과 따로 남긴다 — 색인을 응답 기록으로만 읽는 다른 reader가 깨지지 않게
+        folder = os.path.join(tmp, "laighthouse_mcp_responses", "split-test")
+        with open(os.path.join(folder, "index.jsonl"), encoding="utf-8") as f:
+            assert all("file" in json.loads(line) for line in f)
+        with open(os.path.join(folder, "failures.jsonl"), encoding="utf-8") as f:
+            assert len(f.readlines()) == 2
 
 
 def test_other_failures_are_not_split_and_one_day_over_16mb_asks_to_drop_dims():
@@ -122,8 +131,20 @@ def test_other_failures_are_not_split_and_one_day_over_16mb_asks_to_drop_dims():
         assert [m["range"] for m in missing] == ["2026-10-01~2026-10-01"], missing
         assert "ad_name" in missing[0]["note"]
 
-        ok(tmp, D("2026-10-01"), D("2026-10-01"), ["media", "ad_type"])   # 차원을 줄여 받은 그날
-        assert data_missing(prepare(tmp)) == []
+        ok(tmp, D("2026-10-01"), D("2026-10-01"), REDUCED)   # 차원을 줄여 받은 그날
+        # 차원이 다른 조각은 합칠 수 없다 — 나머지 조각을 모두 같은 group_by로 다시 받으라고 한다
+        again = [m for m in prepare(tmp)["missing"] if m.get("group_by") == REDUCED]
+        pieces = ["2026-09-01~2026-09-30", "2026-10-02~2026-10-02", "2026-10-03~2026-10-04", "2026-10-05~2026-10-08",
+                  "2026-10-09~2026-10-16", "2026-10-17~2026-10-31"]
+        assert sorted(m["range"] for m in again) == pieces, again
+        for r in pieces:
+            ok(tmp, D(r[:10]), D(r[11:]), REDUCED)
+        result = prepare(tmp)
+        assert result["missing"] == [] and result["errors"] == [], result
+        with open(result["base"], encoding="utf-8") as f:
+            merged = report_kit.section_envelope(json.load(f)["data"])   # 빌더가 조각을 합치는 함수 — 차원이 다르면 멈춘다
+        assert merged["dimensions"] == REDUCED
+        assert sorted(r["date"] for r in merged["rows"]) == [str(D("2026-09-01") + timedelta(days=i)) for i in range(61)]
 
 
 PLACE = ["media", "ad_type", "placement"]

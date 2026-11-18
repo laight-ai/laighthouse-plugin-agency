@@ -17,7 +17,8 @@ get_ad_creative_info / get_ad_creative_image)을 원본 그대로 파일로 남�
 - 같은 폴더의 index.jsonl에 응답 본문을 뺀 한 줄(도구·인자·저장 시각·파일명)을 덧붙인다.
 - 24시간 지난 세션 폴더는 정리한다.
 - 호스트가 응답을 크기 상한으로 읽지 못하면("… was larger than 16MB, so it was not read" — MCP 에러 결과라
-  PostToolUseFailure로 온다) 응답 파일 없이 index.jsonl에 `failed: "too_large"` 줄만 남긴다.
+  PostToolUseFailure로 온다) 같은 폴더의 failures.jsonl에 한 줄(도구·인자·시각·에러 앞부분)만 남긴다. index.jsonl에는
+  넣지 않는다 — 그 색인을 응답 기록으로만 읽는 다른 reader(external 플러그인 등)가 깨지지 않게.
 """
 
 import io
@@ -34,7 +35,7 @@ STALE_SECS = 24 * 3600
 SPILL_RE = re.compile(r"Output has been saved to (\S+?)\.?\s*$", re.M)
 SPILL_MAX = 5000      # 안내문은 짧다 — 이보다 긴 텍스트는 데이터로 본다
 SPILL_WAIT = 5.0
-TOO_LARGE_RE = re.compile(r"larger than \d+\s*MB", re.I)
+TOO_LARGE_RE = re.compile(r"larger than \d+\s*MB\b.{0,40}?not read", re.I | re.S)
 
 
 def extract_text(resp):
@@ -88,11 +89,11 @@ def prune():
 
 
 def record_failure(folder, tool_name, tool_input, error):
-    """크기 상한으로 읽지 못한 호출 — 응답 파일 없이 색인에 한 줄만 남긴다."""
+    """크기 상한으로 읽지 못한 호출 — 응답 파일 없이 failures.jsonl에 한 줄만 남긴다."""
     os.makedirs(folder, exist_ok=True)
-    line = {"tool_name": tool_name, "tool_input": tool_input, "saved_at": time.time(), "failed": "too_large",
-            "error": error.strip()[:300]}   # 진단용 — prepare.py는 failed만 본다
-    with open(os.path.join(folder, "index.jsonl"), "a", encoding="utf-8") as f:
+    line = {"tool_name": tool_name, "tool_input": tool_input, "saved_at": time.time(),
+            "error": error.strip()[:300]}   # error는 진단용 — prepare.py는 도구·인자만 본다
+    with open(os.path.join(folder, "failures.jsonl"), "a", encoding="utf-8") as f:
         f.write(json.dumps(line, ensure_ascii=False) + "\n")
     prune()
 
