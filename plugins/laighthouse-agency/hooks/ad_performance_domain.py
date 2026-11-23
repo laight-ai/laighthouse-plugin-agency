@@ -6,7 +6,7 @@
 불러오므로 빠질 수 있다. 훅은 도구를 부를 때마다 실행되므로 규칙이 항상 들어간다.
 
 규칙 원문과 절 형식은 `ad_performance_domain.md`(머리 주석)에 있다. 이 파일은 절을 고르고 세션당 한 번만 넣는다.
-group_by에 광고집행 상품 차원과 매출발생 상품 차원이 함께 있으면 매번 경고를 붙인다 — 차원 키는 테넌트마다 다르고
+group_by에 광고집행 상품 차원과 매출발생 상품 차원이 함께 있으면 매번 경고를, 한쪽만 있으면 반대 기준도 조회해 한 답에 내라는 안내를 붙인다 — 차원 키는 테넌트마다 다르고
 한글일 수 있어 키에 든 낱말(`광고집행`·`매출발생`)로 판별한다. 다른 이름을 쓰는 테넌트가 생기면 AD_PRODUCT·SALES_PRODUCT에 더한다.
 
 세션 기록은 (session_id, agent_id)마다 따로 둔다. 컨텍스트 압축 뒤에는 규칙이 요약에서 빠질 수 있으므로, 같은 명령을
@@ -151,9 +151,16 @@ def build_context(data):
     parts = []
     group_by = (data.get("tool_input") or {}).get("group_by") or []
     group_by = [str(d) for d in ([group_by] if isinstance(group_by, str) else group_by)]
-    if any(k in d for k in AD_PRODUCT for d in group_by) and any(k in d for k in SALES_PRODUCT for d in group_by):
+    has_ad = any(k in d for k in AD_PRODUCT for d in group_by)
+    has_sales = any(k in d for k in SALES_PRODUCT for d in group_by)
+    if has_ad and has_sales:
         parts.append(f"⚠️ 이번 group_by에 광고집행 상품 차원과 매출발생 상품 차원이 함께 있다({group_by}). 두 차원의 교차 행은 해석하지 않는다 — "
                      "광고 지표는 광고집행 상품명으로, 매출은 매출발생 상품명으로 나눠 다시 조회한다.")
+    elif has_ad or has_sales:
+        mine, other = ("광고집행", "매출발생") if has_ad else ("매출발생", "광고집행")
+        rule = next((t for t, keywords, _ in sections if not keywords and AD_PRODUCT[0] in t), "상품 차원")
+        parts.append(f"📌 이번 조회는 {mine} 상품 기준이다. 상품별 분석이면 차원 목록에서 {other} 상품 차원을 찾아 같은 기간·필터로 따로 조회하고, "
+                     f"묻지 말고 규칙 '{rule}' 절의 ①~④ 형식으로 한 답에 함께 낸다. 이미 조회했으면 무시한다.")
     if new:
         parts.append("이 응답을 해석·설명·보고할 때 아래 광고 성과 도메인 규칙을 지킨다.")
         parts.extend(f"## {title}\n{body}" for title, body in new)
