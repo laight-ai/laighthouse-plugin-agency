@@ -16,6 +16,7 @@
 | 훅 | save_responses | laighthouse 응답 원본을 파일로 남긴다 — 각 스킬의 `assets/prepare.py`가 빌더 입력을 만든다 |
 | 훅 | capture_ad_performance | `get_ad_performance`의 큰 응답을 파일로 저장하고 경로만 모델에 보여 준다(재타이핑 방지) |
 | 훅 | capture_change_raw | `list_campaign_change_raw`(변경 이력 원본) 응답을 건수와 `next_cursor`만 보이게 바꾼다 |
+| 훅 | ad_performance_domain | `get_ad_performance` 응답 뒤에 광고 성과 도메인 규칙(계약형 BRS, 광고집행/매출발생 상품 구분, 매체별 특이사항)을 세션당 한 번 넣는다(압축 뒤 다시 넣음) |
 | 스킬 | overall-summary | 종합 리포트(HTML) + 같은 이름의 엑셀(.xlsx) 렌더링 |
 | 스킬 | overall-summary-comment · -total · -tables · -history · -mix | 종합 리포트에서 섹션 하나만 뽑기(Comment / Total·Monthly Summary / Product·Target·Placement·Weekly·Daily 표 / Campaign History / Mix) |
 | 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
