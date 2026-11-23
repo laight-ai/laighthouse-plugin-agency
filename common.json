@@ -1,5 +1,5 @@
 {
-  "version": "v4.1.1",
+  "version": "v4.2.0",
   "targets": [
     {
       "root": "plugins/laighthouse-agency",
@@ -26,7 +26,9 @@
         "shared/assets/fees.py",
         "shared/assets/fees_legacy.py",
         "shared/assets/saved_responses.py",
-        "hooks/capture_change_raw.py"
+        "hooks/capture_change_raw.py",
+        "hooks/ad_performance_domain.py",
+        "hooks/ad_performance_domain.md"
       ]
     }
   ]
