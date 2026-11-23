@@ -12,6 +12,16 @@
         ]
       },
       {
+        "matcher": ".*get_ad_performance$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ad_performance_domain.py\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
         "matcher": ".*list_campaign_change_raw$",
         "hooks": [
           {
@@ -27,6 +37,18 @@
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/save_responses.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ad_performance_domain.py\"",
             "timeout": 30
           }
         ]
