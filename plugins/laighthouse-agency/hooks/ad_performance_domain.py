@@ -8,6 +8,8 @@
 규칙 원문과 절 형식은 `ad_performance_domain.md`(머리 주석)에 있다. 이 파일은 절을 고르고 세션당 한 번만 넣는다.
 group_by에 광고집행 상품 차원과 매출발생 상품 차원이 함께 있으면 매번 경고를, 한쪽만 있으면 반대 기준도 조회해 한 답에 내라는 안내를 붙인다 — 차원 키는 테넌트마다 다르고
 한글일 수 있어 키에 든 낱말(`광고집행`·`매출발생`)로 판별한다. 다른 이름을 쓰는 테넌트가 생기면 AD_PRODUCT·SALES_PRODUCT에 더한다.
+응답에 BRS(네이버 브랜드검색) 행이 있으면 매번 합계·ROAS에서 빼라는 경고를 붙인다 — BRS는 광고비를 알 수 없어 합치면 매출만 부풀린다.
+쿠팡 행이 있고 조회 종료일이 오늘 − 14일(그날 포함) 이후면 매번 잠정 구간과 확정일을 날짜로 계산해 붙인다 — 쿠팡 전환은 클릭 후 14일까지 붙는다.
 
 세션 기록은 (session_id, agent_id)마다 따로 둔다. 컨텍스트 압축 뒤에는 규칙이 요약에서 빠질 수 있으므로, 같은 명령을
 SessionStart(matcher `compact`)에도 걸어 두면 그 세션 기록을 지워 다음 호출에 규칙을 다시 넣는다.
@@ -16,6 +18,7 @@ SessionStart(matcher `compact`)에도 걸어 두면 그 세션 기록을 지워 
 어떤 오류가 나도 아무것도 출력하지 않고 끝난다(도구 응답은 그대로 전달된다).
 """
 
+import datetime
 import json
 import os
 import re
@@ -32,6 +35,10 @@ STALE_SECS = 3 * 24 * 3600
 TAG = "[laighthouse-domain-hook]"
 AD_PRODUCT = ("광고집행",)
 SALES_PRODUCT = ("매출발생",)
+BRS = ("brs", "브랜드검색")   # 원문 사전 검사용. 행 판별은 is_naver_brs
+COUPANG = ("coupang", "쿠팡")
+COUPANG_LAG_DAYS = 14
+KST = datetime.timezone(datetime.timedelta(hours=9))
 
 
 def parse_sections(md):
@@ -135,6 +142,38 @@ def forget_session(data):
         pass
 
 
+def today():
+    """테스트가 날짜를 고정할 수 있게 LAIGHTHOUSE_DOMAIN_HOOK_TODAY(YYYY-MM-DD)를 먼저 본다."""
+    fixed = os.environ.get("LAIGHTHOUSE_DOMAIN_HOOK_TODAY")
+    # 광고 데이터 날짜는 한국 기준이다 — UTC로 도는 환경에서도 하루 어긋나지 않게 KST로 센다
+    return datetime.date.fromisoformat(fixed) if fixed else datetime.datetime.now(KST).date()
+
+
+def is_naver_brs(media):
+    """매체 값이 네이버 브랜드검색인가 — `BRS` 낱말, 또는 네이버와 함께 쓴 `브랜드검색`(카카오 브랜드검색은 아니다)."""
+    return bool(re.search(r"(?<![a-z])brs(?![a-z])", media)) or ("브랜드검색" in media and ("네이버" in media or "naver" in media))
+
+
+def coupang_lag_note(data):
+    """쿠팡 전환은 클릭 후 14일까지 붙는다 — 조회 기간이 그 안에 걸리면 잠정 구간과 확정일을 날짜로 알린다."""
+    tool_input = data.get("tool_input") or {}
+    try:
+        start = datetime.date.fromisoformat(str(tool_input.get("start_date")))
+        end = datetime.date.fromisoformat(str(tool_input.get("end_date")))
+    except ValueError:
+        return None
+    # d일 클릭에는 d+14일까지 전환이 붙는다 — 오늘이 d+14일 이하면 d일은 아직 잠정, d+15일부터 확정
+    now = today()
+    first_open = now - datetime.timedelta(days=COUPANG_LAG_DAYS)
+    if end < first_open:
+        return None
+    first = max(start, first_open)
+    final = end + datetime.timedelta(days=COUPANG_LAG_DAYS + 1)
+    return (f"⏳ 쿠팡: 오늘({now}) 기준 {first} 이후 성과는 14일 기여 기간이 끝나지 않아 전환·매출·주문·ROAS가 더 늘 수 있다"
+            f"({end}까지 확정되는 날 {final}). 답 첫머리에 이 잠정 구간을 날짜로 밝히고, 확정된 기간과 비교해 '하락'이라 하지 않는다"
+            " — 광고비·노출·클릭은 지연이 없다.")
+
+
 def build_context(data):
     with open(RULES, encoding="utf-8") as f:
         sections = parse_sections(f.read())
@@ -144,11 +183,18 @@ def build_context(data):
 
     pending = [(title, keywords, body) for title, keywords, body in sections if title not in sent]
     remaining = {k for _, keywords, _ in pending for k in keywords}
-    media = media_values(data, remaining) if remaining else set()
+    media = media_values(data, remaining | set(BRS) | set(COUPANG))
     new = [(title, body) for title, keywords, body in pending
            if not keywords or any(k in m for k in keywords for m in media)]
 
     parts = []
+    if any(is_naver_brs(m) for m in media):
+        parts.append("⚠️ 응답에 BRS(네이버 브랜드검색) 행이 있다. BRS는 계약형이라 광고비가 없거나 실제 계약금과 달라 BRS 매출을 합치면 ROAS가 부풀려진다 — "
+                     "네이버·전체 합계와 ROAS는 BRS를 뺀 값으로 내고(\"BRS 제외\"라고 밝힌다), BRS는 별도 행으로 따로 보인다. BRS 광고비가 없거나 0이면 BRS ROAS는 산출하지 않는다.")
+    if any(k in m for k in COUPANG for m in media):
+        note = coupang_lag_note(data)
+        if note:
+            parts.append(note)
     group_by = (data.get("tool_input") or {}).get("group_by") or []
     group_by = [str(d) for d in ([group_by] if isinstance(group_by, str) else group_by)]
     has_ad = any(k in d for k in AD_PRODUCT for d in group_by)
