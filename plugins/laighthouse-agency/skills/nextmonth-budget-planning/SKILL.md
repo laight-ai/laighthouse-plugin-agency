@@ -28,7 +28,7 @@ metadata:
 
 > 🚫 **숫자는 `get_media_mix_plan` 응답의 `summary` 행 값만 쓴다.** 행마다 `current`(기준 달 실적) · `baseline`(추천 배분) ·
 > `plan`(피드백 반영 배분)이 각각 `{cost, outcome}` 으로 온다. 합계는 `media: "*"` 행이다 — 매체 행을 더해 합계를 만들지 않는다.
-> 잔여 예산은 `remainder_fill`(G 참고)에서 가져온다. 추정 · 다른 도구 값 섞기 금지.
+> 잔여 예산 금액은 `unspent.total`, 잔여 예산을 채우는 배분안은 `remainder_fill`(G 참고)에서 가져온다. 추정 · 다른 도구 값 섞기 금지.
 >
 > 🚫 **계산과 칸 채우기는 `python3` 스크립트 하나로 한다.** 응답 JSON 을 문자열째 스크립트에 붙여 `json.loads` 로 읽고(JSON 의 `null` 은
 > python 리터럴이 아니다), 「표에 넣을 값」대로 서식까지 입힌 HTML 조각(요약 수치 값, 표 `<tbody>` 행)을 출력하게 한다. 그 출력을 뼈대에
@@ -193,26 +193,34 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
 ### G. 잔여 예산 채우기
 
 추천 배분은 비용을 더 써도 효과가 늘지 않는 매체에는 예산을 더 넣지 않아, 예산 일부가 잔여 예산으로 남을 수 있다.
-잔여 예산은 기본으로 남겨 두고, 사용자가 원할 때만 채운다. `get_media_mix_plan` 의 `remainder_fill` 로 판단한다(null 이면 이 절을 건너뛴다).
-`fill_remainder` 가 false 면 "채우면 이렇게 된다"는 미리 보기, true 면 "이렇게 채웠다"는 기록이다.
+잔여 예산은 기본으로 남겨 두고, 사용자가 원할 때만 채운다. 잔여 예산을 어떻게 나눌지(배분안)도 사용자가 보여 달라고 할 때만 보여 준다.
 
-- `remainder`: 잔여 예산 합계 · `added`: 채우면(채워서) 더 들어가는 금액 · `added_by_media`: 매체별 `{media, cost}`, 채우는 순서대로 ·
-  `outcome_delta`: 채워서 바뀌는 예상 성과(음수일 수 있다) · `left`: 채우고도 남는 금액(모든 매체가 상한에 닿음)
+- 잔여 예산 금액은 `get_media_mix_plan` 의 `unspent.total` 이다.
+- 배분안은 `get_media_mix_plan(brand_name, plan_id, include_remainder_fill=true)` 로 부를 때만 오는 `remainder_fill` 에 있다(기본 응답에는 키가 없다).
+  `fill_remainder` 가 false 면 "채우면 이렇게 된다"는 미리 보기, true 면 "이렇게 채웠다"는 기록이다.
+  `remainder` 잔여 예산 합계 · `added` 채우면(채워서) 더 들어가는 금액 · `added_by_media` 매체별 `{media, cost}`, 채우는 순서대로 ·
+  `outcome_delta` 채워서 바뀌는 예상 성과(음수일 수 있다) · `left` 채우고도 남는 금액(모든 매체가 상한에 닿음)
+- 문구의 금액은 비용 서식(`₩` 정수)이다. 매체는 `added_by_media` 순서(채우는 순서) 그대로 쓰고, 금액 순으로 다시 정렬하지 않는다.
+  {성과 변화}는 `outcome_delta` 의 절댓값을 표의 성과 칸 서식으로 쓰고 부호에 따라 "늘어납니다" · "줄어듭니다"(0 이면 "그대로입니다")를 붙인다.
+  {상한 문장}은 `left` 가 1만 원 이상일 때만 붙이는 "₩{left}는 모든 매체가 과거에 써 본 금액 범위에 닿아 더 넣을 곳이 없습니다."다.
 
-1. **보고서를 낼 때마다(피드백 반영 · 되돌리기 뒤에도) 아래대로 완료 메시지의 {안내 줄}에 넣는다.** 금액은 비용 서식(`₩` 정수),
-   매체는 `added_by_media` 순서(채우는 순서) 그대로 쓰고, 금액 순으로 다시 정렬하지 않는다.
-   {성과 변화}는 `outcome_delta` 의 절댓값을 표의 성과 칸 서식으로 쓰고 부호에 따라 "늘어납니다" · "줄어듭니다"(0 이면 "그대로입니다")를 붙인다.
+1. **보고서를 낼 때마다(피드백 반영 · 되돌리기 뒤에도) 완료 메시지의 {안내 줄}에 아래를 넣는다.**
 
    | 상태 | 이렇게 말한다 |
    |---|---|
-   | `fill_remainder` false, `added` 1만 원 이상 | "잔여 예산 ₩{remainder}이 남아 있습니다. 채우면 {매체}에 ₩{cost}, {매체}에 ₩{cost}가 더 들어가고, 예상 {지표}가 {성과 변화} {늘어납니다 \| 줄어듭니다}." `left` 가 1만 원 이상이면 "₩{left}는 모든 매체가 과거에 써 본 금액 범위에 닿아 더 넣을 곳이 없습니다."를 붙이고, 끝에 "잔여 예산을 채울까요, 남겨 둘까요?"를 묻는다 |
-   | `fill_remainder` false, `added` 1만 원 미만, `remainder` 1만 원 이상 | "잔여 예산 ₩{remainder}이 남았지만, 모든 매체가 과거에 써 본 금액 범위에 닿아 더 넣을 곳이 없습니다." 한 줄만. 묻지 않는다 |
-   | `fill_remainder` true, `added` 1만 원 이상 | "잔여 예산 약 ₩{added}을 {매체}에 ₩{cost}, {매체}에 ₩{cost} 채웠습니다(예상 {지표} {성과 변화} {늘어남 \| 줄어듦})." `left` 가 1만 원 이상이면 위와 같은 문장을 붙인다. 묻지 않는다 |
+   | `fill_remainder` false, `unspent.total` 1만 원 이상 | "잔여 예산 ₩{unspent.total}이 남아 있습니다. 어떻게 나눌 수 있는지 보여 드릴까요?" 매체별 금액 · 성과 변화는 이 단계에서 보여 주지 않는다 |
+   | `fill_remainder` true, `remainder_fill.added` 1만 원 이상 | "잔여 예산 약 ₩{added}을 {매체}에 ₩{cost}, {매체}에 ₩{cost} 채웠습니다(예상 {지표} {성과 변화} {늘어남 \| 줄어듦})." 뒤에 {상한 문장}. 묻지 않는다 |
    | 그 밖 | 아무것도 말하지 않는다 |
 
-2. 사용자가 채우겠다고 하면 `set_media_mix_fill_remainder(brand_name, plan_id, fill=true)`, 다시 남겨 두겠다고 하면 `fill=false`.
-   다시 계산하지 않고 바로 반영되므로 `get_media_mix_plan` 을 1회 다시 부르고 D 로 보고서를 새로 만든다(표가 바뀐 배분을 보여 준다).
+   `fill_remainder` 가 true 인 계획은 보고서를 만들기 전에 `include_remainder_fill=true` 로 1회 더 불러 그 응답으로 D 를 한다(채운 금액과 매체별 내역이 필요하다).
+2. 사용자가 보여 달라고 하면 `include_remainder_fill=true` 로 1회 불러 `remainder_fill` 로 답한다.
+   - `added` 가 1만 원 이상: "채우면 {매체}에 ₩{cost}, {매체}에 ₩{cost}가 더 들어가고, 예상 {지표}가 {성과 변화} {늘어납니다 \| 줄어듭니다}." 뒤에 {상한 문장}, 끝에 "잔여 예산을 채울까요, 남겨 둘까요?"
+   - `added` 가 1만 원 미만: "모든 매체가 과거에 써 본 금액 범위에 닿아 잔여 예산을 더 넣을 곳이 없습니다." 묻지 않는다.
+3. 사용자가 채우겠다고 하면 `set_media_mix_fill_remainder(brand_name, plan_id, fill=true)` 후 `include_remainder_fill=true` 로,
+   다시 남겨 두겠다고 하면 `fill=false` 후 기본 인자로 `get_media_mix_plan` 을 1회 부르고 D 로 보고서를 새로 만든다(다시 계산하지 않아 바로 반영된다).
    `changed` 가 false 면 이미 그렇게 돼 있다고만 알린다. 이 선택은 이후 피드백을 반영해 다시 계산해도 그대로 유지된다.
+
+`include_remainder_fill` 같은 인자 이름은 사용자에게 말하지 않는다.
 
 ### H. 물을 때만 답하기
 
@@ -265,8 +273,8 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
   3. `예상 {효율 열 이름}` — 최종 배분 합계 효율. 아래 줄에 기준 달 실적 대비 증감과 `{기준 달 M}월 실적 대비`. 증감을 쓸 수 없으면 둘 다 뺀다.
   4. `{기준 달 M}월 실적 {효율 열 이름}` — 실적 합계 효율. 아래 줄 `비용 ₩{실적 합계 비용}`.
 - **계획 조건**: 기준 달 `YYYY년 M월`, 목표 예산 `₩{target_budget}` + `VAT 제외 Net`, 지표 `{cost_metric} · {outcome_metric}`,
-  시작 시각 `created_at`(UTC)에 9시간을 더한 `YYYY-MM-DD HH:mm`. 잔여 예산 줄은 `remainder_fill` 로 쓴다 — `fill_remainder` 가 true 이고
-  `added` 를 반올림한 값이 1 이상이면 `₩{added} 채움`, false 이고 `remainder` 를 반올림한 값이 1 이상이면 `₩{remainder} 남김`(금액은 비용 서식), 그 밖에는 줄을 뺀다.
+  시작 시각 `created_at`(UTC)에 9시간을 더한 `YYYY-MM-DD HH:mm`. 잔여 예산 줄은 `fill_remainder` 가 true 이고
+  `remainder_fill.added` 를 반올림한 값이 1 이상이면 `₩{added} 채움`, false 이고 `unspent.total` 을 반올림한 값이 1 이상이면 `₩{unspent.total} 남김`(금액은 비용 서식), 그 밖에는 줄을 뺀다.
 - **배지**: `완료` 하나. 반영한 피드백이 있으면 `피드백 {N}개 반영` 배지를 더한다.
 - **반영한 피드백 카드**: `state` 가 `active` 인 피드백을 `claims` 순서 그대로(오래된 순) 한 행씩 — 번호, 사용자가 한 말(`claim.source_evidence`), 매체(`claim.affected_media` 를 ` · ` 로),
   조건(E-3 의 {조건}과 같은 말), 기간(E-3 의 {기간}), 종류(`claim.context_type` → 꼭 지킬 조건 · 가능하면 지킬 조건),
@@ -357,7 +365,7 @@ tr.total td{font-weight:700;background:#fafbfc;border-top:1px solid #dcdfe4;bord
 - 하이라이트는 피드백이 없으면 추천 배분과 기준 달 실적의 차이, 있으면 피드백 반영 배분과 추천 배분의 차이에서 고른다.
 - {안내 줄}은 쓸 것만 한 줄씩 넣고, 없으면 줄째 뺀다.
   - 방금 반영한 피드백이 있으면(E-4) 그 피드백의 지키지 못한 날 문구. 목록에서 골라 볼 때는 넣지 않는다
-  - G-1 의 잔여 예산 문구(채울지 묻는 경우 이 줄을 맨 끝에 둔다)
+  - G-1 의 잔여 예산 문구(배분안을 보여 드릴지 묻는 경우 이 줄을 맨 끝에 둔다)
   - 이 대화에서 처음 보고서를 낼 때 한 번: "특정 매체의 금액 · 기간 · 비율 같은 조건을 말씀해 주시면 반영해 다시 계산합니다."
 
 추천 배분 계산이 실패했으면(C 의 판정) HTML 을 만들지 않고 아래를 쓴다. `error` 가 비었으면 사유 자리에 `잠시 후 다시 실행해 주세요.` 를 쓴다.
