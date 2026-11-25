@@ -1,5 +1,5 @@
 {
-  "version": "v4.3.2",
+  "version": "v4.4.0",
   "targets": [
     {
       "root": "plugins/laighthouse-agency",
