@@ -28,7 +28,7 @@ metadata:
 
 > 🚫 **숫자는 `get_media_mix_plan` 응답의 `summary` 행 값만 쓴다.** 행마다 `current`(기준 달 실적) · `baseline`(추천 배분) ·
 > `plan`(피드백 반영 배분)이 각각 `{cost, outcome}` 으로 온다. 합계는 `media: "*"` 행이다 — 매체 행을 더해 합계를 만들지 않는다.
-> 잔여 예산 금액은 `unspent.total`, 잔여 예산을 채우는 배분안은 `remainder_fill`(G 참고)에서 가져온다. 추정 · 다른 도구 값 섞기 금지.
+> 잔여 예산 금액은 `unspent.total`(`unspent` 가 null 일 수 있다 — G 참고), 잔여 예산을 채우는 배분안은 `remainder_fill`(G 참고)에서 가져온다. 추정 · 다른 도구 값 섞기 금지.
 >
 > 🚫 **계산과 칸 채우기는 `python3` 스크립트 하나로 한다.** 응답 JSON 을 문자열째 스크립트에 붙여 `json.loads` 로 읽고(JSON 의 `null` 은
 > python 리터럴이 아니다), 「표에 넣을 값」대로 서식까지 입힌 HTML 조각(요약 수치 값, 표 `<tbody>` 행)을 출력하게 한다. 그 출력을 뼈대에
@@ -223,6 +223,8 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
 
    **지키지 못한 날 알리기**: 다시 계산한 결과(`get_media_mix_plan`)의 `claims` 에서 `refused_days` · `refused_reasons`({날짜: {매체: 이유}})만
    근거로 쓴다. 이유를 짐작하거나 다른 이유를 지어내지 않는다. 피드백마다 이유별로 날짜를 묶어(예: `12월 9일 · 10일`) 한 줄씩 쓴다.
+   여러 매체에 걸친 피드백은 매체 하나라도 지킨 날을 반영한 날로 치므로, `refused_days` 는 그 피드백의 매체를 하나도 지키지 못한 날이다.
+   같은 날 매체마다 이유가 다르면 매체 이름을 붙여 이유별로 나눠 쓴다.
    "때문에"는 쓰지 않고 "~로 인해" · "~라서"로 쓴다(사용자를 탓하는 말로 읽힐 수 있다).
 
    - **이번에 반영한 피드백**: `refused_days` 의 날마다 아래 표의 줄을 쓴다.
@@ -266,7 +268,10 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
 추천 배분은 비용을 더 써도 효과가 늘지 않는 매체에는 예산을 더 넣지 않아, 예산 일부가 잔여 예산으로 남을 수 있다.
 잔여 예산은 기본으로 남겨 두고, 사용자가 원할 때만 채운다. 잔여 예산을 어떻게 나눌지(배분안)도 사용자가 보여 달라고 할 때만 보여 준다.
 
-- 잔여 예산 금액은 `get_media_mix_plan` 의 `unspent.total` 이다.
+- 잔여 예산 금액은 `get_media_mix_plan` 의 `unspent.total` 이다. `unspent` 는 null 일 수 있다 — 계획에 든 피드백이 모두 작은 변화
+  (`routing[].decision` 이 `OUTPUT_ADJUSTMENT`)이고 조건(`INJECT_CONSTRAINT`)이 하나도 없어 최적화를 다시 돌리지 않은 경우다. 이때는 완료 메시지에
+  잔여 예산 안내를 쓰지 않고, 사용자가 잔여 예산을 물으면 `include_remainder_fill=true` 로 불러 `remainder_fill` 의 `remainder` 로 답한 뒤 2번처럼 배분안을 보여 준다.
+  `unspent.total` 을 읽기 전에는 늘 `unspent` 가 null 인지 먼저 본다.
 - 배분안은 `get_media_mix_plan(brand_name, plan_id, include_remainder_fill=true)` 로 부를 때만 오는 `remainder_fill` 에 있다(기본 응답에는 키가 없다).
   `fill_remainder` 가 false 면 "채우면 이렇게 된다"는 미리 보기, true 면 "이렇게 채웠다"는 기록이다.
   `remainder` 잔여 예산 합계 · `added` 채우면(채워서) 더 들어가는 금액 · `added_by_media` 매체별 `{media, cost}`, 채우는 순서대로 ·
@@ -279,7 +284,7 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
 
    | 상태 | 이렇게 말한다 |
    |---|---|
-   | `fill_remainder` false, `unspent.total` 1만 원 이상 | "잔여 예산 ₩{unspent.total}이 남아 있습니다. 어떻게 나눌 수 있는지 보여 드릴까요?" 매체별 금액 · 성과 변화는 이 단계에서 보여 주지 않는다 |
+   | `fill_remainder` false, `unspent` 가 null 이 아니고 `unspent.total` 1만 원 이상 | "잔여 예산 ₩{unspent.total}이 남아 있습니다. 어떻게 나눌 수 있는지 보여 드릴까요?" 매체별 금액 · 성과 변화는 이 단계에서 보여 주지 않는다 |
    | `fill_remainder` true, `remainder_fill.added` 1만 원 이상 | "잔여 예산 약 ₩{added}을 {매체}에 ₩{cost}, {매체}에 ₩{cost} 채웠습니다(예상 {지표} {성과 변화} {늘어남 \| 줄어듦})." 뒤에 {상한 문장}. 묻지 않는다 |
    | 그 밖 | 아무것도 말하지 않는다 |
 
@@ -349,7 +354,7 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
   4. `{기준 달 M}월 실적 {효율 열 이름}` — 실적 합계 효율. 아래 줄 `비용 ₩{실적 합계 비용}`.
 - **계획 조건**: 기준 달 `YYYY년 M월`, 목표 예산 `₩{target_budget}` + `VAT 제외 Net`, 지표 `{cost_metric} · {outcome_metric}`,
   시작 시각 `created_at`(UTC)에 9시간을 더한 `YYYY-MM-DD HH:mm`. 잔여 예산 줄은 `fill_remainder` 가 true 이고
-  `remainder_fill.added` 를 반올림한 값이 1 이상이면 `₩{added} 채움`, false 이고 `unspent.total` 을 반올림한 값이 1 이상이면 `₩{unspent.total} 남김`(금액은 비용 서식), 그 밖에는 줄을 뺀다.
+  `remainder_fill.added` 를 반올림한 값이 1 이상이면 `₩{added} 채움`, false 이고 `unspent` 가 null 이 아니고 `unspent.total` 을 반올림한 값이 1 이상이면 `₩{unspent.total} 남김`(금액은 비용 서식), 그 밖에는 줄을 뺀다.
 - **배지**: `완료` 하나. 반영한 피드백이 있으면 `피드백 {N}개 반영` 배지를 더한다.
 - **반영한 피드백 카드**: `state` 가 `active` 인 피드백을 `claims` 순서 그대로(오래된 순) 한 행씩 — 번호, 사용자가 한 말(`claim.source_evidence`), 매체(`claim.affected_media` 를 ` · ` 로),
   조건(E-3 의 {조건}과 같은 말), 기간(E-3 의 {기간}), 종류(`claim.context_type` → 꼭 지킬 조건 · 가능하면 지킬 조건),
