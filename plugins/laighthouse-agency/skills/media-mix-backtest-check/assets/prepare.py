@@ -39,7 +39,7 @@ def main(argv=None):
         return 2
     recs = bt.sr.load_records(a.brand)
     rec, env = bt.ad_performance(recs)
-    if rec is None or (isinstance(env, dict) and not bt.covers(rec, start, end)):
+    if rec is None or not bt.covers(rec, start, end):
         bt.sr.emit({"missing": [bt.call_args(a.brand, start, end)]})
         return 0
     if not isinstance(env, dict) or not isinstance(env.get("rows"), list):

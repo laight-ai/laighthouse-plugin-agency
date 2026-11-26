@@ -5,7 +5,8 @@
   python3 assets/build_report.py --brand <브랜드> --cost <비용 지표> --outcome <성과 지표> --months 2026-03,2026-05 [--out <경로.html>]
 
 출력(JSON 한 줄):
-- 광고 성과 응답이 모자라면 {"missing": [...]}, 끝난 backtest 결과가 없는 달이 있으면 {"missing_jobs": [달]}
+- 광고 성과 응답이 모자라면 {"missing": [...]}, 오류면 {"errors": [...]}
+- 끝난 backtest 결과가 없는 달이 있으면 {"missing_jobs": [달]}(결과 조회가 오류로 끝난 응답이 있으면 "errors"도)
 - 아니면 {"out": HTML 경로(모두 실패면 null), "facts": {months, counts, flagged, failed}}
 """
 import argparse
@@ -35,18 +36,21 @@ def main(argv=None):
         return 2
     recs = bt.sr.load_records(a.brand)
     rec, env = bt.ad_performance(recs)
-    if rec is None or not isinstance(env, dict) or not bt.covers(rec, start, end):
+    if rec is None or not bt.covers(rec, start, end):
         bt.sr.emit({"missing": [bt.call_args(a.brand, start, end)]})
+        return 0
+    if not isinstance(env, dict) or not isinstance(env.get("rows"), list):
+        bt.sr.emit({"errors": [{"call": "get_ad_performance", "response": bt.sr.response_text(rec).strip()[:300]}]})
         return 0
     try:
         data = bt.monthly(env, a.cost, a.outcome)
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 2
-    found = bt.jobs(recs, a.cost, a.outcome)
+    found, errors = bt.jobs(recs, a.cost, a.outcome)
     missing = [m for m in months if m not in found]
     if missing:
-        bt.sr.emit({"missing_jobs": missing})
+        bt.sr.emit({"missing_jobs": missing, **({"errors": errors} if errors else {})})
         return 0
     done = [bt.judge_month(m, found[m], data) for m in months if found[m].get("status") == "succeeded"]
     failed = [(m, found[m].get("error")) for m in months if found[m].get("status") != "succeeded"]

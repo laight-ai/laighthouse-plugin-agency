@@ -84,8 +84,10 @@ metadata:
    ```
    python3 assets/build_report.py --brand <브랜드> --cost <비용 지표> --outcome <성과 지표> --months <3번에서 확인한 달들>
    ```
-   - `missing_jobs` 가 나오면 그 달의 `get_media_mix_job` 을 한 번 더 부르고 다시 실행한다. 그래도 나오면 실패 7.
-   - `missing` 이 나오면 2번의 `get_ad_performance` 를 그 인자로 부르고 다시 실행한다.
+   - `missing_jobs` 가 `errors` 와 함께 나오면 결과 조회가 오류로 끝난 것이다 — 그 메시지로 「실패하면」의 맞는 안내를 하고 멈춘다.
+     `errors` 없이 나오면 그 달의 `get_media_mix_job` 을 한 번 더 부르고 다시 실행한다. 그래도 나오면 실패 7.
+   - `missing` 이 나오면 2번의 `get_ad_performance` 를 그 인자로 부르고 다시 실행한다. `errors` 가 나오면 그 메시지로 「실패하면」의 맞는 안내를 한다.
+   - 종료 코드 2면 stderr 메시지를 쉬운 말로 전하고 멈춘다(저장된 응답이 2번과 달라진 경우다 — 2번부터 다시 하면 된다).
    - 출력 `out` 이 HTML 경로다(`~/Downloads/laighthouse-reports/{브랜드}_media-mix-backtest_{첫 달}_{마지막 달}.html`). 다른 위치를 말했으면 `--out <경로.html>`.
      `out` 이 null 이면 모든 달의 계산이 실패한 것이다 — `facts.failed` 의 사유를 전하고 멈춘다.
 8. 그 HTML 을 Artifact(또는 `mcp__visualize__show_widget`)로 게시한다. 둘 다 없으면 저장 경로만 안내한다.

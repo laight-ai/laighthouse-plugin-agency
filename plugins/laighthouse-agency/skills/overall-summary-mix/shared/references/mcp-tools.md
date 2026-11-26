@@ -2,7 +2,7 @@
 
 이 플러그인의 스킬이 쓰는 도구는 `get_ad_performance`·`get_target_progress_v2`·`list_campaign_change_raw`·`get_external_context`(필요하면 `get_brand_list`)뿐이다.
 예외로 `nextmonth-budget-planning` 스킬은 미디어믹스 계획 도구(`list_media_mix_metrics`·`start_media_mix_plan`·`list_media_mix_plans`·`get_media_mix_plan`·`propose_media_mix_claim`·`apply_media_mix_claim`·`remove_media_mix_claim`·`reset_media_mix_plan`·`set_media_mix_fill_remainder`·`get_media_mix_reward_curves`)를 쓴다 —
-규칙은 그 스킬의 SKILL.md에 있다. `media-mix-backtest-check` 스킬도 같은 도구 셋(`create_media_mix_job` 은 `backtest: true`)과 `get_ad_performance` 를 쓴다.
+규칙은 그 스킬의 SKILL.md에 있다. `media-mix-backtest-check` 스킬은 `list_media_mix_metrics`·`create_media_mix_job`(늘 `backtest: true`)·`list_media_mix_jobs`·`get_media_mix_job` 과 `get_ad_performance` 를 쓴다.
 
 ## 1. `get_ad_performance` — 광고 성과 (유일한 성과 조회 도구)
 

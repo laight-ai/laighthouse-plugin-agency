@@ -138,14 +138,20 @@ def won(v):
 
 
 def jobs(recs, cost_metric, outcome_metric):
-    """대상 달마다 가장 최근의 끝난 backtest 결과 {달: 응답}. 계산 중인 것은 뺀다."""
-    out = {}
+    """({달: 가장 최근의 끝난 backtest 결과}, [조회 오류 응답]). 계산 중인 것은 뺀다."""
+    out, errors = {}, []
     for rec in recs:
         if rec["_tool"] != "get_media_mix_job":
             continue
+        text = sr.response_text(rec)
         try:
-            job = json.loads(sr.response_text(rec))
+            job = json.loads(text)
         except ValueError:
+            job = None
+        if not isinstance(job, dict):
+            err = {"call": "get_media_mix_job", "response": str(text).strip().split("\n", 1)[0][:300]}
+            if err not in errors:
+                errors.append(err)
             continue
         req = job.get("request") if isinstance(job, dict) else None
         if not isinstance(req, dict) or not req.get("backtest"):
@@ -154,7 +160,7 @@ def jobs(recs, cost_metric, outcome_metric):
             continue
         if job.get("status") in ("succeeded", "failed", "canceled"):
             out[req.get("target_month")] = job
-    return out
+    return out, errors
 
 
 # ── 판정 ────────────────────────────────────────────────────────────────
@@ -209,6 +215,8 @@ def _trend(base, hist, change, item):
         if c < FLOOR:
             return {"verdict": "unknown", "reason": f"{label(k)} 비용이 판정 하한 미만이거나 없음"}
         eff.append(o / c)
+    if not eff[0]:
+        return {"verdict": "unknown", "reason": f"{label(months[0])} 성과가 0이라 추세를 셀 수 없음"}
     t = pct(eff[1], eff[0])
     trend = "up" if t >= TREND else "down" if t <= -TREND else "flat"
     d = direction(change)
@@ -261,6 +269,8 @@ def fmt_pct(v, sign=True):
     if v is None:
         return "–"
     d = Decimal(str(v * 100)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+    if d == 0:
+        d = abs(d)   # -0.0% 를 찍지 않는다
     return f"{'+' if sign and d > 0 else ''}{d}%"
 
 

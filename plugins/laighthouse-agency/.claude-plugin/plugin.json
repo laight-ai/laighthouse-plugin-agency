@@ -1,7 +1,7 @@
 {
   "name": "laighthouse-agency",
-  "version": "1.24.0",
-  "description": "대행사 양식 보고서 플러그인 — MCP 연동 데이터로 종합 리포트(Comment·Summary·세부 표·Campaign History·Mix 계획표, HTML + 엑셀, 섹션별 하위 스킬 포함)와 Daily·Weekly·Monthly 보고서를 만듭니다. 외부 요인(네이버 검색량·뉴스·블로그, 서울 날씨) 보고서, 썸네일을 담은 소재 성과 보고서, 다음 달 매체별 예산 계획(사용자 피드백 반영)도 만듭니다. 어떤 브랜드에도 동작합니다.",
+  "version": "1.25.0",
+  "description": "대행사 양식 보고서 플러그인 — MCP 연동 데이터로 종합 리포트(Comment·Summary·세부 표·Campaign History·Mix 계획표, HTML + 엑셀, 섹션별 하위 스킬 포함)와 Daily·Weekly·Monthly 보고서를 만듭니다. 외부 요인(네이버 검색량·뉴스·블로그, 서울 날씨) 보고서, 썸네일을 담은 소재 성과 보고서, 다음 달 매체별 예산 계획(사용자 피드백 반영), 과거 예산안의 백테스트 타당성 점검 보고서도 만듭니다. 어떤 브랜드에도 동작합니다.",
   "author": {
     "name": "LaightAI"
   },
