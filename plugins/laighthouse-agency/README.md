@@ -50,7 +50,8 @@ MCP 미디어믹스 계획 도구(`start_media_mix_plan`·`get_media_mix_plan`·
 Claude 가 `get_media_mix_plan` 응답의 `summary`로 증감률·비중을 `python3`로 계산한 뒤 SKILL.md 의 「HTML 뼈대」대로 HTML 을 직접 쓴다
 (1.23.0~, 스크립트 없음). 표는 기준 달 실적 · 예산안 제안 · 피드백 반영 배분(피드백이 있을 때만)을 나란히 두고, 배분 칸마다 앞 묶음 대비
 증감을 빨강(상승)·파랑(하락)으로 붙인다. 사용자 피드백은 되묻고 확인받은 뒤에만 반영하고, 되돌리기 · 잔여 예산 채우기도 한다.
-일별 배분과 비용 대비 효과 곡선은 사용자가 물을 때만 채팅으로 답한다. SKILL.md 의 원본은 laighthouse-plugin-common
+첫 보고서 뒤에는 다음 행동 선지(조건 넣기 · 잔여 예산 나눠 보기 · 배분 이유 듣기)를 번호로 보여 주고,
+비용 대비 효과 곡선은 물을 때만 채팅으로 답한다. 날짜별 금액은 제공하지 않는다. SKILL.md 의 원본은 laighthouse-plugin-common
 레포다 — 공통 레포에서 고친 뒤 `sync.py`로 가져온다. 이전 렌더러(`assets/build_report.py`·`mm_view.js`·`mm_view.css`와 그 테스트)는 git 태그
 `archive/media-mix-html-renderer`에 있다(되살리기: `git checkout archive/media-mix-html-renderer -- <경로>`).
 
