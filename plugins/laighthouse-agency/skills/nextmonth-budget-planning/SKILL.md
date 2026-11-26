@@ -55,7 +55,7 @@ metadata:
 |---|---|
 | `baseline` | 예산안 제안 |
 | `plan` | 피드백 반영 배분 |
-| `current` | 기준 달 실적을 달 이름으로(예: "11월 실적"). "현재"라고 하지 않는다 |
+| `current` | 기준 달 이름을 붙여 "{M}월 현재까지 실적"(예: "11월 현재까지 실적"). HTML 과 대화 모두 이 이름을 쓴다 |
 | 판(revision) | 버전 |
 | claim | 사용자 피드백(또는 피드백) |
 | `hard_fact` / `soft_judgment` | 꼭 지킬 조건 / 가능하면 지킬 조건 |
@@ -103,7 +103,7 @@ metadata:
 
    > | 조건 | 값 |
    > |---|---|
-   > | 제안받을 달 | 2026년 12월(11월 실적으로 계산) |
+   > | 제안받을 달 | 2026년 12월(11월 현재까지 실적으로 계산) |
    > | 비용 지표 | 광고비 |
    > | 성과 지표 | 매출 |
    > | 예산 | ₩80,000,000 |
@@ -397,7 +397,7 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
   | 그 밖의 단위(건수) | 정수 뒤에 단위(예: `1,234회`) | `{지표}당 비용` | `1 ÷ outcome_per_cost` 를 비용처럼 `₩` 정수로. `outcome_per_cost` 가 0 이면 `–` |
   | 없음(`null` · 빈 값) | 정수, 단위 없이(예: `1,234`) | `{지표} ÷ 비용` | `outcome_per_cost` 를 유효숫자 세 자리로, 지수 표기 없이 천 단위 쉼표(예: `0.0388` · `9.70` · `1,230`) |
 
-- **열 머리글**: 첫 줄은 `매체`(두 줄 차지) · `{기준 달 M}월 실적`(3열) · `예산안 제안`(3열) · `피드백 반영 배분`(3열).
+- **열 머리글**: 첫 줄은 `매체`(두 줄 차지) · `{기준 달 M}월 현재까지 실적`(3열) · `예산안 제안`(3열) · `피드백 반영 배분`(3열).
   둘째 줄은 실적 쪽 `비용` · `{지표}` · `{효율 열 이름}`, 배분 쪽마다 `비용` · `예상 {지표}` · `{효율 열 이름}`.
 - **증감**: 배분 쪽 칸마다 값 아래 줄에 비교 대상 대비 증감을 쓴다. 예산안 제안 칸은 같은 행 · 같은 열의 기준 달 실적 대비,
   피드백 반영 배분 칸은 같은 행 · 같은 열의 예산안 제안 대비다.
@@ -411,9 +411,9 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
 - **요약 수치 4개**(합계 행 기준):
   1. `{제안 달 M}월 예산 합계` — 최종 배분 합계 비용. 아래 줄 `목표 ₩{target_budget} (Net)`, 그 합계가 목표의 99.5% 미만이면 `{합계 ÷ 목표 × 100, 소수 첫째}% 배분` 도.
   2. `예상 {지표}` — 최종 배분 합계 성과. 아래 줄: 피드백 반영 배분이면 예산안 제안 대비 증감(표와 같은 규칙)과 `예산안 제안 대비`, 아니면 `모델 예측치`.
-  3. `예상 {효율 열 이름}` — 최종 배분 합계 효율. 아래 줄에 기준 달 실적 대비 증감과 `{기준 달 M}월 실적 대비`. 증감을 쓸 수 없으면 둘 다 뺀다.
-  4. `{기준 달 M}월 실적 {효율 열 이름}` — 실적 합계 효율. 아래 줄 `비용 ₩{실적 합계 비용}`.
-- **계획 조건**: 기준 달 `YYYY년 M월`, 목표 예산 `₩{target_budget}` + `VAT 제외 Net`, 지표 `{cost_metric} · {outcome_metric}`,
+  3. `예상 {효율 열 이름}` — 최종 배분 합계 효율. 아래 줄에 기준 달 실적 대비 증감과 `{기준 달 M}월 현재까지 실적 대비`. 증감을 쓸 수 없으면 둘 다 뺀다.
+  4. `{기준 달 M}월 현재까지 실적 {효율 열 이름}` — 실적 합계 효율. 아래 줄 `비용 ₩{실적 합계 비용}`.
+- **계획 조건**: 목표 예산 `₩{target_budget}` + `VAT 제외 Net`, 지표 `{cost_metric} · {outcome_metric}`,
   시작 시각 `created_at`(UTC)에 9시간을 더한 `YYYY-MM-DD HH:mm`. 잔여 예산 줄은 `fill_remainder` 가 true 이고
   `remainder_fill.added` 를 반올림한 값이 1 이상이면 `₩{added} 채움`, false 이고 `unspent.total` 을 반올림한 값이 1 이상이면 `₩{unspent.total} 남김`(금액은 비용 서식), 그 밖에는 줄을 뺀다.
 - **배지**: `완료` 하나. 반영한 피드백이 있으면 `피드백 {N}개 반영` 배지를 더한다.
@@ -459,18 +459,18 @@ td{border-bottom:1px solid #eef0f3;padding:7px 12px;vertical-align:middle}td:fir
 tr.total td{font-weight:700;background:#fafbfc;border-top:1px solid #dcdfe4;border-bottom:0}
 </style></head><body><div class="page">
 <div class="head"><h1>{제안 달 YYYY년 M월} 예산 계획</h1><span class="badge">완료</span><span class="badge fb">피드백 {N}개 반영</span></div>
-<dl><dt>기준 달</dt><dd>{기준 달 YYYY년 M월}</dd><dt>목표 예산</dt><dd>{₩목표} <span class="sub">VAT 제외 Net</span></dd>
+<dl><dt>목표 예산</dt><dd>{₩목표} <span class="sub">VAT 제외 Net</span></dd>
 <dt>지표</dt><dd>{cost_metric} · {outcome_metric}</dd><dt>시작 시각</dt><dd>{YYYY-MM-DD HH:mm}</dd>
 <dt>잔여 예산</dt><dd>{₩채운 금액 채움 | ₩잔여 예산 남김}</dd></dl>
 <div class="kpis">
 <div class="kpi"><div class="k-label">{제안 달 M}월 예산 합계</div><div class="k-value">{₩최종 합계}</div><div class="k-sub"><span>목표 {₩목표} (Net)</span><span>{n.n}% 배분</span></div></div>
 <div class="kpi"><div class="k-label">예상 {지표}</div><div class="k-value">{최종 합계 성과}</div><div class="k-sub"><span class="{up|down}">{▲|▼} {n.n}%</span><span>예산안 제안 대비</span></div></div>
-<div class="kpi"><div class="k-label">예상 {효율 열 이름}</div><div class="k-value">{최종 합계 효율}</div><div class="k-sub"><span class="{up|down}">{▲|▼} {n.n}%</span><span>{기준 달 M}월 실적 대비</span></div></div>
-<div class="kpi"><div class="k-label">{기준 달 M}월 실적 {효율 열 이름}</div><div class="k-value">{실적 합계 효율}</div><div class="k-sub"><span>비용 {₩실적 합계}</span></div></div>
+<div class="kpi"><div class="k-label">예상 {효율 열 이름}</div><div class="k-value">{최종 합계 효율}</div><div class="k-sub"><span class="{up|down}">{▲|▼} {n.n}%</span><span>{기준 달 M}월 현재까지 실적 대비</span></div></div>
+<div class="kpi"><div class="k-label">{기준 달 M}월 현재까지 실적 {효율 열 이름}</div><div class="k-value">{실적 합계 효율}</div><div class="k-sub"><span>비용 {₩실적 합계}</span></div></div>
 </div>
 <section class="card"><div class="card-head"><h2>매체별 요약</h2><span class="note">비용은 VAT 제외 Net 기준입니다.</span></div>
 <div class="wrap"><table><thead>
-<tr><th rowspan="2">매체</th><th colspan="3" class="grp g">{기준 달 M}월 실적</th><th colspan="3" class="grp g">예산안 제안</th><th colspan="3" class="grp g">피드백 반영 배분</th></tr>
+<tr><th rowspan="2">매체</th><th colspan="3" class="grp g">{기준 달 M}월 현재까지 실적</th><th colspan="3" class="grp g">예산안 제안</th><th colspan="3" class="grp g">피드백 반영 배분</th></tr>
 <tr><th class="num g">비용</th><th class="num">{지표}</th><th class="num">{효율 열 이름}</th>
 <th class="num g">비용</th><th class="num">예상 {지표}</th><th class="num">{효율 열 이름}</th>
 <th class="num g">비용</th><th class="num">예상 {지표}</th><th class="num">{효율 열 이름}</th></tr>
@@ -536,7 +536,7 @@ tr.total td{font-weight:700;background:#fafbfc;border-top:1px solid #dcdfe4;bord
 
 ```
 다형식품 다음 달 예산 계획(2026년 12월) 보고서 생성 완료.
-가장 인상적인 부분: 예산안 제안은 11월 실적보다 NVSHOP 비중을 늘리고 PLINK를 줄였습니다.
+가장 인상적인 부분: 예산안 제안은 11월 현재까지 실적보다 NVSHOP 비중을 늘리고 PLINK를 줄였습니다.
 다음으로 이렇게 해 보실 수 있습니다. 번호로 고르시거나 원하시는 것을 그대로 말씀해 주세요.
 1. 조건을 넣어 다시 계산하기 — 예: "12월 1일~10일 PLINK를 하루 30만 원으로 고정", "BRS를 10% 줄여 줘", "NVSHOP은 하루 40만~60만 원 사이로", "PLINK와 NVSHOP을 합쳐 하루 100만 원 이하로"
 2. 잔여 예산 ₩3,527,375을 어떻게 나눌 수 있는지 보기
