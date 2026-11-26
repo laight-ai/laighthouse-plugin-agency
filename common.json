@@ -10,6 +10,7 @@
         "skills/naver-search",
         "skills/weather-impact",
         "skills/nextmonth-budget-planning",
+        "skills/media-mix-backtest-check",
         "skills/app-guide",
         "hooks/save_responses.py",
         "hooks/capture_ad_performance.py",
