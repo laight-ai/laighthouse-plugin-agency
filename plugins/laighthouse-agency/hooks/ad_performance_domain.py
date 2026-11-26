@@ -184,7 +184,8 @@ def build_context(data):
 
     pending = [(title, keywords, body) for title, keywords, body in sections if title not in sent]
     remaining = {k for _, keywords, _ in pending for k in keywords}
-    media = media_values(data, remaining | set(BRS) | set(COUPANG))
+    # BRS 경고를 이미 보냈으면 BRS 글자만으로 큰 응답을 다시 파싱하지 않는다
+    media = media_values(data, remaining | (set() if BRS_WARNED in sent else set(BRS)) | set(COUPANG))
     new = [(title, body) for title, keywords, body in pending
            if not keywords or any(k in m for k in keywords for m in media)]
 
