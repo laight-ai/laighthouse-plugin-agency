@@ -278,7 +278,7 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
    - 비율 피드백(`DIRECTIONAL_NUDGE`), 늘릴 때: "'{`claim.source_evidence`}'는 평소 하루 변동 폭 안이라 미세 조정으로 반영했습니다. 제안한 예산안은 그대로 두고 날마다 그날 계획 금액의 {+15%}만큼 더하는 방식이라, 하루에 평소 변동 폭까지만 움직이고, 늘린 만큼은 잔여 예산을 먼저 쓴 뒤 다른 매체에서 비율대로 덜어 냅니다." 줄일 때는 "{−10%}만큼 빼는 방식이라"로 쓴다.
    - 줄일 때(둘 다): 뒷문장을 "줄인 만큼은 다른 매체에 비율대로 나눠 줍니다."로 바꾼다.
    - 잔여 예산을 채운 계획(`fill_remainder` true, 기본)은 채운 뒤에 미세 조정을 더하므로 "늘린 만큼은 다른 매체에서 비율대로 덜어 냅니다"로 쓴다.
-     "늘린 만큼은 잔여 예산을 먼저 쓴 뒤 다른 매체에서 비율대로 덜어 냅니다"는 사용자가 잔여 예산을 남겨 두라고 한 계획(`fill_remainder` false)에만 쓴다.
+     "늘린 만큼은 잔여 예산을 먼저 쓴 뒤 다른 매체에서 비율대로 덜어 냅니다"는 잔여 예산을 채우지 않은 계획(`fill_remainder` false)에만 쓴다.
    - 이유를 함께 말한 피드백(`routing[].branch` 가 4)은 "하루에 평소 변동 폭까지만 움직이고"를 "이유를 함께 말씀하셔서 하루에 평소 변동 폭의 1.5배까지 움직이고"로 쓴다. branch 5 는 위 문구 그대로다.
 
    **지키지 못한 날 알리기**: 다시 계산한 결과(`get_media_mix_plan`)의 `claims` 에서 `refused_days` · `refused_reasons`({날짜: {매체: 이유}})만
@@ -326,8 +326,8 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
 ### G. 잔여 예산 채우기
 
 예산안은 비용을 더 써도 효과가 늘지 않는 매체에는 예산을 더 넣지 않아, 예산 일부가 잔여 예산으로 남을 수 있다.
-새 계획은 처음부터 잔여 예산까지 채운 배분이다(`fill_remainder` true). 잔여 예산을 남길지 채울지 선택지를 보여 주거나, 그런 선택이 있다고
-알리지 않는다.
+새 계획은 처음부터 잔여 예산까지 채운 배분이다(`fill_remainder` true). 이 기본값보다 먼저 만든 계획은 `fill_remainder` 가 false 로 남아
+있을 수 있다 — 사용자가 남겨 두라고 했다고 가정하지 않는다. 잔여 예산을 남길지 채울지 선택지를 보여 주거나, 그런 선택이 있다고 알리지 않는다.
 
 - 잔여 예산 금액은 `get_media_mix_plan` 의 `unspent.total` 이다(계산 결과가 아직 없을 때만 null 이다 — 보고서는 결과가 있을 때만 만드므로
   보고서에서는 늘 값이 있다).
@@ -336,7 +336,6 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
   `outcome_delta` 채워서 바뀐 예상 성과(음수일 수 있다) · `left` 채우고도 남은 금액(모든 매체가 상한에 닿음)
 - 문구의 금액은 비용 서식(`₩` 정수)이다. 매체는 `added_by_media` 순서(채운 순서) 그대로 쓰고, 금액 순으로 다시 정렬하지 않는다.
   {성과 변화}는 `outcome_delta` 의 절댓값을 표의 성과 칸 서식으로 쓴다.
-  {상한 문장}은 `left` 가 1만 원 이상일 때만 붙이는 "₩{left}는 모든 매체가 과거에 써 본 금액 범위에 닿아 더 넣을 곳이 없습니다."다.
 
 1. **`fill_remainder` 가 true 인 계획은 보고서를 만들기 전에 `include_remainder_fill=true` 로 1회 더 불러 그 응답으로 D 를 한다**(채운 금액과
    매체별 내역이 필요하다). 보고서를 낼 때마다 완료 메시지의 {안내 줄}에(이 대화의 첫 보고서는 「다음 행동 선지」 위에 한 줄로) 아래를 넣는다.
@@ -344,9 +343,11 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
 
    | 상태 | 이렇게 말한다 |
    |---|---|
-   | `fill_remainder` true, `remainder_fill.added` 1만 원 이상 | "잔여 예산 약 ₩{added}을 {매체}에 ₩{cost}, {매체}에 ₩{cost} 채웠습니다(예상 {지표} {성과 변화} {늘어남 \| 줄어듦})." 뒤에 {상한 문장} |
-   | `fill_remainder` false(사용자가 남겨 두라고 한 계획), `unspent.total` 1만 원 이상 | "말씀하신 대로 잔여 예산 ₩{unspent.total}은 남겨 두었습니다." |
+   | `fill_remainder` true, `remainder_fill.added` 1만 원 이상 | "잔여 예산 약 ₩{added}을 {매체}에 ₩{cost}, {매체}에 ₩{cost} 채웠습니다(예상 {지표} {성과 변화} {늘어남 \| 줄어듦})." |
+   | `fill_remainder` 와 관계없이 `unspent.total` 1만 원 이상 | "잔여 예산 ₩{unspent.total}은 배분되지 않았습니다." `fill_remainder` true 면(채우고도 상한에 막혀 남은 금액) 뒤에 "모든 매체가 과거에 써 본 금액 범위에 닿아 더 넣을 곳이 없습니다."를 붙인다 |
    | 그 밖 | 아무것도 말하지 않는다 |
+
+   두 줄에 모두 해당하면 채운 문장 뒤에 배분되지 않은 문장을 잇는다.
 2. **`set_media_mix_fill_remainder` 는 사용자가 먼저 "잔여 예산은 남겨 둬" · "다시 채워 줘"라고 할 때만 부른다.**
    남겨 두라면 `fill=false` 후 기본 인자로, 다시 채워 달라면 `fill=true` 후 `include_remainder_fill=true` 로 `get_media_mix_plan` 을 1회 부르고
    D 로 보고서를 새로 만든다(다시 계산하지 않아 바로 반영된다). `changed` 가 false 면 이미 그렇게 돼 있다고만 알린다.
@@ -411,8 +412,9 @@ A 를 거치지 않았고 이 대화에서 다루던 계획도 없으면 볼 계
   3. `예상 {효율 열 이름}` — 최종 배분 합계 효율. 아래 줄에 기준 달 실적 대비 증감과 `{기준 달 M}월 현재까지 실적 대비`. 증감을 쓸 수 없으면 둘 다 뺀다.
   4. `{기준 달 M}월 현재까지 실적 {효율 열 이름}` — 실적 합계 효율. 아래 줄 `비용 ₩{실적 합계 비용}`.
 - **계획 조건**: 목표 예산 `₩{target_budget}` + `VAT 제외 Net`, 지표 `{cost_metric} · {outcome_metric}`,
-  시작 시각 `created_at`(UTC)에 9시간을 더한 `YYYY-MM-DD HH:mm`. 잔여 예산 줄은 `fill_remainder` 가 true 이고
-  `remainder_fill.added` 를 반올림한 값이 1 이상이면 `₩{added} 채움`, false 이고 `unspent.total` 을 반올림한 값이 1 이상이면 `₩{unspent.total} 남김`(금액은 비용 서식), 그 밖에는 줄을 뺀다.
+  시작 시각 `created_at`(UTC)에 9시간을 더한 `YYYY-MM-DD HH:mm`. 잔여 예산 줄에는 `fill_remainder` 가 true 이고
+  `remainder_fill.added` 를 반올림한 값이 1 이상이면 `₩{added} 채움`, `fill_remainder` 와 관계없이 `unspent.total` 을 반올림한 값이 1 이상이면
+  `₩{unspent.total} 미배분` 을 쓰고, 둘 다면 ` · ` 로 잇는다(금액은 비용 서식). 둘 다 아니면 줄을 뺀다.
 - **배지**: `완료` 하나. 반영한 피드백이 있으면 `피드백 {N}개 반영` 배지를 더한다.
 - **반영한 피드백 카드**: `state` 가 `active` 인 피드백을 `claims` 순서 그대로(오래된 순) 한 행씩 — 번호, 사용자가 한 말(`claim.source_evidence`), 매체(`claim.affected_media` 를 ` · ` 로),
   조건(E-3 의 {조건}과 같은 말), 기간(E-3 의 {기간}), 종류(`claim.context_type` → 꼭 지킬 조건 · 가능하면 지킬 조건),
@@ -458,7 +460,7 @@ tr.total td{font-weight:700;background:#fafbfc;border-top:1px solid #dcdfe4;bord
 <div class="head"><h1>{제안 달 YYYY년 M월} 예산 계획</h1><span class="badge">완료</span><span class="badge fb">피드백 {N}개 반영</span></div>
 <dl><dt>목표 예산</dt><dd>{₩목표} <span class="sub">VAT 제외 Net</span></dd>
 <dt>지표</dt><dd>{cost_metric} · {outcome_metric}</dd><dt>시작 시각</dt><dd>{YYYY-MM-DD HH:mm}</dd>
-<dt>잔여 예산</dt><dd>{₩채운 금액 채움 | ₩잔여 예산 남김}</dd></dl>
+<dt>잔여 예산</dt><dd>{₩채운 금액 채움 · ₩잔여 예산 미배분}</dd></dl>
 <div class="kpis">
 <div class="kpi"><div class="k-label">{제안 달 M}월 예산 합계</div><div class="k-value">{₩최종 합계}</div><div class="k-sub"><span>목표 {₩목표} (Net)</span><span>{n.n}% 배분</span></div></div>
 <div class="kpi"><div class="k-label">예상 {지표}</div><div class="k-value">{최종 합계 성과}</div><div class="k-sub"><span class="{up|down}">{▲|▼} {n.n}%</span><span>예산안 제안 대비</span></div></div>
