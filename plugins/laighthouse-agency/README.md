@@ -22,7 +22,8 @@
 | 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
 | 스킬 | creative-report | 소재 성과 — 매체별 소재 TOP(광고비·CTR·ROAS 등)을 채팅 표로, 또는 썸네일 포함 보고서(HTML)로. 먼저 형태를 고르게 한다 |
 | 스킬 | naver-search · naver-news · naver-blog · weather-impact | 외부 요인 보고서(HTML, 날짜 범위) — 네이버 검색량·뉴스·블로그, 서울 날씨(+광고 클릭) |
-| 스킬 | nextmonth-budget-planning | 월간 미디어믹스 결과 보고서(HTML) — 라이트하우스 웹 결과 화면과 같은 모양, Claude 가 SKILL.md 의 뼈대대로 직접 작성 |
+| 스킬 | nextmonth-budget-planning | 다음 달 예산 계획(채팅 결과, HTML 은 요청할 때만) — 기준 달 실적 · 예산안 제안 · 피드백 반영 배분 비교, 사용자 피드백 반영 · 되돌리기, Claude 가 SKILL.md 의 뼈대대로 직접 작성 |
+| 스킬 | media-mix-backtest-check | 예산안 백테스트 타당성 점검(HTML) — 과거 달 예산안을 그 시점 데이터로 다시 계산해 효율 추세 · 평소 월간 변동 폭 · 작년 흐름에 비춰 판정, 성과 검증 아님 |
 | 스킬 | app-guide | 라이트하우스 웹 화면(app.laight.ai) 사용법 — 메뉴 위치, 매체 연동·파일 업로드·목표 설정 등 순서 안내(데이터 조회 없음) |
 | 스킬 | skill-catalog | 라이트하우스 스킬 목록(이름·명령어·설명·요청 예시)을 채팅에 표로 보여 준다 — "스킬 목록", "어떤 스킬 있어" |
 
@@ -40,15 +41,19 @@
 > "breezm 주간 보고서" → `weekly-report` (기준일 = 데이터 마지막 날, 기본: 어제)
 > "breezm 9월 월간 보고서" → `monthly-report` (대상 월 기본: 지난달)
 
-### 미디어믹스 결과 (1.12.0~)
+### 다음 달 예산 계획 (1.12.0~, 계획 도구 1.24.0~)
 
-> "다라세제 미디어믹스 결과 보여줘" → `nextmonth-budget-planning` (내가 실행한 job 목록에서 골라 결과를 본다)
-> "다라세제 3월 실적으로 4월 예산 7천만 원 미디어믹스 돌려줘" → `nextmonth-budget-planning` (조건을 확인받고 새로 실행 → 끝나면 보고서)
+> "다라세제 다음 달 예산 계획 보여줘" → `nextmonth-budget-planning` (내가 시작한 계획 목록에서 골라 결과를 본다)
+> "다라세제 3월 실적으로 4월 예산 7천만 원 계획 세워줘" → `nextmonth-budget-planning` (조건을 확인받고 새로 계산 → 끝나면 배분 표와 의견)
+> "네이버는 4월 1~10일에 하루 50만 원으로 고정해줘" → 피드백으로 옮겨 되묻고, 확인받으면 반영해 다시 계산
 
-MCP 도구 `get_media_mix_job`을 기본 인자로 부르고, Claude 가 응답의 `summary`로 증감률·비중을 `python3`로 계산한 뒤
-SKILL.md 의 「HTML 뼈대」대로 HTML 을 직접 쓴다(1.19.0~, 스크립트 없음). 표는 기준 달 「N월 현재까지」와 「M월 제안」을 나란히 두고,
-제안 칸마다 현재 대비 증감을 빨강(상승)·파랑(하락)으로 붙인다. SKILL.md 의 원본은 laighthouse-plugin-common 레포다 —
-공통 레포에서 고친 뒤 `sync.py`로 가져온다. 이전 렌더러(`assets/build_report.py`·`mm_view.js`·`mm_view.css`와 그 테스트)는 git 태그
+MCP 미디어믹스 계획 도구(`start_media_mix_plan`·`get_media_mix_plan`·`propose_media_mix_claim`·`apply_media_mix_claim` 등)를 쓰고,
+Claude 가 `get_media_mix_plan` 응답의 `summary`로 증감률·비중을 `python3`로 계산한 뒤 SKILL.md 의 「HTML 뼈대」대로 HTML 을 직접 쓴다
+(1.19.0~, 스크립트 없음). 표는 기준 달 실적 · 예산안 제안 · 피드백 반영 배분(피드백이 있을 때만)을 나란히 두고, 배분 칸마다 앞 묶음 대비
+증감을 빨강(상승)·파랑(하락)으로 붙인다. 사용자 피드백은 되묻고 확인받은 뒤에만 반영하고, 되돌리기도 한다. 잔여 예산은 처음부터 채운 배분으로 보여 준다.
+첫 보고서 뒤에는 다음 행동 선지(조건 넣기 · 배분 이유 듣기)를 번호로 보여 주고,
+비용 대비 효과 곡선은 물을 때만 채팅으로 답한다. 날짜별 금액은 제공하지 않는다. SKILL.md 의 원본은 laighthouse-plugin-common
+레포다 — 공통 레포에서 고친 뒤 `sync.py`로 가져온다. 이전 렌더러(`assets/build_report.py`·`mm_view.js`·`mm_view.css`와 그 테스트)는 git 태그
 `archive/media-mix-html-renderer`에 있다(되살리기: `git checkout archive/media-mix-html-renderer -- <경로>`).
 
 ### 외부 요인 보고서 (1.9.0~)

@@ -209,6 +209,7 @@ ENTRY = {
     "naver-news": ("assets/prepare.py", RANGE, "missing"),
     "naver-blog": ("assets/prepare.py", RANGE, "missing"),
     "weather-impact": ("assets/prepare.py", RANGE, "missing"),
+    "media-mix-backtest-check": ("assets/prepare.py", ["--cost", "광고비", "--outcome", "매출"], "missing"),
     "creative-report": ("assets/creative_report.py", ["--start-date", "2026-01-01", "--end-date", "2026-01-05"], "note"),
 }
 
