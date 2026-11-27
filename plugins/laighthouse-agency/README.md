@@ -22,7 +22,7 @@
 | 스킬 | daily-report · weekly-report · monthly-report | Daily·Weekly·Monthly 보고서(HTML) 렌더링 |
 | 스킬 | creative-report | 소재 성과 — 매체별 소재 TOP(광고비·CTR·ROAS 등)을 채팅 표로, 또는 썸네일 포함 보고서(HTML)로. 먼저 형태를 고르게 한다 |
 | 스킬 | naver-search · naver-news · naver-blog · weather-impact | 외부 요인 보고서(HTML, 날짜 범위) — 네이버 검색량·뉴스·블로그, 서울 날씨(+광고 클릭) |
-| 스킬 | nextmonth-budget-planning | 다음 달 예산 계획(채팅 결과, HTML 은 요청할 때만) — 기준 달 실적 · 예산안 제안 · 피드백 반영 배분 비교, 사용자 피드백 반영 · 되돌리기, Claude 가 SKILL.md 의 뼈대대로 직접 작성 |
+| 스킬 | nextmonth-budget-planning | 다음 달 예산 계획(HTML 보고서 + 채팅 평가) — 기준 달 실적 · 예산안 제안 · 피드백 반영 배분 비교, 사용자 피드백 반영 · 되돌리기, Claude 가 SKILL.md 의 뼈대대로 직접 작성 |
 | 스킬 | media-mix-backtest-check | 예산안 백테스트 타당성 점검(HTML) — 과거 달 예산안을 그 시점 데이터로 다시 계산해 효율 추세 · 평소 월간 변동 폭 · 작년 흐름에 비춰 판정, 성과 검증 아님 |
 | 스킬 | app-guide | 라이트하우스 웹 화면(app.laight.ai) 사용법 — 메뉴 위치, 매체 연동·파일 업로드·목표 설정 등 순서 안내(데이터 조회 없음) |
 | 스킬 | skill-catalog | 라이트하우스 스킬 목록(이름·명령어·설명·요청 예시)을 채팅에 표로 보여 준다 — "스킬 목록", "어떤 스킬 있어" |
