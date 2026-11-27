@@ -29,7 +29,7 @@
 | | `naver-news` | 외부 요인: 브랜드 네이버 뉴스 기사 수 비교 + 자사 주요 기사 4건 |
 | | `naver-blog` | 외부 요인: 브랜드 네이버 블로그 글 수(제목 일치) 비교 + 자사 주요 글 4건 |
 | | `weather-impact` | 외부 요인: 서울 일별 기온·강수·불쾌지수, 광고 클릭이 있으면 겹치기 |
-| | `nextmonth-budget-planning` | 다음 달 예산 계획(HTML) — 기준 달 실적 · 예산안 제안 · 피드백 반영 배분 비교, Claude 가 직접 작성. 조건 확인 후 새로 계산, 사용자 피드백 반영 · 되돌리기 · 잔여 예산 채우기 |
+| | `nextmonth-budget-planning` | 다음 달 예산 계획(HTML) — 기준 달 실적 · 예산안 제안 · 피드백 반영 배분 비교, Claude 가 직접 작성. 조건 확인 후 새로 계산, 사용자 피드백 반영 · 되돌리기(잔여 예산은 처음부터 채운 배분) |
 | | `app-guide` | 라이트하우스 웹 화면(app.laight.ai) 사용법 — 메뉴 위치, 매체 연동·파일 업로드·목표 설정 등 순서 안내(데이터 조회 없음) |
 
 자세한 내용은 [plugins/laighthouse-agency/README.md](plugins/laighthouse-agency/README.md)를 보세요.
